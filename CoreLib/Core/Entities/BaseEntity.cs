@@ -102,11 +102,6 @@ namespace CoreLib.Core.Entities
         public bool IsActive { get; set; } = true;
 
         /// <summary>
-        /// エンティティの状態
-        /// </summary>
-        public EntityStatus Status { get; set; } = EntityStatus.Active;
-
-        /// <summary>
         /// 表示順
         /// </summary>
         public int DisplayOrder { get; set; }
@@ -115,5 +110,36 @@ namespace CoreLib.Core.Entities
         /// 行バージョン（オプティミスティックロック用）
         /// </summary>
         public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+        /// <summary>
+        /// エンティティ状態
+        /// </summary>
+        public EntityStatus Status
+        {
+            get
+            {
+                if (IsDeleted) return EntityStatus.Deleted;
+                if (!IsActive) return EntityStatus.Inactive;
+                return EntityStatus.Active;
+            }
+        }
+    }
+
+    /// <summary>
+    /// GUID識別子を使用する完全装備エンティティ
+    /// </summary>
+    public abstract class FullFeaturedGuidEntity : FullFeaturedEntityBase<Guid>
+    {
+        protected FullFeaturedGuidEntity()
+        {
+            Id = Guid.NewGuid();
+        }
+    }
+
+    /// <summary>
+    /// 整数識別子を使用する完全装備エンティティ
+    /// </summary>
+    public abstract class FullFeaturedIntEntity : FullFeaturedEntityBase<int>
+    {
     }
 }

@@ -197,5 +197,123 @@ namespace CoreLib.Utilities.Extensions.Common
             long roundedTicks = (long)Math.Round((double)ticks / (ticksPerMinute * minutes)) * (ticksPerMinute * minutes);
             return new DateTime(roundedTicks, dt.Kind);
         }
+
+        /// <summary>
+        /// 開始日から終了日までの営業日数を計算
+        /// </summary>
+        public static int GetBusinessDays(this DateTime startDate, DateTime endDate,
+            DayOfWeek[]? holidays = null, DateTime[]? specificHolidays = null)
+        {
+            if (endDate < startDate)
+                return -GetBusinessDays(endDate, startDate, holidays, specificHolidays);
+
+            var businessDays = 0;
+            var currentDate = startDate.Date;
+            var lastDate = endDate.Date;
+
+            // デフォルトの休日（土日）
+            holidays ??= new[] { DayOfWeek.Saturday, DayOfWeek.Sunday };
+
+            // 特定の休日リスト（祝日など）
+            specificHolidays ??= Array.Empty<DateTime>();
+            var holidayList = specificHolidays.Select(h => h.Date).ToList();
+
+            while (currentDate <= lastDate)
+            {
+                // 休日でない場合はカウント
+                if (!holidays.Contains(currentDate.DayOfWeek) && !holidayList.Contains(currentDate))
+                {
+                    businessDays++;
+                }
+                currentDate = currentDate.AddDays(1);
+            }
+
+            return businessDays;
+        }
+
+        /// <summary>
+        /// 指定された日数分の営業日を追加
+        /// </summary>
+        public static DateTime AddBusinessDays(this DateTime date, int days,
+            DayOfWeek[]? holidays = null, DateTime[]? specificHolidays = null)
+        {
+            if (days == 0) return date;
+
+            // デフォルトの休日（土日）
+            holidays ??= new[] { DayOfWeek.Saturday, DayOfWeek.Sunday };
+
+            // 特定の休日リスト（祝日など）
+            specificHolidays ??= Array.Empty<DateTime>();
+            var holidayList = specificHolidays.Select(h => h.Date).ToList();
+
+            var result = date;
+            var step = days > 0 ? 1 : -1;
+
+            while (days != 0)
+            {
+                result = result.AddDays(step);
+
+                // 休日でない場合はカウント
+                if (!holidays.Contains(result.DayOfWeek) && !holidayList.Contains(result.Date))
+                {
+                    days -= step;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 年齢を計算
+        /// </summary>
+        public static int CalculateAge(this DateTime birthDate, DateTime? referenceDate = null)
+        {
+            var reference = referenceDate ?? DateTime.Today;
+            var age = reference.Year - birthDate.Year;
+
+            // まだ誕生日を迎えていなければ1歳引く
+            if (birthDate.Date > reference.AddYears(-age))
+                age--;
+
+            return age;
+        }
+
+        /// <summary>
+        /// 日本の和暦形式に変換
+        /// </summary>
+        public static string ToJapaneseDate(this DateTime date, bool includeDay = true)
+        {
+            // 元号の定義
+            var erasDict = new Dictionary<string, DateTime>
+            {
+                { "令和", new DateTime(2019, 5, 1) },
+                { "平成", new DateTime(1989, 1, 8) },
+                { "昭和", new DateTime(1926, 12, 25) },
+                { "大正", new DateTime(1912, 7, 30) },
+                { "明治", new DateTime(1868, 1, 25) }
+            };
+
+            // 日付に対応する元号を特定
+            string era = "西暦";
+            int year = date.Year;
+
+            foreach (var entry in erasDict)
+            {
+                if (date >= entry.Value)
+                {
+                    era = entry.Key;
+                    year = date.Year - entry.Value.Year + 1;
+                    if (year == 1)
+                        year = Convert.ToInt32('元'); // 元年の場合
+                    break;
+                }
+            }
+
+            // 和暦形式に整形
+            if (includeDay)
+                return $"{era}{year}年{date.Month}月{date.Day}日";
+            else
+                return $"{era}{year}年{date.Month}月";
+        }
     }
 }

@@ -15,6 +15,37 @@ namespace CoreLib.Commands
     /// </summary>
     public abstract class ViewModelBase : ObservableObject
     {
+        private bool _isBusy;
+        private string _statusMessage = string.Empty;
+        private bool _hasErrors;
+
+        /// <summary>
+        /// ビジー状態を示すフラグ
+        /// </summary>
+        public bool IsBusy
+        {
+            get => _isBusy;
+            protected set => SetProperty(ref _isBusy, value);
+        }
+
+        /// <summary>
+        /// ステータスメッセージ
+        /// </summary>
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            protected set => SetProperty(ref _statusMessage, value);
+        }
+
+        /// <summary>
+        /// エラーの有無
+        /// </summary>
+        public bool HasErrors
+        {
+            get => _hasErrors;
+            protected set => SetProperty(ref _hasErrors, value);
+        }
+
         /// <summary>
         /// RelayCommand を作成
         /// </summary>
@@ -54,6 +85,157 @@ namespace CoreLib.Commands
                 ? new AsyncRelayCommand<T>(execute)
                 : new AsyncRelayCommand<T>(execute, canExecute);
         }
+
+        /// <summary>
+        /// 安全な非同期コマンド実行をラップ（例外処理とビジー状態管理付き）
+        /// </summary>
+        protected async Task ExecuteSafelyAsync(Func<Task> action, string successMessage = null)
+        {
+            if (IsBusy)
+                return;
+
+            try
+            {
+                IsBusy = true;
+                HasErrors = false;
+                StatusMessage = "処理中...";
+
+                await action();
+
+                if (!string.IsNullOrEmpty(successMessage))
+                {
+                    StatusMessage = successMessage;
+                }
+                else
+                {
+                    StatusMessage = "処理が完了しました";
+                }
+            }
+            catch (Exception ex)
+            {
+                HasErrors = true;
+                StatusMessage = $"エラー: {ex.Message}";
+                HandleError(ex);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// エラーハンドリングの既定の実装
+        /// </summary>
+        protected virtual void HandleError(Exception ex)
+        {
+            // 派生クラスでオーバーライドして独自のエラー処理を実装可能
+            System.Diagnostics.Debug.WriteLine($"ViewModel Error: {ex}");
+        }
+
+        /// <summary>
+        /// プロパティ値をリセット
+        /// </summary>
+        protected void ResetProperties()
+        {
+            var properties = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanWrite && p.GetSetMethod(true).IsPublic);
+
+            foreach (var property in properties)
+            {
+                if (property.PropertyType.IsValueType)
+                {
+                    property.SetValue(this, Activator.CreateInstance(property.PropertyType));
+                }
+                else
+                {
+                    property.SetValue(this, null);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// サービスロケーター機能を持つViewModel基底クラス
+    /// </summary>
+    public abstract class ServicedViewModelBase : ViewModelBase
+    {
+        protected readonly IServiceProvider ServiceProvider;
+
+        protected ServicedViewModelBase(IServiceProvider serviceProvider)
+        {
+            ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        }
+
+        /// <summary>
+        /// サービスを取得
+        /// </summary>
+        protected T GetService<T>() where T : class
+        {
+            return ServiceProvider.GetService<T>() ??
+                throw new InvalidOperationException($"サービス '{typeof(T).Name}' が登録されていません。");
+        }
+
+        /// <summary>
+        /// オプションのサービスを取得（存在しない場合はnull）
+        /// </summary>
+        protected T GetOptionalService<T>() where T : class
+        {
+            return ServiceProvider.GetService<T>();
+        }
+    }
+
+    /// <summary>
+    /// CQRSパターンを用いたViewModel基底クラス
+    /// </summary>
+    public abstract class CqrsViewModelBase : ViewModelBase
+    {
+        protected readonly ICommandBus CommandBus;
+
+        protected CqrsViewModelBase(ICommandBus commandBus)
+        {
+            CommandBus = commandBus ?? throw new ArgumentNullException(nameof(commandBus));
+        }
+
+        /// <summary>
+        /// コマンドを安全に送信（結果なし）
+        /// </summary>
+        protected async Task SendCommandSafelyAsync(ICommand command, string successMessage = null)
+        {
+            await ExecuteSafelyAsync(async () =>
+            {
+                await CommandBus.SendAsync(command);
+            }, successMessage);
+        }
+
+        /// <summary>
+        /// コマンドを安全に送信（結果あり）
+        /// </summary>
+        protected async Task<TResult> SendCommandSafelyAsync<TResult>(ICommand<TResult> command, string successMessage = null)
+        {
+            TResult result = default;
+
+            await ExecuteSafelyAsync(async () =>
+            {
+                result = await CommandBus.SendAsync(command);
+            }, successMessage);
+
+            return result;
+        }
+
+        /// <summary>
+        /// クエリを安全に送信
+        /// </summary>
+        protected async Task<TResult> QuerySafelyAsync<TResult>(IQuery<TResult> query, string successMessage = null)
+        {
+            TResult result = default;
+
+            await ExecuteSafelyAsync(async () =>
+            {
+                result = await CommandBus.QueryAsync(query);
+            }, successMessage);
+
+            return result;
+        }
     }
 
     /// <summary>
@@ -87,9 +269,9 @@ namespace CoreLib.Commands
         public string Data { get; set; }
     }
 
-    public class ExampleViewModel : ViewModelBase
+    // 拡張ViewModelの使用例
+    public class EnhancedExampleViewModel : CqrsViewModelBase
     {
-        private readonly ICommandBus _commandBus;
         private string _data;
 
         public string Data
@@ -100,29 +282,47 @@ namespace CoreLib.Commands
 
         public IAsyncRelayCommand LoadDataCommand { get; }
         public IAsyncRelayCommand SaveDataCommand { get; }
+        public IRelayCommand ResetCommand { get; }
 
-        public ExampleViewModel(ICommandBus commandBus)
+        public EnhancedExampleViewModel(ICommandBus commandBus)
+            : base(commandBus)
         {
-            _commandBus = commandBus;
-
-            LoadDataCommand = CreateAsyncCommand(LoadDataAsync);
-            SaveDataCommand = CreateAsyncCommand(SaveDataAsync);
+            LoadDataCommand = CreateAsyncCommand(LoadDataAsync, () => !IsBusy);
+            SaveDataCommand = CreateAsyncCommand(SaveDataAsync, () => !IsBusy && !string.IsNullOrEmpty(Data));
+            ResetCommand = CreateCommand(Reset);
         }
 
         private async Task LoadDataAsync()
         {
             var query = new GetDataQuery { Id = 1 };
-            Data = await _commandBus.QueryAsync(query);
+            Data = await QuerySafelyAsync(query, "データを読み込みました");
         }
 
         private async Task SaveDataAsync()
         {
             var command = new SaveDataCommand { Data = Data };
-            bool success = await _commandBus.SendAsync(command);
+            bool success = await SendCommandSafelyAsync(command, "データを保存しました");
 
             if (success)
             {
-                // 保存成功時の処理
+                // 保存成功時の追加処理があれば実装
+            }
+        }
+
+        private void Reset()
+        {
+            Data = string.Empty;
+            StatusMessage = "リセットしました";
+            HasErrors = false;
+        }
+
+        protected override void HandleError(Exception ex)
+        {
+            base.HandleError(ex);
+            // 特定のエラーに対するカスタム処理
+            if (ex is InvalidOperationException)
+            {
+                StatusMessage = "操作が無効です。正しい入力を確認してください。";
             }
         }
     }
