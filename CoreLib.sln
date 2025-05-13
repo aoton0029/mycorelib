@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35931.197 d17.13
+VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreLib", "CoreLib\CoreLib.csproj", "{726CF43F-3BF5-478D-81BB-50F1227CE2C6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreLibWinforms", "CoreLibWinforms\CoreLibWinforms.csproj", "{C98EDB91-58AC-40AC-96DC-97E8C25C1DAE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{726CF43F-3BF5-478D-81BB-50F1227CE2C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{726CF43F-3BF5-478D-81BB-50F1227CE2C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{726CF43F-3BF5-478D-81BB-50F1227CE2C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C98EDB91-58AC-40AC-96DC-97E8C25C1DAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C98EDB91-58AC-40AC-96DC-97E8C25C1DAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C98EDB91-58AC-40AC-96DC-97E8C25C1DAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C98EDB91-58AC-40AC-96DC-97E8C25C1DAE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

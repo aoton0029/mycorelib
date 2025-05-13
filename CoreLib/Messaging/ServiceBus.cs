@@ -38,6 +38,34 @@ namespace CoreLib.Messaging
     }
 
     /// <summary>
+    /// 非同期メッセンジャーのインターフェース
+    /// </summary>
+    public interface IAsyncMessenger
+    {
+        /// <summary>
+        /// 指定されたタイプのメッセージを直接発行する
+        /// </summary>
+        Task PublishAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
+            where TMessage : IMessage;
+
+        /// <summary>
+        /// メッセージをキューに追加し、非同期で処理する
+        /// </summary>
+        Task EnqueueAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
+            where TMessage : IMessage;
+
+        /// <summary>
+        /// メッセージハンドラーを登録
+        /// </summary>
+        void RegisterHandler<TMessage>(IMessageHandler<TMessage> handler) where TMessage : IMessage;
+
+        /// <summary>
+        /// メッセージハンドラーを登録解除
+        /// </summary>
+        void UnregisterHandler<TMessage>(IMessageHandler<TMessage> handler) where TMessage : IMessage;
+    }
+
+    /// <summary>
     /// 基本メッセージ実装
     /// </summary>
     public abstract class Message : IMessage
@@ -45,21 +73,12 @@ namespace CoreLib.Messaging
         /// <summary>
         /// メッセージID
         /// </summary>
-        public Guid MessageId { get; }
+        public Guid MessageId { get; } = Guid.NewGuid();
 
         /// <summary>
         /// メッセージの作成日時
         /// </summary>
-        public DateTime CreatedAt { get; }
-
-        /// <summary>
-        /// コンストラクタ
-        /// </summary>
-        protected Message()
-        {
-            MessageId = Guid.NewGuid();
-            CreatedAt = DateTime.UtcNow;
-        }
+        public DateTime CreatedAt { get; } = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -85,6 +104,268 @@ namespace CoreLib.Messaging
         void UnregisterHandler<TMessage>(IMessageHandler<TMessage> handler)
             where TMessage : IMessage;
     }
+
+    /// <summary>
+    /// 非同期メッセンジャーの実装
+    /// </summary>
+    public class AsyncMessenger : IAsyncMessenger, IDisposable
+    {
+        private readonly IAppLogger _logger;
+        private readonly ConcurrentDictionary<Type, List<object>> _handlers = new();
+        private readonly ConcurrentDictionary<Type, ConcurrentQueue<object>> _messageQueues = new();
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private readonly Dictionary<Type, Task> _processingTasks = new();
+        private readonly object _syncRoot = new();
+        private bool _isProcessing = false;
+        private bool _disposed = false;
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
+        public AsyncMessenger(IAppLogger logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// メッセージハンドラーを登録
+        /// </summary>
+        public void RegisterHandler<TMessage>(IMessageHandler<TMessage> handler) where TMessage : IMessage
+        {
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            var messageType = typeof(TMessage);
+
+            lock (_syncRoot)
+            {
+                if (!_handlers.TryGetValue(messageType, out var handlers))
+                {
+                    handlers = new List<object>();
+                    _handlers[messageType] = handlers;
+                }
+
+                if (!handlers.Contains(handler))
+                {
+                    handlers.Add(handler);
+                    _logger.LogDebug($"メッセージハンドラーを登録: {handler.GetType().Name} for {messageType.Name}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// メッセージハンドラーを登録解除
+        /// </summary>
+        public void UnregisterHandler<TMessage>(IMessageHandler<TMessage> handler) where TMessage : IMessage
+        {
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            var messageType = typeof(TMessage);
+
+            lock (_syncRoot)
+            {
+                if (_handlers.TryGetValue(messageType, out var handlers))
+                {
+                    if (handlers.Remove(handler))
+                    {
+                        _logger.LogDebug($"メッセージハンドラーの登録を解除: {handler.GetType().Name} for {messageType.Name}");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// メッセージを直接発行する
+        /// </summary>
+        public async Task PublishAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
+            where TMessage : IMessage
+        {
+            if (message == null)
+                throw new ArgumentNullException(nameof(message));
+
+            var messageType = typeof(TMessage);
+            _logger.LogDebug($"メッセージを発行: {messageType.Name}, ID={message.MessageId}");
+
+            if (!_handlers.TryGetValue(messageType, out var handlers) || handlers.Count == 0)
+            {
+                _logger.LogWarning($"メッセージタイプ {messageType.Name} に対するハンドラーが見つかりません");
+                return;
+            }
+
+            var typedHandlers = handlers.Cast<IMessageHandler<TMessage>>().ToList();
+            var tasks = new List<Task>();
+
+            foreach (var handler in typedHandlers)
+            {
+                try
+                {
+                    tasks.Add(handler.HandleAsync(message, cancellationToken));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"メッセージハンドラーの実行時にエラーが発生: {handler.GetType().Name}");
+                }
+            }
+
+            await Task.WhenAll(tasks);
+        }
+
+        /// <summary>
+        /// メッセージをキューに追加し、非同期で処理する
+        /// </summary>
+        public Task EnqueueAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
+            where TMessage : IMessage
+        {
+            if (message == null)
+                throw new ArgumentNullException(nameof(message));
+
+            var messageType = typeof(TMessage);
+
+            // キューの取得または作成
+            var queue = _messageQueues.GetOrAdd(messageType, _ => new ConcurrentQueue<object>());
+
+            // メッセージをキューに追加
+            queue.Enqueue(message);
+            _logger.LogDebug($"メッセージをキューに追加: {messageType.Name}, ID={message.MessageId}, キュー長={queue.Count}");
+
+            // まだ処理が開始されていない場合は、処理を開始
+            EnsureProcessingStarted<TMessage>();
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 特定タイプのメッセージの処理が開始されていることを確認
+        /// </summary>
+        private void EnsureProcessingStarted<TMessage>() where TMessage : IMessage
+        {
+            var messageType = typeof(TMessage);
+
+            lock (_syncRoot)
+            {
+                if (!_isProcessing)
+                {
+                    StartProcessing();
+                }
+
+                if (!_processingTasks.ContainsKey(messageType))
+                {
+                    StartProcessingForType<TMessage>();
+                }
+            }
+        }
+
+        /// <summary>
+        /// メッセージ処理全体を開始
+        /// </summary>
+        private void StartProcessing()
+        {
+            _isProcessing = true;
+            _logger.LogInformation("非同期メッセージ処理を開始");
+        }
+
+        /// <summary>
+        /// 特定タイプのメッセージ処理を開始
+        /// </summary>
+        private void StartProcessingForType<TMessage>() where TMessage : IMessage
+        {
+            var messageType = typeof(TMessage);
+
+            var processingTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await ProcessQueueAsync<TMessage>(_cancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // 正常なキャンセル
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"メッセージキュー処理中にエラーが発生: {messageType.Name}");
+                }
+            });
+
+            _processingTasks[messageType] = processingTask;
+            _logger.LogDebug($"メッセージタイプの処理を開始: {messageType.Name}");
+        }
+
+        /// <summary>
+        /// メッセージキューの処理
+        /// </summary>
+        private async Task ProcessQueueAsync<TMessage>(CancellationToken cancellationToken) where TMessage : IMessage
+        {
+            var messageType = typeof(TMessage);
+
+            if (!_messageQueues.TryGetValue(messageType, out var queue))
+            {
+                _logger.LogWarning($"メッセージタイプ {messageType.Name} のキューが見つかりません");
+                return;
+            }
+
+            while (!cancellationToken.IsCancellationRequested && _isProcessing)
+            {
+                if (queue.TryDequeue(out var messageObj) && messageObj is TMessage message)
+                {
+                    try
+                    {
+                        await PublishAsync(message, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"メッセージの処理中にエラーが発生: {messageType.Name}, ID={message.MessageId}");
+                    }
+                }
+                else
+                {
+                    // キューが空の場合は少し待機
+                    await Task.Delay(100, cancellationToken);
+                }
+            }
+        }
+
+        /// <summary>
+        /// メッセージ処理を停止
+        /// </summary>
+        public void StopProcessing()
+        {
+            lock (_syncRoot)
+            {
+                if (!_isProcessing)
+                    return;
+
+                _isProcessing = false;
+                _logger.LogInformation("非同期メッセージ処理を停止");
+            }
+        }
+
+        /// <summary>
+        /// リソースの破棄
+        /// </summary>
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            StopProcessing();
+
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
+
+            // すべての処理タスクの完了を待機
+            Task.WhenAll(_processingTasks.Values).Wait(TimeSpan.FromSeconds(5));
+
+            _processingTasks.Clear();
+            _messageQueues.Clear();
+            _handlers.Clear();
+
+            _logger.LogInformation("非同期メッセンジャーを破棄");
+        }
+    }
+
 
     /// <summary>
     /// サービスバスの実装

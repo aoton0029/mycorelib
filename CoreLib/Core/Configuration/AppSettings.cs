@@ -1,173 +1,177 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace CoreLib.Core.Configuration
 {
     /// <summary>
-    /// 拡張されたアプリケーション設定
+    /// 設定クラスの基底クラス
     /// </summary>
-    public class AppSettings
+    public abstract class AppSettings : IValidatable
     {
-        public string ApplicationName { get; set; } = string.Empty;
+        /// <summary>
+        /// バージョン情報
+        /// </summary>
+        public string Version { get; set; } = "1.0";
+
+        /// <summary>
+        /// 環境名
+        /// </summary>
         public string Environment { get; set; } = "Development";
-        public string Version { get; set; } = "1.0.0";
-        public bool EnabledCache { get; set; } = true;
-        public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(30);
-        public int RetryCount { get; set; } = 3;
-        public LogSettings LogSettings { get; set; } = new();
-        public DatabaseSettings DatabaseSettings { get; set; } = new();
-        public SecuritySettings SecuritySettings { get; set; } = new();
-        public NotificationSettings NotificationSettings { get; set; } = new();
-        public Dictionary<string, string> CustomSettings { get; set; } = new();
 
-        public bool IsDevelopment => Environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
-        public bool IsProduction => Environment.Equals("Production", StringComparison.OrdinalIgnoreCase);
-        public bool IsStaging => Environment.Equals("Staging", StringComparison.OrdinalIgnoreCase);
+        /// <summary>
+        /// 最終更新日時
+        /// </summary>
+        public DateTime? LastUpdated { get; set; }
+
+        /// <summary>
+        /// 設定を検証
+        /// </summary>
+        public virtual ValidationResult Validate()
+        {
+            // 基本検証ロジック
+            var result = new ValidationResult();
+
+            // データアノテーション属性を使用した検証
+            foreach (var property in GetType().GetProperties())
+            {
+                var validationAttributes = property.GetCustomAttributes<ValidationAttribute>(true);
+                foreach (var attribute in validationAttributes)
+                {
+                    var value = property.GetValue(this);
+                    var context = new ValidationContext(this) { MemberName = property.Name };
+
+                    try
+                    {
+                        if (!attribute.IsValid(value))
+                        {
+                            result.AddError(
+                                attribute.FormatErrorMessage(property.Name),
+                                property.Name,
+                                attribute.GetType().Name);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        result.AddError(
+                            $"検証中にエラーが発生しました: {ex.Message}",
+                            property.Name,
+                            "ValidationError");
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 設定が有効かどうかを検証（例外をスロー）
+        /// </summary>
+        public void ValidateAndThrow()
+        {
+            var result = Validate();
+            result.ThrowIfInvalid();
+        }
+
+        /// <summary>
+        /// カスタム検証ロジックを追加
+        /// </summary>
+        /// <param name="value">検証する値</param>
+        /// <param name="propertyName">プロパティ名</param>
+        /// <param name="errorMessage">エラーメッセージ</param>
+        /// <param name="errorCode">エラーコード</param>
+        /// <returns>検証結果</returns>
+        protected ValidationResult ValidateProperty(
+            bool isValid,
+            string propertyName,
+            string errorMessage,
+            string errorCode = "ValidationError")
+        {
+            var result = new ValidationResult();
+
+            if (!isValid)
+            {
+                result.AddError(errorMessage, propertyName, errorCode);
+            }
+
+            return result;
+        }
     }
 
     /// <summary>
-    /// 拡張されたログ設定
+    /// アプリケーション全般の設定クラス
     /// </summary>
-    public class LogSettings
+    public class ApplicationSettings : AppSettings
     {
-        public string LogLevel { get; set; } = "Information";
-        public bool EnableConsoleLogging { get; set; } = true;
-        public bool EnableFileLogging { get; set; } = false;
-        public string LogFilePath { get; set; } = "logs/app.log";
-        public int RetainedFileCountLimit { get; set; } = 31;
-        public long FileSizeLimitBytes { get; set; } = 10 * 1024 * 1024; // 10MB
-        public bool IncludeScopes { get; set; } = true;
-        public bool UseUtcTimestamp { get; set; } = true;
+        /// <summary>
+        /// アプリケーション名
+        /// </summary>
+        [Required(ErrorMessage = "アプリケーション名は必須です")]
+        public string ApplicationName { get; set; } = "CoreLibアプリケーション";
+
+        /// <summary>
+        /// 会社名
+        /// </summary>
+        public string CompanyName { get; set; } = "";
+
+        /// <summary>
+        /// 管理者メールアドレス
+        /// </summary>
+        [EmailAddress(ErrorMessage = "有効なメールアドレスを入力してください")]
+        public string AdminEmail { get; set; } = "";
+
+        /// <summary>
+        /// セッションタイムアウト（分）
+        /// </summary>
+        [Range(5, 1440, ErrorMessage = "セッションタイムアウトは5～1440分の範囲で指定してください")]
+        public int SessionTimeoutMinutes { get; set; } = 30;
+
+        /// <summary>
+        /// デバッグモードの有効化
+        /// </summary>
+        public bool EnableDebugMode { get; set; } = false;
+
+        /// <summary>
+        /// 接続文字列
+        /// </summary>
+        public ConnectionStrings ConnectionStrings { get; set; } = new ConnectionStrings();
+
+        /// <summary>
+        /// 機能フラグ
+        /// </summary>
+        public FeatureFlags FeatureFlags { get; set; } = new FeatureFlags();
+
+        /// <summary>
+        /// 設定を検証
+        /// </summary>
+        public override ValidationResult Validate()
+        {
+            // 基本検証
+            var result = base.Validate();
+
+            // ConnectionStringsの検証
+            if (ConnectionStrings != null)
+            {
+                var connectionStringsResult = ConnectionStrings.Validate();
+                result.AddErrors(connectionStringsResult);
+            }
+
+            // カスタム検証
+            if (EnableDebugMode && Environment != "Development")
+            {
+                result.AddError(
+                    "本番環境ではデバッグモードを有効にすることはできません",
+                    nameof(EnableDebugMode),
+                    "InvalidDebugMode");
+            }
+
+            return result;
+        }
     }
 
-    /// <summary>
-    /// データベース設定
-    /// </summary>
-    public class DatabaseSettings
-    {
-        public string ConnectionString { get; set; } = string.Empty;
-        public string ProviderName { get; set; } = "SqlServer";
-        public int CommandTimeout { get; set; } = 30;
-        public bool EnableDetailedErrors { get; set; } = false;
-        public bool EnableSensitiveDataLogging { get; set; } = false;
-        public int MaxRetryCount { get; set; } = 3;
-        public int MaxRetryDelay { get; set; } = 30;
-        public bool EnableAutoMigration { get; set; } = false;
-    }
-
-    /// <summary>
-    /// セキュリティ設定
-    /// </summary>
-    public class SecuritySettings
-    {
-        public JwtSettings JwtSettings { get; set; } = new();
-        public PasswordSettings PasswordSettings { get; set; } = new();
-        public CorsSettings CorsSettings { get; set; } = new();
-        public bool RequireHttps { get; set; } = true;
-        public bool EnableXssProtection { get; set; } = true;
-        public bool EnableCsrfProtection { get; set; } = true;
-    }
-
-    /// <summary>
-    /// JWT設定
-    /// </summary>
-    public class JwtSettings
-    {
-        public string SecretKey { get; set; } = string.Empty;
-        public string Issuer { get; set; } = string.Empty;
-        public string Audience { get; set; } = string.Empty;
-        public int ExpiryMinutes { get; set; } = 60;
-        public bool ValidateIssuerSigningKey { get; set; } = true;
-        public bool ValidateIssuer { get; set; } = true;
-        public bool ValidateAudience { get; set; } = true;
-        public bool ValidateLifetime { get; set; } = true;
-        public int ClockSkewMinutes { get; set; } = 5;
-    }
-
-    /// <summary>
-    /// パスワード設定
-    /// </summary>
-    public class PasswordSettings
-    {
-        public int RequiredLength { get; set; } = 8;
-        public bool RequireDigit { get; set; } = true;
-        public bool RequireLowercase { get; set; } = true;
-        public bool RequireUppercase { get; set; } = true;
-        public bool RequireNonAlphanumeric { get; set; } = true;
-        public int RequiredUniqueChars { get; set; } = 4;
-        public int MaxFailedAttempts { get; set; } = 5;
-        public int LockoutMinutes { get; set; } = 30;
-        public int PasswordExpiryDays { get; set; } = 90;
-    }
-
-    /// <summary>
-    /// CORS設定
-    /// </summary>
-    public class CorsSettings
-    {
-        public bool AllowAnyOrigin { get; set; } = false;
-        public string[] AllowedOrigins { get; set; } = Array.Empty<string>();
-        public bool AllowAnyMethod { get; set; } = false;
-        public string[] AllowedMethods { get; set; } = Array.Empty<string>();
-        public bool AllowAnyHeader { get; set; } = false;
-        public string[] AllowedHeaders { get; set; } = Array.Empty<string>();
-        public bool AllowCredentials { get; set; } = false;
-        public int PreflightMaxAgeSeconds { get; set; } = 600;
-    }
-
-    /// <summary>
-    /// 通知設定
-    /// </summary>
-    public class NotificationSettings
-    {
-        public EmailSettings EmailSettings { get; set; } = new();
-        public SmsSettings SmsSettings { get; set; } = new();
-        public PushNotificationSettings PushNotificationSettings { get; set; } = new();
-        public bool EnableBackgroundService { get; set; } = true;
-        public int ProcessingIntervalSeconds { get; set; } = 60;
-        public int MaxRetryCount { get; set; } = 3;
-    }
-
-    /// <summary>
-    /// メール設定
-    /// </summary>
-    public class EmailSettings
-    {
-        public string SmtpServer { get; set; } = string.Empty;
-        public int Port { get; set; } = 25;
-        public bool EnableSsl { get; set; } = true;
-        public string Username { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-        public string FromEmail { get; set; } = string.Empty;
-        public string FromName { get; set; } = string.Empty;
-        public int ConnectionTimeout { get; set; } = 10;
-        public bool UseDefaultCredentials { get; set; } = false;
-    }
-
-    /// <summary>
-    /// SMS設定
-    /// </summary>
-    public class SmsSettings
-    {
-        public string Provider { get; set; } = string.Empty;
-        public string ApiKey { get; set; } = string.Empty;
-        public string ApiSecret { get; set; } = string.Empty;
-        public string FromNumber { get; set; } = string.Empty;
-        public int Timeout { get; set; } = 10;
-    }
-
-    /// <summary>
-    /// プッシュ通知設定
-    /// </summary>
-    public class PushNotificationSettings
-    {
-        public string Provider { get; set; } = string.Empty;
-        public string ApiKey { get; set; } = string.Empty;
-        public string AppId { get; set; } = string.Empty;
-        public bool SandboxMode { get; set; } = false;
-    }
 
 }
