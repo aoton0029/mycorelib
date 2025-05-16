@@ -12,7 +12,7 @@ namespace CoreLibWinforms.Forms
 {
     public partial class FormLoading : Form
     {
-        private readonly CancellationTokenSource _cts;
+        internal readonly CancellationTokenSource _cts;
 
         public FormLoading(string msg, bool aCanCancel, CancellationTokenSource cts = null)
         {

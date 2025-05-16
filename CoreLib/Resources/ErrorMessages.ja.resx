@@ -1,0 +1,267 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Key" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="NotNullOrWhiteSpace" xml:space="preserve">
+    <value>文字列がnull、空、または空白文字のみであってはなりません。</value>
+  </data>
+  <data name="NotNullOrEmpty" xml:space="preserve">
+    <value>文字列がnullまたは空であってはなりません。</value>
+  </data>
+  <data name="GreaterThan" xml:space="preserve">
+    <value>値は{0}より大きくなければなりません。</value>
+  </data>
+  <data name="LessThan" xml:space="preserve">
+    <value>値は{0}より小さくなければなりません。</value>
+  </data>
+  <data name="Between" xml:space="preserve">
+    <value>値は{0}から{1}の間でなければなりません。</value>
+  </data>
+  <data name="EmailFormat" xml:space="preserve">
+    <value>値は有効なメールアドレスでなければなりません。</value>
+  </data>
+  <data name="FileNotFound" xml:space="preserve">
+    <value>ファイルが存在しません: {0}</value>
+  </data>
+  <data name="FileNotWritable" xml:space="preserve">
+    <value>ファイルに書き込めません: {0}</value>
+  </data>
+  <data name="DirectoryNotFound" xml:space="preserve">
+    <value>ディレクトリが存在しません: {0}</value>
+  </data>
+  <data name="DirectoryNotWritable" xml:space="preserve">
+    <value>ディレクトリに書き込めません: {0}</value>
+  </data>
+  <data name="FileSizeExceeded" xml:space="preserve">
+    <value>ファイルサイズ ({0} バイト) が許容最大サイズ {1} バイト ({2}) を超えています</value>
+  </data>
+  <data name="StreamSizeExceeded" xml:space="preserve">
+    <value>ストリームサイズ ({0} バイト) が許容最大サイズ {1} バイト ({2}) を超えています</value>
+  </data>
+  <data name="DataSizeExceeded" xml:space="preserve">
+    <value>データサイズ ({0} バイト) が許容最大サイズ {1} バイト ({2}) を超えています</value>
+  </data>
+  <data name="CollectionSizeExceeded" xml:space="preserve">
+    <value>コレクションサイズ ({0} 項目) が許容最大数 {1} 項目を超えています</value>
+  </data>
+  <data name="StringLengthExceeded" xml:space="preserve">
+    <value>文字列長 ({0} 文字) が許容最大長 {1} 文字を超えています</value>
+  </data>
+  <data name="FileExtensionNotAllowed" xml:space="preserve">
+    <value>ファイル拡張子 '{0}' は許可されていません。許可されている拡張子: {1}</value>
+  </data>
+  <data name="FileExtensionBlocked" xml:space="preserve">
+    <value>ファイル拡張子 '{0}' はブロックされています。ブロックされている拡張子: {1}</value>
+  </data>
+  <data name="InvalidFileName" xml:space="preserve">
+    <value>ファイル名 '{0}' に無効な文字が含まれています。無効な文字: {1}</value>
+  </data>
+  <data name="InvalidPath" xml:space="preserve">
+    <value>パス '{0}' に無効な文字が含まれています。無効な文字: {1}</value>
+  </data>
+  <data name="StreamNotReadable" xml:space="preserve">
+    <value>ストリームは読み取り可能ではありません</value>
+  </data>
+  <data name="StreamNotWritable" xml:space="preserve">
+    <value>ストリームは書き込み可能ではありません</value>
+  </data>
+  <data name="ProcessExited" xml:space="preserve">
+    <value>プロセスID {0} はすでに終了しています。</value>
+  </data>
+  <data name="ProcessNotFound" xml:space="preserve">
+    <value>プロセスID {0} が見つかりません。</value>
+  </data>
+  <data name="ProcessAlreadyRunning" xml:space="preserve">
+    <value>プロセス '{0}' はすでに実行中です。</value>
+  </data>
+  <data name="ComponentNotInitialized" xml:space="preserve">
+    <value>コンポーネント '{0}' が正しく初期化されていません。</value>
+  </data>
+  <data name="RequiresAdministrator" xml:space="preserve">
+    <value>この操作には管理者権限が必要です。</value>
+  </data>
+  <data name="WindowsVersionRequired" xml:space="preserve">
+    <value>この機能にはWindows バージョン {0} 以降が必要です。現在のバージョン: {1}。</value>
+  </data>
+  <data name="RequiresUIThread" xml:space="preserve">
+    <value>この操作はUIスレッドで実行する必要があります。</value>
+  </data>
+  <data name="NetworkNotAvailable" xml:space="preserve">
+    <value>ネットワーク接続が利用できません。</value>
+  </data>
+  <data name="InvalidPortRange" xml:space="preserve">
+    <value>ポート番号 {0} は有効な範囲(0-65535)外です。</value>
+  </data>
+  <data name="PortInUse" xml:space="preserve">
+    <value> ポート {0} は他のプロセスによって既に使用されています。</value>
+  </data>
+  <data name="PortCheckFailed" xml:space="preserve">
+    <value>ポート {0} の利用可否確認に失敗しました: {1}。</value>
+  </data>
+  <data name="ServiceNotRunning" xml:space="preserve">
+    <value>サービス '{0}' は実行中ではありません。現在のステータス: {1}。</value>
+  </data>
+  <data name="ServiceNotFound" xml:space="preserve">
+    <value>サービス '{0}' がこのコンピュータ上に見つかりません。</value>
+  </data>
+  <data name="InvalidConfiguration" xml:space="preserve">
+    <value> 構成 '{0}' が無効です: {1}。</value>
+  </data>
+  <data name="ObjectDisposed" xml:space="preserve">
+    <value>破棄された '{0}' にアクセスできません。</value>
+  </data>
+  <data name="InvalidMethodCallForState" xml:space="preserve">
+    <value>メソッド '{0}' はステート '{1}' では呼び出せません。</value>
+  </data>
+  <data name="OperationCanceled" xml:space="preserve">
+    <value>操作 '{0}' がキャンセルされました。</value>
+  </data>
+  <data name="CannotCastToType" xml:space="preserve">
+    <value>型 '{0}' のオブジェクトを '{1}' に変換できません。</value>
+  </data>
+  <data name="FeatureNotImplemented" xml:space="preserve">
+    <value>機能 '{0}' はまだ実装されていません。</value>
+  </data>
+  <data name="OperationTimedOut" xml:space="preserve">
+    <value>操作 '{0}' は {1} 秒後にタイムアウトしました。</value>
+  </data>
+  <data name="CrossThreadOperation" xml:space="preserve">
+    <value>オブジェクト '{0}' はスレッド {1} で作成されましたが、スレッド {2} でアクセスされました。</value>
+  </data>
+  <data name="OperationFailed" xml:space="preserve">
+    <value>操作 '{0}' が失敗しました。</value>
+  </data>
+  <data name="TaskNotCompleted" xml:space="preserve">
+    <value>タスク '{0}' はまだ完了していません。</value>
+  </data>
+  <data name="TaskFaulted" xml:space="preserve">
+    <value>タスク '{0}' はエラーで失敗しました: {1}。</value>
+  </data>
+  <data name="TaskCanceled" xml:space="preserve">
+    <value>タスク '{0}' はキャンセルされました。</value>
+  </data>
+  <data name="InvalidLicense" xml:space="preserve">
+    <value>機能 '{0}' のライセンスが無効です。</value>
+  </data>
+  <data name="InvalidObjectState" xml:space="preserve">
+    <value />
+  </data>
+</root>
