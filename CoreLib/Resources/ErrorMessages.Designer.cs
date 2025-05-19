@@ -142,6 +142,402 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Your account has been locked. Please contact administrator. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorAccountLocked {
+            get {
+                return ResourceManager.GetString("ErrorAccountLocked", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Authentication failed. Please check your credentials. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorAuthenticationFailed {
+            get {
+                return ResourceManager.GetString("ErrorAuthenticationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to create backup. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorBackupFailed {
+            get {
+                return ResourceManager.GetString("ErrorBackupFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The certificate is invalid or has expired. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorCertificateInvalid {
+            get {
+                return ResourceManager.GetString("ErrorCertificateInvalid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Communication failure with remote system. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorCommunicationFailure {
+            get {
+                return ResourceManager.GetString("ErrorCommunicationFailure", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to read configuration file. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorConfigReadFailed {
+            get {
+                return ResourceManager.GetString("ErrorConfigReadFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to save configuration. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorConfigWriteFailed {
+            get {
+                return ResourceManager.GetString("ErrorConfigWriteFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The connection was unexpectedly dropped. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorConnectionDropped {
+            get {
+                return ResourceManager.GetString("ErrorConnectionDropped", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data is corrupted and cannot be processed. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataCorrupted {
+            get {
+                return ResourceManager.GetString("ErrorDataCorrupted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data inconsistency detected. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataInconsistent {
+            get {
+                return ResourceManager.GetString("ErrorDataInconsistent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data size exceeds the maximum allowed limit. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataTooLarge {
+            get {
+                return ResourceManager.GetString("ErrorDataTooLarge", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data validation failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataValidationFailed {
+            get {
+                return ResourceManager.GetString("ErrorDataValidationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Device is busy: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDeviceBusy {
+            get {
+                return ResourceManager.GetString("ErrorDeviceBusy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Device not found: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDeviceNotFound {
+            get {
+                return ResourceManager.GetString("ErrorDeviceNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Device is not responding: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDeviceNotResponding {
+            get {
+                return ResourceManager.GetString("ErrorDeviceNotResponding", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required device driver is not installed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDriverNotInstalled {
+            get {
+                return ResourceManager.GetString("ErrorDriverNotInstalled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required environment variable {0} not found or invalid. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorEnvironmentVariable {
+            get {
+                return ResourceManager.GetString("ErrorEnvironmentVariable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required framework not installed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorFrameworkNotInstalled {
+            get {
+                return ResourceManager.GetString("ErrorFrameworkNotInstalled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hardware fault detected: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorHardwareFault {
+            get {
+                return ResourceManager.GetString("ErrorHardwareFault", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The system is experiencing high CPU usage. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorHighCpuUsage {
+            get {
+                return ResourceManager.GetString("ErrorHighCpuUsage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Incompatible version. Required: {0}, Current: {1} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorIncompatibleVersion {
+            get {
+                return ResourceManager.GetString("ErrorIncompatibleVersion", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   You don&apos;t have sufficient rights to perform this action. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInsufficientRights {
+            get {
+                return ResourceManager.GetString("ErrorInsufficientRights", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The configuration is invalid or corrupted. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidConfiguration {
+            get {
+                return ResourceManager.GetString("ErrorInvalidConfiguration", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid operation. This action cannot be performed at this time. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidOperation {
+            get {
+                return ResourceManager.GetString("ErrorInvalidOperation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid setting: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidSetting {
+            get {
+                return ResourceManager.GetString("ErrorInvalidSetting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Low disk space. Only {0} MB available. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorLowDiskSpace {
+            get {
+                return ResourceManager.GetString("ErrorLowDiskSpace", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required data is missing or invalid. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorMissingData {
+            get {
+                return ResourceManager.GetString("ErrorMissingData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Missing dependency: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorMissingDependency {
+            get {
+                return ResourceManager.GetString("ErrorMissingDependency", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   No response from server. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorNoResponse {
+            get {
+                return ResourceManager.GetString("ErrorNoResponse", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Not enough memory to complete this operation. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorOutOfMemory {
+            get {
+                return ResourceManager.GetString("ErrorOutOfMemory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to parse data: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorParsingFailed {
+            get {
+                return ResourceManager.GetString("ErrorParsingFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The process was terminated unexpectedly. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorProcessTerminated {
+            get {
+                return ResourceManager.GetString("ErrorProcessTerminated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Protocol error: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorProtocolError {
+            get {
+                return ResourceManager.GetString("ErrorProtocolError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Recovery operation failed. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorRecoveryFailed {
+            get {
+                return ResourceManager.GetString("ErrorRecoveryFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Unable to access the system registry. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorRegistryAccess {
+            get {
+                return ResourceManager.GetString("ErrorRegistryAccess", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to restore from backup. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorRestoreFailed {
+            get {
+                return ResourceManager.GetString("ErrorRestoreFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Security violation detected. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSecurityViolation {
+            get {
+                return ResourceManager.GetString("ErrorSecurityViolation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   SSL/TLS error: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSSLError {
+            get {
+                return ResourceManager.GetString("ErrorSSLError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The system is currently busy. Please try again later. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSystemBusy {
+            get {
+                return ResourceManager.GetString("ErrorSystemBusy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   System is in an unstable state. Restart recommended. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSystemNotStable {
+            get {
+                return ResourceManager.GetString("ErrorSystemNotStable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   This error requires troubleshooting. See log for details. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorTroubleshootingNeeded {
+            get {
+                return ResourceManager.GetString("ErrorTroubleshootingNeeded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   An unexpected error has occurred. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorUnexpected {
+            get {
+                return ResourceManager.GetString("ErrorUnexpected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Unknown error occurred. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorUnknown {
+            get {
+                return ResourceManager.GetString("ErrorUnknown", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   This operation is not supported on this platform. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorUnsupportedPlatform {
+            get {
+                return ResourceManager.GetString("ErrorUnsupportedPlatform", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Feature &apos;{0}&apos; is not implemented yet. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string FeatureNotImplemented {
@@ -241,15 +637,6 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
-        ///   Object &apos;{0}&apos; is in an invalid state for this operation. に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string InvalidObjectState {
-            get {
-                return ResourceManager.GetString("InvalidObjectState", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Path &apos;{0}&apos; contains invalid characters. Invalid characters include: {1} に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string InvalidPath {
@@ -264,15 +651,6 @@ namespace CoreLib.Resources {
         internal static string InvalidPortRange {
             get {
                 return ResourceManager.GetString("InvalidPortRange", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Value に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string Key {
-            get {
-                return ResourceManager.GetString("Key", resourceCulture);
             }
         }
         

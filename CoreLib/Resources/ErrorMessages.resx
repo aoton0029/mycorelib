@@ -117,9 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Key" xml:space="preserve">
-    <value>Value</value>
-  </data>
   <data name="NotNullOrWhiteSpace" xml:space="preserve">
     <value>String cannot be null or whitespace.</value>
   </data>
@@ -261,7 +258,421 @@
   <data name="InvalidLicense" xml:space="preserve">
     <value> Invalid license for feature '{0}'.</value>
   </data>
-  <data name="InvalidObjectState" xml:space="preserve">
-    <value>Object '{0}' is in an invalid state for this operation.</value>
+  <data name="ErrorUnexpected" xml:space="preserve">
+    <value>An unexpected error has occurred.</value>
   </data>
+  <data name="ErrorInvalidOperation" xml:space="preserve">
+    <value>Invalid operation. This action cannot be performed at this time.</value>
+  </data>
+  <data name="ErrorMissingData" xml:space="preserve">
+    <value>Required data is missing or invalid.</value>
+  </data>
+  <data name="ErrorUnknown" xml:space="preserve">
+    <value>Unknown error occurred.</value>
+  </data>
+  <data name="ErrorProcessTerminated" xml:space="preserve">
+    <value>The process was terminated unexpectedly.</value>
+  </data>
+  <data name="ErrorOutOfMemory" xml:space="preserve">
+    <value>Not enough memory to complete this operation.</value>
+  </data>
+  <data name="ErrorSystemBusy" xml:space="preserve">
+    <value>The system is currently busy. Please try again later.</value>
+  </data>
+  <data name="ErrorHighCpuUsage" xml:space="preserve">
+    <value>The system is experiencing high CPU usage.</value>
+  </data>
+  <data name="ErrorLowDiskSpace" xml:space="preserve">
+    <value>Low disk space. Only {0} MB available.</value>
+  </data>
+  <data name="ErrorInvalidSetting" xml:space="preserve">
+    <value>Invalid setting: {0}</value>
+  </data>
+  <data name="ErrorConfigReadFailed" xml:space="preserve">
+    <value>Failed to read configuration file.</value>
+  </data>
+  <data name="ErrorConfigWriteFailed" xml:space="preserve">
+    <value>Failed to save configuration.</value>
+  </data>
+  <data name="ErrorRegistryAccess" xml:space="preserve">
+    <value>Unable to access the system registry.</value>
+  </data>
+  <data name="ErrorInvalidConfiguration" xml:space="preserve">
+    <value>The configuration is invalid or corrupted.</value>
+  </data>
+  <data name="ErrorDataCorrupted" xml:space="preserve">
+    <value>Data is corrupted and cannot be processed.</value>
+  </data>
+  <data name="ErrorDataTooLarge" xml:space="preserve">
+    <value>Data size exceeds the maximum allowed limit.</value>
+  </data>
+  <data name="ErrorParsingFailed" xml:space="preserve">
+    <value>Failed to parse data: {0}</value>
+  </data>
+  <data name="ErrorDataInconsistent" xml:space="preserve">
+    <value>Data inconsistency detected.</value>
+  </data>
+  <data name="ErrorDataValidationFailed" xml:space="preserve">
+    <value>Data validation failed: {0}</value>
+  </data>
+  <data name="ErrorAuthenticationFailed" xml:space="preserve">
+    <value>Authentication failed. Please check your credentials.</value>
+  </data>
+  <data name="ErrorInsufficientRights" xml:space="preserve">
+    <value>You don't have sufficient rights to perform this action.</value>
+  </data>
+  <data name="ErrorSecurityViolation" xml:space="preserve">
+    <value>Security violation detected.</value>
+  </data>
+  <data name="ErrorCertificateInvalid" xml:space="preserve">
+    <value>The certificate is invalid or has expired.</value>
+  </data>
+  <data name="ErrorAccountLocked" xml:space="preserve">
+    <value>Your account has been locked. Please contact administrator.</value>
+  </data>
+  <data name="ErrorCommunicationFailure" xml:space="preserve">
+    <value>Communication failure with remote system.</value>
+  </data>
+  <data name="ErrorConnectionDropped" xml:space="preserve">
+    <value>The connection was unexpectedly dropped.</value>
+  </data>
+  <data name="ErrorNoResponse" xml:space="preserve">
+    <value>No response from server.</value>
+  </data>
+  <data name="ErrorProtocolError" xml:space="preserve">
+    <value>Protocol error: {0}</value>
+  </data>
+  <data name="ErrorSSLError" xml:space="preserve">
+    <value>SSL/TLS error: {0}</value>
+  </data>
+  <data name="ErrorDeviceNotFound" xml:space="preserve">
+    <value>Device not found: {0}</value>
+  </data>
+  <data name="ErrorDeviceBusy" xml:space="preserve">
+    <value>Device is busy: {0}</value>
+  </data>
+  <data name="ErrorDeviceNotResponding" xml:space="preserve">
+    <value>Device is not responding: {0}</value>
+  </data>
+  <data name="ErrorHardwareFault" xml:space="preserve">
+    <value>Hardware fault detected: {0}</value>
+  </data>
+  <data name="ErrorDriverNotInstalled" xml:space="preserve">
+    <value>Required device driver is not installed: {0}</value>
+  </data>
+  <data name="ErrorRecoveryFailed" xml:space="preserve">
+    <value>Recovery operation failed.</value>
+  </data>
+  <data name="ErrorBackupFailed" xml:space="preserve">
+    <value>Failed to create backup.</value>
+  </data>
+  <data name="ErrorRestoreFailed" xml:space="preserve">
+    <value>Failed to restore from backup.</value>
+  </data>
+  <data name="ErrorSystemNotStable" xml:space="preserve">
+    <value>System is in an unstable state. Restart recommended.</value>
+  </data>
+  <data name="ErrorTroubleshootingNeeded" xml:space="preserve">
+    <value>This error requires troubleshooting. See log for details.</value>
+  </data>
+  <data name="ErrorUnsupportedPlatform" xml:space="preserve">
+    <value>This operation is not supported on this platform.</value>
+  </data>
+  <data name="ErrorIncompatibleVersion" xml:space="preserve">
+    <value>Incompatible version. Required: {0}, Current: {1}</value>
+  </data>
+  <data name="ErrorEnvironmentVariable" xml:space="preserve">
+    <value>Required environment variable {0} not found or invalid.</value>
+  </data>
+  <data name="ErrorMissingDependency" xml:space="preserve">
+    <value>Missing dependency: {0}</value>
+  </data>
+  <data name="ErrorFrameworkNotInstalled" xml:space="preserve">
+    <value>Required framework not installed: {0}</value>
+  </data>
+  <!-- .NET 8 Specific System Error Messages -->
+<data name="ErrorInvalidGCOperation" xml:space="preserve">
+  <value>Invalid garbage collection operation. The operation might interfere with the runtime.</value>
+</data>
+<data name="ErrorNativeAOTCompilation" xml:space="preserve">
+  <value>Native AOT compilation error: {0}</value>
+</data>
+<data name="ErrorMissingRuntimePack" xml:space="preserve">
+  <value>Missing runtime pack for target framework '{0}'.</value>
+</data>
+<data name="ErrorSourceGeneratorFailed" xml:space="preserve">
+  <value>Source generator failed: {0}</value>
+</data>
+<data name="ErrorInvalidSpanOperation" xml:space="preserve">
+  <value>Invalid Span operation. The operation might cause access violation.</value>
+</data>
+<data name="ErrorThreadPoolStarvation" xml:space="preserve">
+  <value>Thread pool starvation detected. Consider adjusting thread pool settings.</value>
+</data>
+
+<!-- Extended System Error Messages -->
+<data name="ErrorDomainUnreachable" xml:space="preserve">
+  <value>Domain '{0}' is unreachable. DNS resolution failed.</value>
+</data>
+<data name="ErrorTaskSchedulerException" xml:space="preserve">
+  <value>Task scheduler encountered an error: {0}</value>
+</data>
+<data name="ErrorProcessMemoryLeak" xml:space="preserve">
+  <value>Memory leak detected in process. Available memory decreasing over time.</value>
+</data>
+<data name="ErrorVirtualMachineLimit" xml:space="preserve">
+  <value>Virtual machine resource limit reached: {0}</value>
+</data>
+<data name="ErrorContainerLimit" xml:space="preserve">
+  <value>Container resource limit reached: {0}</value>
+</data>
+<data name="ErrorSystemClock" xml:space="preserve">
+  <value>System clock error detected. Current time may be inaccurate.</value>
+</data>
+<data name="ErrorResourceLimitReached" xml:space="preserve">
+  <value>System resource limit reached for: {0}. Current usage: {1}, Limit: {2}</value>
+</data>
+<data name="ErrorFileSystemReadOnly" xml:space="preserve">
+  <value>File system is in read-only mode. Write operations are disabled.</value>
+</data>
+<data name="ErrorNetworkInterfaceDown" xml:space="preserve">
+  <value>Network interface '{0}' is down or disconnected.</value>
+</data>
+<data name="ErrorProcessorThermalThrottle" xml:space="preserve">
+  <value>Processor thermal throttling detected. Performance may be degraded.</value>
+</data>
+<data name="ErrorInvalidHardwareAcceleration" xml:space="preserve">
+  <value>Hardware acceleration is not available or failed to initialize: {0}</value>
+</data>
+<data name="ErrorFileSystemQuota" xml:space="preserve">
+  <value>File system quota exceeded. Available space: {0}</value>
+</data>
+<data name="ErrorDatabaseConnectionPool" xml:space="preserve">
+  <value>Database connection pool limit reached. Current connections: {0}, Maximum: {1}</value>
+</data>
+<data name="ErrorSystemUpdateRequired" xml:space="preserve">
+  <value>System update required to run this application. Minimum required: {0}</value>
+</data>
+<data name="ErrorInvalidSystemState" xml:space="preserve">
+  <value>System is in an invalid state: {0}</value>
+</data>
+<data name="ErrorThreadDeadlock" xml:space="preserve">
+  <value>Thread deadlock detected between threads: {0}</value>
+</data>
+<data name="ErrorKernelModuleNotLoaded" xml:space="preserve">
+  <value>Required kernel module '{0}' is not loaded.</value>
+</data>
+<data name="ErrorI18NSupport" xml:space="preserve">
+  <value>Internationalization support for locale '{0}' is not installed.</value>
+</data>
+<data name="ErrorSystemMaintenance" xml:space="preserve">
+  <value>System is currently in maintenance mode until {0}.</value>
+</data>
+<data name="ErrorClockSkew" xml:space="preserve">
+  <value>Clock skew detected. Local time differs from server time by {0} seconds.</value>
+</data>
+<data name="ErrorDomainTrustFailure" xml:space="preserve">
+  <value>Domain trust relationship failure between '{0}' and '{1}'.</value>
+</data>
+<data name="ErrorSystemCallFailure" xml:space="preserve">
+  <value>System call '{0}' failed with error code: {1}</value>
+</data>
+<data name="ErrorMaximumSessionsReached" xml:space="preserve">
+  <value>Maximum number of concurrent sessions reached.</value>
+</data>
+<data name="ErrorNetworkPacketLoss" xml:space="preserve">
+  <value>Significant network packet loss detected: {0}%</value>
+</data>
+<data name="ErrorAPIDeprecated" xml:space="preserve">
+  <value>API '{0}' is deprecated and will be removed in future versions. Use '{1}' instead.</value>
+</data>
+<data name="ErrorAPIRateLimit" xml:space="preserve">
+  <value>API rate limit exceeded. Maximum rate: {0} requests per {1}.</value>
+</data>
+<!-- Data Processing Errors -->
+<data name="ErrorInvalidJson" xml:space="preserve">
+  <value>Invalid JSON format at position {0}: {1}</value>
+</data>
+<data name="ErrorInvalidXml" xml:space="preserve">
+  <value>Invalid XML format: {0}</value>
+</data>
+<data name="ErrorJsonPropertyMissing" xml:space="preserve">
+  <value>Required JSON property '{0}' is missing.</value>
+</data>
+<data name="ErrorXmlElementMissing" xml:space="preserve">
+  <value>Required XML element '{0}' is missing.</value>
+</data>
+<data name="ErrorDataConversionFailed" xml:space="preserve">
+  <value>Failed to convert data from '{0}' to '{1}': {2}</value>
+</data>
+<data name="ErrorDataTypeNotSupported" xml:space="preserve">
+  <value>Data type '{0}' is not supported for this operation.</value>
+</data>
+<data name="ErrorJsonSerializationFailed" xml:space="preserve">
+  <value>JSON serialization failed: {0}</value>
+</data>
+<data name="ErrorJsonDeserializationFailed" xml:space="preserve">
+  <value>JSON deserialization failed: {0}</value>
+</data>
+<data name="ErrorXmlSerializationFailed" xml:space="preserve">
+  <value>XML serialization failed: {0}</value>
+</data>
+<data name="ErrorXmlDeserializationFailed" xml:space="preserve">
+  <value>XML deserialization failed: {0}</value>
+</data>
+<data name="ErrorCSVParsingFailed" xml:space="preserve">
+  <value>CSV parsing failed at line {0}: {1}</value>
+</data>
+<data name="ErrorDataBindingFailed" xml:space="preserve">
+  <value>Data binding failed for property '{0}': {1}</value>
+</data>
+<data name="ErrorDataBindingSourceInvalid" xml:space="preserve">
+  <value>Data binding source is invalid or not supported.</value>
+</data>
+<data name="ErrorDatatableSchemaViolation" xml:space="preserve">
+  <value>DataTable schema violation: {0}</value>
+</data>
+<data name="ErrorDatasetRelationViolation" xml:space="preserve">
+  <value>Dataset relation constraint violation: {0}</value>
+</data>
+<data name="ErrorUnsupportedEncoding" xml:space="preserve">
+  <value>Encoding '{0}' is not supported.</value>
+</data>
+<data name="ErrorCharacterEncodingDetectionFailed" xml:space="preserve">
+  <value>Failed to detect character encoding for the data.</value>
+</data>
+<data name="ErrorRecordValidationFailed" xml:space="preserve">
+  <value>Record validation failed: {0}</value>
+</data>
+<data name="ErrorBulkInsertFailed" xml:space="preserve">
+  <value>Bulk insert operation failed: {0}</value>
+</data>
+<data name="ErrorBulkUpdateFailed" xml:space="preserve">
+  <value>Bulk update operation failed: {0}</value>
+</data>
+<data name="ErrorDataSyncConflict" xml:space="preserve">
+  <value>Data synchronization conflict detected: {0}</value>
+</data>
+<data name="ErrorDataIntegrityViolation" xml:space="preserve">
+  <value>Data integrity violation: {0}</value>
+</data>
+<data name="ErrorDataSourceTimeout" xml:space="preserve">
+  <value>Data source connection timeout after {0} seconds.</value>
+</data>
+
+<!-- .NET 8 Specific Data Processing Errors -->
+<data name="ErrorSourceGeneratorDataContextFailed" xml:space="preserve">
+  <value>Source-generated data context failed to initialize: {0}</value>
+</data>
+<data name="ErrorJsonSourceGenerationFailed" xml:space="preserve">
+  <value>JSON source generation failed: {0}</value>
+</data>
+<data name="ErrorAotSerializationNotSupported" xml:space="preserve">
+  <value>Type '{0}' is not supported for AOT serialization.</value>
+</data>
+<data name="ErrorJsonPolymorphicTypeFailed" xml:space="preserve">
+  <value>JSON polymorphic type resolution failed. Type discriminator '{0}' is invalid.</value>
+</data>
+<data name="ErrorJsonNodeTypeIncorrect" xml:space="preserve">
+  <value>JsonNode type mismatch. Expected: '{0}', Actual: '{1}'.</value>
+</data>
+<data name="ErrorDateOnlyOverflow" xml:space="preserve">
+  <value>DateOnly value '{0}' is outside the supported range.</value>
+</data>
+<data name="ErrorTimeOnlyOverflow" xml:space="preserve">
+  <value>TimeOnly value '{0}' is outside the supported range.</value>
+</data>
+<data name="ErrorUtf8EncodingOverflow" xml:space="preserve">
+  <value>UTF-8 encoding operation exceeded buffer size of {0} bytes.</value>
+</data>
+<data name="ErrorInvalidUtf8Sequence" xml:space="preserve">
+  <value>Invalid UTF-8 sequence detected at position {0}.</value>
+</data>
+
+<!-- High-Performance Data Processing Errors -->
+<data name="ErrorMemoryBufferTooSmall" xml:space="preserve">
+  <value>Memory buffer is too small for the data processing operation. Required: {0} bytes, Available: {1} bytes.</value>
+</data>
+<data name="ErrorParallelDataProcessingFailed" xml:space="preserve">
+  <value>Parallel data processing failed with {0} tasks failed out of {1}.</value>
+</data>
+<data name="ErrorDataStreamCompression" xml:space="preserve">
+  <value>Data stream compression failed: {0}</value>
+</data>
+<data name="ErrorDataStreamDecompression" xml:space="preserve">
+  <value>Data stream decompression failed: {0}</value>
+</data>
+<data name="ErrorRecordBatchProcessingFailed" xml:space="preserve">
+  <value>Record batch processing failed at batch {0}: {1}</value>
+</data>
+<data name="ErrorInvalidDataFormat" xml:space="preserve">
+  <value>Data format '{0}' is invalid or not recognized.</value>
+</data>
+<data name="ErrorDataStructureMismatch" xml:space="preserve">
+  <value>Data structure mismatch. Expected structure: '{0}', Actual: '{1}'.</value>
+</data>
+<data name="ErrorDataDependencyCycle" xml:space="preserve">
+  <value>Dependency cycle detected in data processing pipeline: {0}.</value>
+</data>
+<data name="ErrorInvalidDataSegment" xml:space="preserve">
+  <value>Invalid data segment at offset {0}: {1}.</value>
+</data>
+<data name="ErrorDataCacheMiss" xml:space="preserve">
+  <value>Data cache miss for key '{0}'. Object may have been evicted or expired.</value>
+</data>
+
+<!-- Schema & Model Validation Errors -->
+<data name="ErrorJsonSchemaMismatch" xml:space="preserve">
+  <value>JSON schema validation error: {0}</value>
+</data>
+<data name="ErrorXmlSchemaMismatch" xml:space="preserve">
+  <value>XML schema validation error: {0}</value>
+</data>
+<data name="ErrorModelValidationFailed" xml:space="preserve">
+  <value>Model validation failed with {0} error(s).</value>
+</data>
+<data name="ErrorRequiredFieldMissing" xml:space="preserve">
+  <value>Required field '{0}' is missing or empty.</value>
+</data>
+<data name="ErrorFieldTypeMismatch" xml:space="preserve">
+  <value>Field '{0}' has incorrect type. Expected: {1}, Actual: {2}.</value>
+</data>
+<data name="ErrorEnumValueInvalid" xml:space="preserve">
+  <value>Value '{0}' is not a valid option for '{1}'. Valid options are: {2}.</value>
+</data>
+<data name="ErrorReferentialIntegrityViolation" xml:space="preserve">
+  <value>Referential integrity violation. {0} references {1} which does not exist.</value>
+</data>
+<data name="ErrorDataConstraintViolation" xml:space="preserve">
+  <value>Data constraint violation: {0}</value>
+</data>
+<data name="ErrorPatternMatchingFailed" xml:space="preserve">
+  <value>Pattern matching failed. Value '{0}' does not match pattern '{1}'.</value>
+</data>
+<data name="ErrorValueOutOfRange" xml:space="preserve">
+  <value>Value '{0}' for '{1}' is out of range. Valid range: {2} to {3}.</value>
+</data>
+<data name="ErrorObjectGraphCircularReference" xml:space="preserve">
+  <value>Circular reference detected in object graph at '{0}'.</value>
+</data>
+
+<!-- Data Access Errors -->
+<data name="ErrorDataAccessDenied" xml:space="preserve">
+  <value>Access denied to data resource '{0}'.</value>
+</data>
+<data name="ErrorDataConnectionFailed" xml:space="preserve">
+  <value>Failed to connect to data source: {0}</value>
+</data>
+<data name="ErrorDataCommandFailed" xml:space="preserve">
+  <value>Data command execution failed: {0}</value>
+</data>
+<data name="ErrorDataOptimisticLockingFailed" xml:space="preserve">
+  <value>Optimistic concurrency control failed. The record has been modified since it was last retrieved.</value>
+</data>
+<data name="ErrorDataDeadlock" xml:space="preserve">
+  <value>A deadlock was detected while accessing data. The transaction has been terminated.</value>
+</data>
+<data name="ErrorDataTransactionAborted" xml:space="preserve">
+  <value>Data transaction was aborted: {0}</value>
+</data>
 </root>
