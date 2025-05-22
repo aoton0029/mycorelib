@@ -406,3 +406,391 @@ public void ValidateUser(User user)
 これらのファイルを`CoreLib/Utilities/Validation`ディレクトリに保存してください。必要に応じて既存のバリデーション機能と統合して使用できます。
 
 なお、検索結果が10件に制限されているため、すべての既存ファイルを確認できていない可能性があります。完全な結果を見るには、GitHubリポジトリで直接確認することをお勧めします。
+
+---
+
+I'll help you implement validation in a WinForms DataGridView using INotifyDataErrorInfo, ValidationAttribute, INotifyPropertyChanged, and ErrorProvider to prevent users from leaving cells until validation errors are resolved.
+
+Looking at your repository, I can see you have some validation components already implemented, but we'll need to create a specific implementation for DataGridView validation. Let's create a complete solution:
+
+## Step 1: Create a Model Class with Validation
+
+First, let's create a model class that implements INotifyPropertyChanged and INotifyDataErrorInfo:
+
+```csharp
+using CoreLib.Utilities.Validation;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
+
+namespace YourNamespace
+{
+    public class ValidatedItem : INotifyPropertyChanged, INotifyDataErrorInfo
+    {
+        private readonly ValidationErrorProvider _errorProvider = new ValidationErrorProvider();
+        
+        // プロパティの例
+        private string _name;
+        
+        [Required(ErrorMessage = "名前は必須です")]
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "名前は3〜50文字で入力してください")]
+        public string Name
+        {
+            get => _name;
+            set
+            {
+                if (_name != value)
+                {
+                    _name = value;
+                    ValidateProperty(value);
+                    OnPropertyChanged();
+                }
+            }
+        }
+        
+        private int _age;
+        
+        [Range(0, 120, ErrorMessage = "年齢は0〜120の間で入力してください")]
+        public int Age
+        {
+            get => _age;
+            set
+            {
+                if (_age != value)
+                {
+                    _age = value;
+                    ValidateProperty(value);
+                    OnPropertyChanged();
+                }
+            }
+        }
+        
+        // コンストラクタで各プロパティの検証ルールを登録
+        public ValidatedItem()
+        {
+            // ValidationAttributeの登録
+            var nameProperty = GetType().GetProperty(nameof(Name));
+            var ageProperty = GetType().GetProperty(nameof(Age));
+            
+            foreach (var attribute in nameProperty.GetCustomAttributes(typeof(ValidationAttribute), true))
+            {
+                _errorProvider.RegisterValidationRule(nameof(Name), (ValidationAttribute)attribute);
+            }
+            
+            foreach (var attribute in ageProperty.GetCustomAttributes(typeof(ValidationAttribute), true))
+            {
+                _errorProvider.RegisterValidationRule(nameof(Age), (ValidationAttribute)attribute);
+            }
+        }
+
+        // INotifyPropertyChanged実装
+        public event PropertyChangedEventHandler PropertyChanged;
+        
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        
+        // INotifyDataErrorInfo実装
+        public bool HasErrors => _errorProvider.HasErrors;
+        
+        public event EventHandler<DataErrorsChangedEventArgs> ErrorsChanged
+        {
+            add => _errorProvider.ErrorsChanged += value;
+            remove => _errorProvider.ErrorsChanged -= value;
+        }
+        
+        public System.Collections.IEnumerable GetErrors(string propertyName)
+        {
+            return _errorProvider.GetErrors(propertyName);
+        }
+        
+        // プロパティ検証メソッド
+        private void ValidateProperty(object value, [CallerMemberName] string propertyName = null)
+        {
+            _errorProvider.ValidateProperty(value, propertyName);
+        }
+        
+        // 全てのプロパティを検証する
+        public bool Validate()
+        {
+            return _errorProvider.Validate(this);
+        }
+    }
+}
+```
+
+## Step 2: Create a Custom DataGridView with Error Validation
+
+Next, let's create a custom DataGridView control that prevents users from leaving a cell if there's a validation error:
+
+```csharp
+using System;
+using System.ComponentModel;
+using System.Windows.Forms;
+
+namespace YourNamespace
+{
+    public class ValidatingDataGridView : DataGridView
+    {
+        private ErrorProvider _errorProvider;
+        private bool _isCellValidating = false;
+
+        public ValidatingDataGridView()
+        {
+            // ErrorProviderを初期化
+            _errorProvider = new ErrorProvider();
+            _errorProvider.BlinkStyle = ErrorBlinkStyle.NeverBlink;
+            
+            // セル編集後のイベントハンドラを追加
+            CellValidating += ValidatingDataGridView_CellValidating;
+            CellEndEdit += ValidatingDataGridView_CellEndEdit;
+            CellBeginEdit += ValidatingDataGridView_CellBeginEdit;
+        }
+
+        protected virtual void ValidatingDataGridView_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        {
+            // セルの編集開始時にエラー表示をクリア
+            _errorProvider.SetError(this, string.Empty);
+        }
+
+        protected virtual void ValidatingDataGridView_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        {
+            // すでに検証中なら再帰を防止
+            if (_isCellValidating) return;
+            _isCellValidating = true;
+
+            try
+            {
+                // 行インデックスが有効で、データソースが存在する場合
+                if (e.RowIndex >= 0 && DataSource != null)
+                {
+                    var bindingSource = DataSource as BindingSource;
+                    object dataItem = null;
+
+                    // 現在の行のデータ項目を取得
+                    if (bindingSource != null)
+                    {
+                        dataItem = bindingSource[e.RowIndex];
+                    }
+                    else if (DataSource is IList<object> list && e.RowIndex < list.Count)
+                    {
+                        dataItem = list[e.RowIndex];
+                    }
+
+                    // データ項目がINotifyDataErrorInfoを実装している場合
+                    if (dataItem is INotifyDataErrorInfo errorInfo)
+                    {
+                        // 編集中のカラム名を取得
+                        string propertyName = Columns[e.ColumnIndex].DataPropertyName;
+
+                        // 現在の値をセット（型変換を行う）
+                        var prop = dataItem.GetType().GetProperty(propertyName);
+                        if (prop != null)
+                        {
+                            try
+                            {
+                                // 新しい値に変換して仮にセット
+                                object convertedValue = Convert.ChangeType(e.FormattedValue, prop.PropertyType);
+                                prop.SetValue(dataItem, convertedValue);
+                            }
+                            catch (Exception)
+                            {
+                                // 型変換に失敗した場合、エラーを表示してセルから出ないようにする
+                                _errorProvider.SetError(this, "入力値の型が正しくありません");
+                                e.Cancel = true;
+                                return;
+                            }
+
+                            // プロパティに関連するエラーがあるか確認
+                            var errors = errorInfo.GetErrors(propertyName);
+                            
+                            // エラーを列挙して最初のエラーメッセージを取得
+                            string errorMessage = string.Empty;
+                            foreach (object error in errors)
+                            {
+                                errorMessage = error.ToString();
+                                if (!string.IsNullOrEmpty(errorMessage))
+                                    break;
+                            }
+
+                            // エラーがあれば表示し、セルから出ないようにする
+                            if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                _errorProvider.SetError(this, errorMessage);
+                                e.Cancel = true;
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                _isCellValidating = false;
+            }
+        }
+
+        protected virtual void ValidatingDataGridView_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            // セル編集完了時にデータが正常ならエラーをクリア
+            var errorMessage = _errorProvider.GetError(this);
+            if (string.IsNullOrEmpty(errorMessage))
+            {
+                _errorProvider.SetError(this, string.Empty);
+            }
+            
+            // 編集が完了したら、変更された行の表示を更新
+            InvalidateRow(e.RowIndex);
+        }
+    }
+}
+```
+
+## Step 3: Create ObservableCollection and BindingSource
+
+Now, let's create a method to set up the DataGridView with an ObservableCollection data source:
+
+```csharp
+using System.Collections.ObjectModel;
+using System.Windows.Forms;
+
+namespace YourNamespace
+{
+    public static class DataGridViewExtensions
+    {
+        public static BindingSource BindValidatedCollection<T>(this ValidatingDataGridView dataGridView, 
+            ObservableCollection<T> collection) where T : INotifyPropertyChanged, INotifyDataErrorInfo
+        {
+            // BindingSourceを作成
+            var bindingSource = new BindingSource();
+            bindingSource.DataSource = collection;
+            
+            // DataGridViewにBindingSourceをセット
+            dataGridView.DataSource = bindingSource;
+            
+            // 編集モードをプログラムモードに設定（セルから出る時の検証のため）
+            dataGridView.EditMode = DataGridViewEditMode.EditProgrammatically;
+            
+            return bindingSource;
+        }
+    }
+}
+```
+
+## Step 4: Usage Example (Form)
+
+Here's how to use the above components in a form:
+
+```csharp
+using System;
+using System.Collections.ObjectModel;
+using System.Windows.Forms;
+
+namespace YourNamespace
+{
+    public partial class MainForm : Form
+    {
+        private ObservableCollection<ValidatedItem> _items;
+        private ValidatingDataGridView _dataGridView;
+        private BindingSource _bindingSource;
+        
+        public MainForm()
+        {
+            InitializeComponent();
+            SetupDataGridView();
+            LoadData();
+        }
+        
+        private void SetupDataGridView()
+        {
+            _dataGridView = new ValidatingDataGridView();
+            _dataGridView.Dock = DockStyle.Fill;
+            _dataGridView.AllowUserToAddRows = true;
+            _dataGridView.AllowUserToDeleteRows = true;
+            _dataGridView.AutoGenerateColumns = true;
+            
+            // フォームにDataGridViewを追加
+            Controls.Add(_dataGridView);
+        }
+        
+        private void LoadData()
+        {
+            // サンプルデータの作成
+            _items = new ObservableCollection<ValidatedItem>
+            {
+                new ValidatedItem { Name = "テストユーザー1", Age = 30 },
+                new ValidatedItem { Name = "テストユーザー2", Age = 25 },
+                new ValidatedItem { Name = "", Age = 150 }  // エラーあり
+            };
+            
+            // DataGridViewにデータをバインド
+            _bindingSource = _dataGridView.BindValidatedCollection(_items);
+        }
+    }
+}
+```
+
+## Step 5: Enhancements for Better User Experience
+
+Finally, let's add some enhancements to make the user experience better:
+
+```csharp
+// ValidatingDataGridView クラスに追加
+public class ValidatingDataGridView : DataGridView
+{
+    // 既存のコードに追加
+    
+    // セルの背景色をエラー状態によって変更するメソッド
+    protected override void OnCellPainting(DataGridViewCellPaintingEventArgs e)
+    {
+        base.OnCellPainting(e);
+        
+        if (e.RowIndex >= 0 && e.ColumnIndex >= 0 && DataSource != null)
+        {
+            var bindingSource = DataSource as BindingSource;
+            if (bindingSource != null && e.RowIndex < bindingSource.Count)
+            {
+                var dataItem = bindingSource[e.RowIndex];
+                
+                if (dataItem is INotifyDataErrorInfo errorInfo)
+                {
+                    string propertyName = Columns[e.ColumnIndex].DataPropertyName;
+                    var errors = errorInfo.GetErrors(propertyName);
+                    
+                    bool hasErrors = false;
+                    foreach (var error in errors)
+                    {
+                        if (!string.IsNullOrEmpty(error?.ToString()))
+                        {
+                            hasErrors = true;
+                            break;
+                        }
+                    }
+                    
+                    if (hasErrors)
+                    {
+                        // エラーがある場合、背景色を薄い赤色に
+                        e.CellStyle.BackColor = Color.MistyRose;
+                        // ツールチップをセット
+                        var cell = Rows[e.RowIndex].Cells[e.ColumnIndex];
+                        foreach (var error in errors)
+                        {
+                            if (!string.IsNullOrEmpty(error?.ToString()))
+                            {
+                                cell.ToolTipText = error.ToString();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // グリッドの編集を開始するためのメソッドをオーバーライド
+    protected override void OnCellClick(DataGridViewCellEventArgs e)
+    {
+        base.OnCellClick(e);
+        
