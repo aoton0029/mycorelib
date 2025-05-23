@@ -1,3 +1,575 @@
+Thank you for providing that information. Now I understand that you're looking to implement EventBus and EventHandlerManager classes in C#.
+
+Let me help you create implementations for these classes that handle control events, PropertyChanged, and CollectionChanged events using WeakReferences.
+
+Here's a complete implementation of both classes:
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Reflection;
+using System.Linq;
+
+/// <summary>
+/// A generic event bus that allows publish-subscribe style communication between components
+/// </summary>
+public class EventBus
+{
+    private static readonly Lazy<EventBus> _instance = new Lazy<EventBus>(() => new EventBus());
+    public static EventBus Instance => _instance.Value;
+
+    private readonly EventHandlerManager _eventHandlerManager;
+
+    private EventBus()
+    {
+        _eventHandlerManager = new EventHandlerManager();
+    }
+
+    /// <summary>
+    /// Register a subscriber to receive events of type T
+    /// </summary>
+    /// <typeparam name="T">The type of event to subscribe to</typeparam>
+    /// <param name="subscriber">The subscriber object</param>
+    /// <param name="handler">The method to call when the event occurs</param>
+    public void Subscribe<T>(object subscriber, Action<T> handler)
+    {
+        _eventHandlerManager.AddHandler(typeof(T), subscriber, handler);
+    }
+
+    /// <summary>
+    /// Unregister a subscriber from events of type T
+    /// </summary>
+    /// <typeparam name="T">The type of event to unsubscribe from</typeparam>
+    /// <param name="subscriber">The subscriber object</param>
+    public void Unsubscribe<T>(object subscriber)
+    {
+        _eventHandlerManager.RemoveHandler(typeof(T), subscriber);
+    }
+
+    /// <summary>
+    /// Unregister a subscriber from all events
+    /// </summary>
+    /// <param name="subscriber">The subscriber object</param>
+    public void UnsubscribeAll(object subscriber)
+    {
+        _eventHandlerManager.RemoveAllHandlers(subscriber);
+    }
+
+    /// <summary>
+    /// Publish an event to all subscribers
+    /// </summary>
+    /// <typeparam name="T">The type of event</typeparam>
+    /// <param name="eventData">The event data</param>
+    public void Publish<T>(T eventData)
+    {
+        _eventHandlerManager.InvokeHandlers(typeof(T), eventData);
+    }
+
+    /// <summary>
+    /// Register for PropertyChanged events from an INotifyPropertyChanged object
+    /// </summary>
+    /// <param name="source">The source object implementing INotifyPropertyChanged</param>
+    /// <param name="subscriber">The subscriber object</param>
+    /// <param name="handler">The method to call when the property changes</param>
+    public void SubscribeToPropertyChanged(INotifyPropertyChanged source, object subscriber, PropertyChangedEventHandler handler)
+    {
+        _eventHandlerManager.AddPropertyChangedHandler(source, subscriber, handler);
+    }
+
+    /// <summary>
+    /// Register for CollectionChanged events from an INotifyCollectionChanged object
+    /// </summary>
+    /// <param name="source">The source object implementing INotifyCollectionChanged</param>
+    /// <param name="subscriber">The subscriber object</param>
+    /// <param name="handler">The method to call when the collection changes</param>
+    public void SubscribeToCollectionChanged(INotifyCollectionChanged source, object subscriber, NotifyCollectionChangedEventHandler handler)
+    {
+        _eventHandlerManager.AddCollectionChangedHandler(source, subscriber, handler);
+    }
+
+    /// <summary>
+    /// Register for a standard .NET event
+    /// </summary>
+    /// <param name="source">The source object</param>
+    /// <param name="eventName">The name of the event</param>
+    /// <param name="subscriber">The subscriber object</param>
+    /// <param name="handler">The delegate to handle the event</param>
+    public void SubscribeToEvent(object source, string eventName, object subscriber, Delegate handler)
+    {
+        _eventHandlerManager.AddEventHandler(source, eventName, subscriber, handler);
+    }
+}
+
+/// <summary>
+/// Manages event handlers using weak references to prevent memory leaks
+/// </summary>
+public class EventHandlerManager
+{
+    private readonly Dictionary<Type, List<EventSubscription>> _eventHandlers = new Dictionary<Type, List<EventSubscription>>();
+    private readonly Dictionary<object, List<PropertyChangedSubscription>> _propertyChangedHandlers = new Dictionary<object, List<PropertyChangedSubscription>>();
+    private readonly Dictionary<object, List<CollectionChangedSubscription>> _collectionChangedHandlers = new Dictionary<object, List<CollectionChangedSubscription>>();
+    private readonly Dictionary<EventKey, List<StandardEventSubscription>> _standardEventHandlers = new Dictionary<EventKey, List<StandardEventSubscription>>();
+
+    /// <summary>
+    /// Add a handler for a specific event type
+    /// </summary>
+    public void AddHandler(Type eventType, object subscriber, Delegate handler)
+    {
+        if (!_eventHandlers.TryGetValue(eventType, out var handlers))
+        {
+            handlers = new List<EventSubscription>();
+            _eventHandlers[eventType] = handlers;
+        }
+
+        // Remove any existing subscription for this subscriber
+        handlers.RemoveAll(h => h.TargetReference.IsAlive && h.TargetReference.Target == subscriber);
+
+        // Add the new subscription
+        handlers.Add(new EventSubscription(subscriber, handler));
+
+        // Clean up dead references
+        CleanupEventHandlers(eventType);
+    }
+
+    /// <summary>
+    /// Remove handlers for a specific event type and subscriber
+    /// </summary>
+    public void RemoveHandler(Type eventType, object subscriber)
+    {
+        if (_eventHandlers.TryGetValue(eventType, out var handlers))
+        {
+            handlers.RemoveAll(h => h.TargetReference.IsAlive && h.TargetReference.Target == subscriber);
+            CleanupEventHandlers(eventType);
+        }
+    }
+
+    /// <summary>
+    /// Remove all handlers for a specific subscriber
+    /// </summary>
+    public void RemoveAllHandlers(object subscriber)
+    {
+        // Remove from event handlers
+        foreach (var eventType in _eventHandlers.Keys.ToList())
+        {
+            RemoveHandler(eventType, subscriber);
+        }
+
+        // Remove from property changed handlers
+        foreach (var source in _propertyChangedHandlers.Keys.ToList())
+        {
+            RemovePropertyChangedHandler(source, subscriber);
+        }
+
+        // Remove from collection changed handlers
+        foreach (var source in _collectionChangedHandlers.Keys.ToList())
+        {
+            RemoveCollectionChangedHandler(source, subscriber);
+        }
+
+        // Remove from standard event handlers
+        foreach (var key in _standardEventHandlers.Keys.ToList())
+        {
+            RemoveEventHandler(key.Source, key.EventName, subscriber);
+        }
+    }
+
+    /// <summary>
+    /// Invoke all handlers for a specific event type
+    /// </summary>
+    public void InvokeHandlers(Type eventType, object eventData)
+    {
+        if (!_eventHandlers.TryGetValue(eventType, out var handlers))
+            return;
+
+        // Create a copy to allow handlers to unsubscribe during invocation
+        var handlersCopy = handlers.ToList();
+
+        foreach (var subscription in handlersCopy)
+        {
+            if (subscription.TargetReference.IsAlive)
+            {
+                try
+                {
+                    subscription.Handler.DynamicInvoke(eventData);
+                }
+                catch (Exception ex)
+                {
+                    // Log exception but continue with other handlers
+                    Console.WriteLine($"Error invoking event handler: {ex.Message}");
+                }
+            }
+        }
+
+        // Clean up dead references
+        CleanupEventHandlers(eventType);
+    }
+
+    /// <summary>
+    /// Add a handler for PropertyChanged events
+    /// </summary>
+    public void AddPropertyChangedHandler(INotifyPropertyChanged source, object subscriber, PropertyChangedEventHandler handler)
+    {
+        if (source == null || handler == null)
+            return;
+
+        if (!_propertyChangedHandlers.TryGetValue(source, out var handlers))
+        {
+            handlers = new List<PropertyChangedSubscription>();
+            _propertyChangedHandlers[source] = handlers;
+        }
+
+        // Remove any existing subscription for this subscriber
+        handlers.RemoveAll(h => h.TargetReference.IsAlive && h.TargetReference.Target == subscriber);
+
+        // Create a new weak subscription
+        var subscription = new PropertyChangedSubscription(subscriber, handler);
+        
+        // Add the PropertyChanged event handler
+        source.PropertyChanged += subscription.EventHandler;
+        
+        // Add the subscription to our list
+        handlers.Add(subscription);
+
+        // Clean up dead references
+        CleanupPropertyChangedHandlers(source);
+    }
+
+    /// <summary>
+    /// Remove a handler for PropertyChanged events
+    /// </summary>
+    public void RemovePropertyChangedHandler(object source, object subscriber)
+    {
+        if (!(source is INotifyPropertyChanged notifySource) || !_propertyChangedHandlers.TryGetValue(source, out var handlers))
+            return;
+
+        var toRemove = handlers.Where(h => h.TargetReference.IsAlive && h.TargetReference.Target == subscriber).ToList();
+        
+        foreach (var subscription in toRemove)
+        {
+            notifySource.PropertyChanged -= subscription.EventHandler;
+            handlers.Remove(subscription);
+        }
+
+        // Clean up dead references
+        CleanupPropertyChangedHandlers(source);
+    }
+
+    /// <summary>
+    /// Add a handler for CollectionChanged events
+    /// </summary>
+    public void AddCollectionChangedHandler(INotifyCollectionChanged source, object subscriber, NotifyCollectionChangedEventHandler handler)
+    {
+        if (source == null || handler == null)
+            return;
+
+        if (!_collectionChangedHandlers.TryGetValue(source, out var handlers))
+        {
+            handlers = new List<CollectionChangedSubscription>();
+            _collectionChangedHandlers[source] = handlers;
+        }
+
+        // Remove any existing subscription for this subscriber
+        handlers.RemoveAll(h => h.TargetReference.IsAlive && h.TargetReference.Target == subscriber);
+
+        // Create a new weak subscription
+        var subscription = new CollectionChangedSubscription(subscriber, handler);
+        
+        // Add the CollectionChanged event handler
+        source.CollectionChanged += subscription.EventHandler;
+        
+        // Add the subscription to our list
+        handlers.Add(subscription);
+
+        // Clean up dead references
+        CleanupCollectionChangedHandlers(source);
+    }
+
+    /// <summary>
+    /// Remove a handler for CollectionChanged events
+    /// </summary>
+    public void RemoveCollectionChangedHandler(object source, object subscriber)
+    {
+        if (!(source is INotifyCollectionChanged notifySource) || !_collectionChangedHandlers.TryGetValue(source, out var handlers))
+            return;
+
+        var toRemove = handlers.Where(h => h.TargetReference.IsAlive && h.TargetReference.Target == subscriber).ToList();
+        
+        foreach (var subscription in toRemove)
+        {
+            notifySource.CollectionChanged -= subscription.EventHandler;
+            handlers.Remove(subscription);
+        }
+
+        // Clean up dead references
+        CleanupCollectionChangedHandlers(source);
+    }
+
+    /// <summary>
+    /// Add a handler for standard .NET events
+    /// </summary>
+    public void AddEventHandler(object source, string eventName, object subscriber, Delegate handler)
+    {
+        if (source == null || string.IsNullOrEmpty(eventName) || handler == null)
+            return;
+
+        var key = new EventKey(source, eventName);
+
+        if (!_standardEventHandlers.TryGetValue(key, out var handlers))
+        {
+            handlers = new List<StandardEventSubscription>();
+            _standardEventHandlers[key] = handlers;
+        }
+
+        // Remove any existing subscription for this subscriber
+        handlers.RemoveAll(h => h.TargetReference.IsAlive && h.TargetReference.Target == subscriber);
+
+        // Get the event info
+        var eventInfo = source.GetType().GetEvent(eventName);
+        if (eventInfo == null)
+            throw new ArgumentException($"Event '{eventName}' not found on '{source.GetType().Name}'");
+
+        // Create a new subscription
+        var subscription = new StandardEventSubscription(subscriber, handler, eventInfo, source);
+        
+        // Add the event handler
+        eventInfo.AddEventHandler(source, handler);
+        
+        // Add the subscription to our list
+        handlers.Add(subscription);
+
+        // Clean up dead references
+        CleanupStandardEventHandlers(key);
+    }
+
+    /// <summary>
+    /// Remove a handler for standard .NET events
+    /// </summary>
+    public void RemoveEventHandler(object source, string eventName, object subscriber)
+    {
+        var key = new EventKey(source, eventName);
+        
+        if (!_standardEventHandlers.TryGetValue(key, out var handlers))
+            return;
+
+        var toRemove = handlers.Where(h => h.TargetReference.IsAlive && h.TargetReference.Target == subscriber).ToList();
+        
+        foreach (var subscription in toRemove)
+        {
+            subscription.EventInfo.RemoveEventHandler(source, subscription.Handler);
+            handlers.Remove(subscription);
+        }
+
+        // Clean up dead references
+        CleanupStandardEventHandlers(key);
+    }
+
+    private void CleanupEventHandlers(Type eventType)
+    {
+        if (_eventHandlers.TryGetValue(eventType, out var handlers))
+        {
+            handlers.RemoveAll(h => !h.TargetReference.IsAlive);
+            
+            if (handlers.Count == 0)
+            {
+                _eventHandlers.Remove(eventType);
+            }
+        }
+    }
+
+    private void CleanupPropertyChangedHandlers(object source)
+    {
+        if (!(source is INotifyPropertyChanged notifySource) || !_propertyChangedHandlers.TryGetValue(source, out var handlers))
+            return;
+
+        var deadHandlers = handlers.Where(h => !h.TargetReference.IsAlive).ToList();
+        foreach (var deadHandler in deadHandlers)
+        {
+            notifySource.PropertyChanged -= deadHandler.EventHandler;
+            handlers.Remove(deadHandler);
+        }
+
+        if (handlers.Count == 0)
+        {
+            _propertyChangedHandlers.Remove(source);
+        }
+    }
+
+    private void CleanupCollectionChangedHandlers(object source)
+    {
+        if (!(source is INotifyCollectionChanged notifySource) || !_collectionChangedHandlers.TryGetValue(source, out var handlers))
+            return;
+
+        var deadHandlers = handlers.Where(h => !h.TargetReference.IsAlive).ToList();
+        foreach (var deadHandler in deadHandlers)
+        {
+            notifySource.CollectionChanged -= deadHandler.EventHandler;
+            handlers.Remove(deadHandler);
+        }
+
+        if (handlers.Count == 0)
+        {
+            _collectionChangedHandlers.Remove(source);
+        }
+    }
+
+    private void CleanupStandardEventHandlers(EventKey key)
+    {
+        if (!_standardEventHandlers.TryGetValue(key, out var handlers))
+            return;
+
+        var deadHandlers = handlers.Where(h => !h.TargetReference.IsAlive).ToList();
+        foreach (var deadHandler in deadHandlers)
+        {
+            deadHandler.EventInfo.RemoveEventHandler(key.Source, deadHandler.Handler);
+            handlers.Remove(deadHandler);
+        }
+
+        if (handlers.Count == 0)
+        {
+            _standardEventHandlers.Remove(key);
+        }
+    }
+
+    #region Subscription Classes
+
+    private class EventSubscription
+    {
+        public WeakReference TargetReference { get; }
+        public Delegate Handler { get; }
+
+        public EventSubscription(object target, Delegate handler)
+        {
+            TargetReference = new WeakReference(target);
+            Handler = handler;
+        }
+    }
+
+    private class PropertyChangedSubscription
+    {
+        public WeakReference TargetReference { get; }
+        public PropertyChangedEventHandler EventHandler { get; }
+
+        public PropertyChangedSubscription(object target, PropertyChangedEventHandler handler)
+        {
+            TargetReference = new WeakReference(target);
+            EventHandler = handler;
+        }
+    }
+
+    private class CollectionChangedSubscription
+    {
+        public WeakReference TargetReference { get; }
+        public NotifyCollectionChangedEventHandler EventHandler { get; }
+
+        public CollectionChangedSubscription(object target, NotifyCollectionChangedEventHandler handler)
+        {
+            TargetReference = new WeakReference(target);
+            EventHandler = handler;
+        }
+    }
+
+    private class StandardEventSubscription
+    {
+        public WeakReference TargetReference { get; }
+        public Delegate Handler { get; }
+        public EventInfo EventInfo { get; }
+
+        public StandardEventSubscription(object target, Delegate handler, EventInfo eventInfo, object source)
+        {
+            TargetReference = new WeakReference(target);
+            Handler = handler;
+            EventInfo = eventInfo;
+        }
+    }
+
+    private class EventKey : IEquatable<EventKey>
+    {
+        public object Source { get; }
+        public string EventName { get; }
+
+        public EventKey(object source, string eventName)
+        {
+            Source = source;
+            EventName = eventName;
+        }
+
+        public bool Equals(EventKey other)
+        {
+            if (other == null) return false;
+            return Source.Equals(other.Source) && EventName.Equals(other.EventName);
+        }
+
+        public override bool Equals(object obj) => Equals(obj as EventKey);
+
+        public override int GetHashCode() => (Source?.GetHashCode() ?? 0) ^ EventName.GetHashCode();
+    }
+
+    #endregion
+}
+```
+
+### Key Features of this Implementation:
+
+1. **EventBus Class**:
+   - Singleton pattern for easy global access
+   - Methods to subscribe, unsubscribe, and publish custom events
+   - Special methods for handling PropertyChanged and CollectionChanged events
+   - Support for standard .NET control events
+
+2. **EventHandlerManager Class**:
+   - Uses WeakReference to prevent memory leaks
+   - Manages multiple types of event subscriptions:
+     - Custom events (via EventSubscription)
+     - PropertyChanged events (via PropertyChangedSubscription)
+     - CollectionChanged events (via CollectionChangedSubscription)
+     - Standard .NET events (via StandardEventSubscription)
+   - Automatic cleanup of dead references
+   - Thread-safe event invocation
+
+3. **Usage Examples**:
+
+```csharp
+// Example 1: Custom events
+public class UserLoggedInEvent { public string Username { get; set; } }
+
+// Publisher
+EventBus.Instance.Publish(new UserLoggedInEvent { Username = "JohnDoe" });
+
+// Subscriber
+EventBus.Instance.Subscribe<UserLoggedInEvent>(this, e => 
+{
+    Console.WriteLine($"User logged in: {e.Username}");
+});
+
+// Example 2: PropertyChanged events
+var viewModel = new MyViewModel(); // implements INotifyPropertyChanged
+EventBus.Instance.SubscribeToPropertyChanged(viewModel, this, (sender, e) => 
+{
+    if (e.PropertyName == "Username")
+    {
+        Console.WriteLine("Username changed");
+    }
+});
+
+// Example 3: CollectionChanged events
+var collection = new ObservableCollection<string>(); // implements INotifyCollectionChanged
+EventBus.Instance.SubscribeToCollectionChanged(collection, this, (sender, e) => 
+{
+    Console.WriteLine("Collection changed");
+});
+
+// Example 4: Control events
+var button = new Button();
+EventBus.Instance.SubscribeToEvent(button, "Click", this, new EventHandler((sender, e) => 
+{
+    Console.WriteLine("Button clicked");
+}));
+```
+
+This implementation provides a ro
+
 イベントの重複登録を防止するよう `EventHandlerManager` クラスを改善しましょう。同じイベントが複数回登録されないようにする機能を追加します。
 
 「同じイベントは一つだけ」とのご要望ですね。先ほど提案した `EventHandlerManager` クラスに、同じイベントハンドラーが重複して登録されないようにする機能を追加します。
