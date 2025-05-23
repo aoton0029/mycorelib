@@ -967,4 +967,223 @@ public partial class Form1 : Form
 
 この方法により、PropertyChangedイベントが正常に発火してプロパティが更新されつつ、バリデーションも実行されます。ユーザーはエラーのある入力をいったん行えますが、視覚的なフィードバックを受け取り、最終的なアクションはブロックされる形になります。
 
-追加の対応として、移動先のセルを制限したい場合は、AfterEditのタイミングで次のセルへの移動をハンドリングする方法もあります。      
+追加の対応として、移動先のセルを制限したい場合は、AfterEditのタイミングで次のセルへの移動をハンドリングする方法もあります。  
+
+---
+
+
+
+C1FlexGridでバリデーションエラー時にセルの移動を制限したいというご要望について、PropertyChangedイベントが正常に発火する方法で実装する解決策を提案します。
+
+## 解決策：BeforeLeave イベントを使用する
+
+C1FlexGridには `BeforeLeave` イベントがあり、これはセルから出る直前に発生します。このイベントを使ってエラーチェックを行い、エラーがある場合はセル移動をキャンセルする方法が効果的です。
+
+```csharp
+public partial class Form1 : Form
+{
+    private ObservableCollection<ValidationModel> _items;
+    // 現在編集中のセルの位置を保持
+    private int _currentEditRow;
+    private int _currentEditCol;
+    
+    public Form1()
+    {
+        InitializeComponent();
+        
+        _items = new ObservableCollection<ValidationModel>();
+        // データの初期化
+        
+        c1FlexGrid1.DataSource = _items;
+        
+        // イベントハンドラーの登録
+        c1FlexGrid1.BeforeLeave += C1FlexGrid1_BeforeLeave;
+        c1FlexGrid1.BeforeEdit += C1FlexGrid1_BeforeEdit;
+        c1FlexGrid1.AfterEdit += C1FlexGrid1_AfterEdit;
+    }
+    
+    // 編集開始時に現在の位置を記録
+    private void C1FlexGrid1_BeforeEdit(object sender, RowColEventArgs e)
+    {
+        _currentEditRow = e.Row;
+        _currentEditCol = e.Col;
+    }
+    
+    // セルから出る前にバリデーションチェック
+    private void C1FlexGrid1_BeforeLeave(object sender, RowColEventArgs e)
+    {
+        // データ行でない場合はスキップ
+        if (_currentEditRow < c1FlexGrid1.Rows.Fixed) return;
+        
+        // 編集中のセルが変わっていない場合はスキップ
+        if (e.Row != _currentEditRow || e.Col != _currentEditCol) return;
+        
+        // モデル取得
+        int modelIndex = _currentEditRow - c1FlexGrid1.Rows.Fixed;
+        if (modelIndex < 0 || modelIndex >= _items.Count) return;
+        
+        var item = _items[modelIndex];
+        if (!(item is INotifyDataErrorInfo errorModel)) return;
+        
+        // プロパティ名の取得
+        string propertyName = c1FlexGrid1.Cols[_currentEditCol].Name;
+        
+        // 現在の編集値を取得（表示されている値）
+        var currentValue = c1FlexGrid1[_currentEditRow, _currentEditCol];
+        
+        // 一時的にプロパティの値をセットして検証
+        // これによりPropertyChangedイベントが発火し、バリデーションが行われる
+        var property = item.GetType().GetProperty(propertyName);
+        if (property != null)
+        {
+            try
+            {
+                // 値を適切な型に変換
+                var convertedValue = Convert.ChangeType(currentValue, property.PropertyType);
+                
+                // プロパティ値を設定（これによりバリデーションとPropertyChangedが発火）
+                property.SetValue(item, convertedValue);
+                
+                // バリデーション結果を確認
+                var errors = errorModel.GetErrors(propertyName);
+                if (errors is IEnumerable enumerable && enumerable.Cast<object>().Any())
+                {
+                    // エラーがあるので移動をキャンセル
+                    e.Cancel = true;
+                    
+                    // エラーメッセージの表示
+                    var errorMessages = string.Join(Environment.NewLine, 
+                        enumerable.Cast<string>().ToArray());
+                    
+                    MessageBox.Show(errorMessages, "入力エラー", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    
+                    // フォーカスを保持（任意）
+                    c1FlexGrid1.StartEditing(_currentEditRow, _currentEditCol);
+                }
+            }
+            catch (Exception ex)
+            {
+                // 型変換エラーなど
+                e.Cancel = true;
+                MessageBox.Show($"無効な入力です: {ex.Message}", "入力エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                
+                // フォーカスを保持（任意）
+                c1FlexGrid1.StartEditing(_currentEditRow, _currentEditCol);
+            }
+        }
+    }
+    
+    // 編集完了後のエラー表示更新
+    private void C1FlexGrid1_AfterEdit(object sender, RowColEventArgs e)
+    {
+        if (e.Row < c1FlexGrid1.Rows.Fixed) return;
+        
+        var item = _items[e.Row - c1FlexGrid1.Rows.Fixed];
+        if (!(item is INotifyDataErrorInfo errorModel)) return;
+        
+        string propertyName = c1FlexGrid1.Cols[e.Col].Name;
+        
+        // エラー状態によるセルスタイル更新
+        var errors = errorModel.GetErrors(propertyName);
+        if (errors is IEnumerable enumerable && enumerable.Cast<object>().Any())
+        {
+            // エラー表示
+            CellStyle errorStyle = new CellStyle();
+            errorStyle.BackColor = Color.MistyRose;
+            errorStyle.ForeColor = Color.Red;
+            c1FlexGrid1.SetCellStyle(e.Row, e.Col, errorStyle);
+        }
+        else
+        {
+            // スタイルクリア
+            c1FlexGrid1.SetCellStyle(e.Row, e.Col, null);
+        }
+    }
+}
+```
+
+## データモデルクラスの実装例
+
+```csharp
+public class ValidationModel : INotifyPropertyChanged, INotifyDataErrorInfo
+{
+    private readonly ValidationErrorProvider _errorProvider = new ValidationErrorProvider();
+    
+    private string _name;
+    
+    [Required(ErrorMessage = "名前は必須です")]
+    [StringLength(50, MinimumLength = 3, ErrorMessage = "名前は3〜50文字で入力してください")]
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (_name != value)
+            {
+                _name = value;
+                ValidateProperty(value, nameof(Name));
+                OnPropertyChanged(nameof(Name));
+            }
+        }
+    }
+    
+    // 他のプロパティも同様に実装
+    
+    // INotifyPropertyChanged実装
+    public event PropertyChangedEventHandler PropertyChanged;
+    
+    protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+    
+    // INotifyDataErrorInfo実装
+    public bool HasErrors => _errorProvider.HasErrors;
+    
+    public event EventHandler<DataErrorsChangedEventArgs> ErrorsChanged
+    {
+        add => _errorProvider.ErrorsChanged += value;
+        remove => _errorProvider.ErrorsChanged -= value;
+    }
+    
+    public IEnumerable GetErrors(string propertyName)
+    {
+        return _errorProvider.GetErrors(propertyName);
+    }
+    
+    // バリデーション実行メソッド
+    private void ValidateProperty(object value, [CallerMemberName] string propertyName = null)
+    {
+        _errorProvider.ClearErrors(propertyName);
+        
+        var context = new ValidationContext(this) { MemberName = propertyName };
+        var results = new List<ValidationResult>();
+        
+        if (!Validator.TryValidateProperty(value, context, results))
+        {
+            foreach (var result in results)
+            {
+                _errorProvider.AddError(propertyName, result.ErrorMessage);
+            }
+        }
+    }
+}
+```
+
+## この実装の利点
+
+1. **PropertyChangedイベントが正常に発火する**:
+   - BeforeLeaveイベントではプロパティ値の更新を許可し、PropertyChangedイベントが発火します
+   - バリデーションエラーがある場合のみ、セルの移動をキャンセルします
+
+2. **UXの向上**:
+   - エラーメッセージをユーザーに表示し、問題を明確に伝えます
+   - エラーのあるセルは視覚的に区別されます
+
+3. **柔軟性**:
+   - バリデーション条件や表示スタイルを調整可能です
+   - 特定の状況では例外的にエラーを無視することも可能です（必要に応じて）
+
+この方法により、PropertyChangedが正常に動作しつつ、バリデーションエラーがある場合はセルから出られないという要件を満たすことができます。    
