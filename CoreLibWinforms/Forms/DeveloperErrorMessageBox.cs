@@ -10,6 +10,7 @@ using System.Resources;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using CoreLib.Resources;
 
 namespace CoreLibWinforms.Forms
 {
@@ -18,8 +19,7 @@ namespace CoreLibWinforms.Forms
     /// </summary>
     public partial class DeveloperErrorMessageBox : Form
     {
-        private static readonly ResourceManager _resourceManager =
-            new ResourceManager(typeof(CoreLib.Resources.ErrorMessages));
+        private static readonly ResourceManager _resourceManager; //.= new ResourceManager(typeof(ErrorMessages));
 
         private readonly ErrorInfo _errorInfo;
         private bool _detailsVisible = false;

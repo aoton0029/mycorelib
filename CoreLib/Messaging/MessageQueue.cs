@@ -1,5 +1,5 @@
-﻿using CoreLib.Logging;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -48,7 +48,7 @@ namespace CoreLib.Messaging
     public class InMemoryMessageQueue : IMessageQueue, IDisposable
     {
         private readonly IServiceBus _serviceBus;
-        private readonly IAppLogger _logger;
+        private readonly ILogger _logger;
         private readonly ConcurrentDictionary<Type, object> _queues = new();
         private readonly CancellationTokenSource _cancellationSource = new();
         private readonly Dictionary<Type, Task> _processingTasks = new();
@@ -58,7 +58,7 @@ namespace CoreLib.Messaging
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public InMemoryMessageQueue(IServiceBus serviceBus, IAppLogger logger)
+        public InMemoryMessageQueue(IServiceBus serviceBus, ILogger logger)
         {
             _serviceBus = serviceBus ?? throw new ArgumentNullException(nameof(serviceBus));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

@@ -1,5 +1,5 @@
-﻿using CoreLib.Logging;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -110,7 +110,7 @@ namespace CoreLib.Messaging
     /// </summary>
     public class AsyncMessenger : IAsyncMessenger, IDisposable
     {
-        private readonly IAppLogger _logger;
+        private readonly ILogger _logger;
         private readonly ConcurrentDictionary<Type, List<object>> _handlers = new();
         private readonly ConcurrentDictionary<Type, ConcurrentQueue<object>> _messageQueues = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -122,7 +122,7 @@ namespace CoreLib.Messaging
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public AsyncMessenger(IAppLogger logger)
+        public AsyncMessenger(ILogger logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -373,14 +373,14 @@ namespace CoreLib.Messaging
     public class ServiceBus : IServiceBus
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly IAppLogger _logger;
+        private readonly ILogger _logger;
         private readonly ConcurrentDictionary<Type, List<object>> _handlers = new();
         private readonly object _syncRoot = new();
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public ServiceBus(IServiceProvider serviceProvider, IAppLogger logger)
+        public ServiceBus(IServiceProvider serviceProvider, ILogger logger)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

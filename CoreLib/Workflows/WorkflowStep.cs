@@ -1,4 +1,4 @@
-﻿using CoreLib.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -337,12 +337,12 @@ namespace CoreLib.Workflows
         public string? ErrorMessage { get; private set; }
 
         private readonly List<IWorkflowStep> _steps = new();
-        private readonly IAppLogger? _logger;
+        private readonly ILogger? _logger;
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public Workflow(string workflowId, string description, IAppLogger? logger = null)
+        public Workflow(string workflowId, string description, ILogger? logger = null)
         {
             WorkflowId = workflowId ?? throw new ArgumentNullException(nameof(workflowId));
             Description = description ?? throw new ArgumentNullException(nameof(description));
@@ -467,7 +467,7 @@ namespace CoreLib.Workflows
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public WorkflowBuilder(string workflowId, string description, IAppLogger? logger = null)
+        public WorkflowBuilder(string workflowId, string description, ILogger? logger = null)
         {
             _workflow = new Workflow(workflowId, description, logger);
         }

@@ -1,5 +1,5 @@
-﻿using CoreLib.Logging;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,12 +28,12 @@ namespace CoreLib.Messaging
     public class LoggingPipelineBehavior<TMessage> : IMessagePipelineBehavior<TMessage>
         where TMessage : IMessage
     {
-        private readonly IAppLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public LoggingPipelineBehavior(IAppLogger logger)
+        public LoggingPipelineBehavior(ILogger logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -72,13 +72,13 @@ namespace CoreLib.Messaging
     public class ErrorHandlingPipelineBehavior<TMessage> : IMessagePipelineBehavior<TMessage>
         where TMessage : IMessage
     {
-        private readonly IAppLogger _logger;
+        private readonly ILogger _logger;
         private readonly bool _swallowExceptions;
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public ErrorHandlingPipelineBehavior(IAppLogger logger, bool swallowExceptions = false)
+        public ErrorHandlingPipelineBehavior(ILogger logger, bool swallowExceptions = false)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _swallowExceptions = swallowExceptions;
@@ -114,7 +114,7 @@ namespace CoreLib.Messaging
     {
         private readonly List<IMessagePipelineBehavior<TMessage>> _behaviors;
         private readonly IMessageHandler<TMessage> _handler;
-        private readonly IAppLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// コンストラクタ
@@ -122,7 +122,7 @@ namespace CoreLib.Messaging
         public MessagePipeline(
             IMessageHandler<TMessage> handler,
             IEnumerable<IMessagePipelineBehavior<TMessage>> behaviors,
-            IAppLogger logger)
+            ILogger logger)
         {
             _handler = handler ?? throw new ArgumentNullException(nameof(handler));
             _behaviors = behaviors?.ToList() ?? new List<IMessagePipelineBehavior<TMessage>>();
@@ -172,12 +172,12 @@ namespace CoreLib.Messaging
     public class MessagePipelineFactory
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly IAppLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public MessagePipelineFactory(IServiceProvider serviceProvider, IAppLogger logger)
+        public MessagePipelineFactory(IServiceProvider serviceProvider, ILogger logger)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

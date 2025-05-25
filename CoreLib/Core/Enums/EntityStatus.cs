@@ -34,4 +34,4 @@ namespace CoreLib.Core.Enums
         Locked = 6
     }
 }
-}
+

@@ -1,5 +1,5 @@
-﻿using CoreLib.Logging;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,9 +45,9 @@ namespace CoreLib.Messaging
         // メッセージハンドラーの実装例
         public class UserCreatedMessageHandler : IMessageHandler<UserCreatedMessage>
         {
-            private readonly IAppLogger _logger;
+            private readonly ILogger _logger;
 
-            public UserCreatedMessageHandler(IAppLogger logger)
+            public UserCreatedMessageHandler(ILogger logger)
             {
                 _logger = logger;
             }

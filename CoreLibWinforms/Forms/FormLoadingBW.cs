@@ -132,7 +132,7 @@ namespace CoreLibWinforms.Forms
             // 閉じるのを少し遅らせる（キャンセル時など表示確認のため）
             if (e.Cancelled)
             {
-                Timer timer = new Timer { Interval = 1000 };
+                System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer { Interval = 1000 };
                 timer.Tick += (s, args) =>
                 {
                     timer.Stop();

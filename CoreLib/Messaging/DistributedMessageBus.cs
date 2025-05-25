@@ -1,5 +1,5 @@
-﻿using CoreLib.Logging;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -97,12 +97,12 @@ namespace CoreLib.Messaging
     public class InMemoryDistributedMessageBus : IDistributedMessageBus
     {
         private readonly IServiceBus _serviceBus;
-        private readonly IAppLogger _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public InMemoryDistributedMessageBus(IServiceBus serviceBus, IAppLogger logger)
+        public InMemoryDistributedMessageBus(IServiceBus serviceBus, ILogger logger)
         {
             _serviceBus = serviceBus ?? throw new ArgumentNullException(nameof(serviceBus));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
