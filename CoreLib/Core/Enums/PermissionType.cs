@@ -22,7 +22,7 @@ namespace CoreLib.Core.Enums
     /// ユーザー権限
     /// </summary>
     [Flags]
-    public enum Permissions
+    public enum PermissionType
     {
         [Description("なし")]
         None = 0,
