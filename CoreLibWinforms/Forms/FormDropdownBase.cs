@@ -8,10 +8,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CoreLibWinforms.UserControls
+namespace CoreLibWinforms.Forms
 {
-    public partial class DropdownBase : UserControl
+    public partial class FormDropdownBase : Form
     {
+        private Control _targetControl;
+
         #region イベント
 
         /// <summary>
@@ -23,12 +25,6 @@ namespace CoreLibWinforms.UserControls
         /// キャンセルボタンがクリックされた時に発生するイベント
         /// </summary>
         public event EventHandler CancelClicked;
-
-        /// <summary>
-        /// コントロールが閉じる前に発生するイベント
-        /// </summary>
-        public event CancelEventHandler Closing;
-
         #endregion
 
         #region プロパティ
@@ -74,22 +70,33 @@ namespace CoreLibWinforms.UserControls
         public bool OKOnEnterKey { get; set; } = false;
 
         #endregion
-
-        #region プライベート変数
-
-        private Form _host;
-        private Control _parentControl;
-        private bool _isShown = false;
-
-        #endregion
-
-        /// <summary>
-        /// コンストラクタ
-        /// </summary>
-        public DropdownBase()
+        public FormDropdownBase()
         {
-            this.BorderStyle = BorderStyle.FixedSingle;
-            this.Visible = false;
+            InitializeComponent();
+            // フォームのDeactivatedイベントを処理
+            this.Deactivate += (s, e) =>
+            {
+                if (CloseOnOutsideClick)
+                {
+                    Close(true);
+                }
+            };
+
+            // キー入力処理
+            this.KeyPreview = true;
+            this.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Escape && CancelOnEscKey)
+                {
+                    OnCancelClicked();
+                    e.Handled = true;
+                }
+                else if (e.KeyCode == Keys.Enter && OKOnEnterKey)
+                {
+                    OnOKClicked();
+                    e.Handled = true;
+                }
+            };
         }
 
         #region パブリックメソッド
@@ -155,11 +162,10 @@ namespace CoreLibWinforms.UserControls
         /// <typeparam name="T">DropdownBaseを継承したコントロールの型</typeparam>
         /// <param name="dropdown">ドロップダウンコントロール</param>
         /// <param name="parentControl">親コントロール</param>
-        public void ShowAtMousePosition<T>(Control parentControl)
-            where T : DropdownBase
+        public void ShowAtMousePosition()
         {
             Point mousePos = Control.MousePosition;
-            ShowAtLocation(parentControl, mousePos);
+            ShowAtLocation(null, mousePos);
         }
 
         /// <summary>
@@ -167,106 +173,40 @@ namespace CoreLibWinforms.UserControls
         /// </summary>
         /// <param name="parentControl">親となるコントロール</param>
         /// <param name="location">表示位置（スクリーン座標）</param>
-        public void ShowAtLocation(Control parentControl, Point location)
+        public void ShowAtLocation(Control targetControl, Point location)
         {
-            if (_isShown)
-                return;
+            _targetControl = targetControl;
 
-            _parentControl = parentControl;
+            FormBorderStyle = FormBorderStyle.None;
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.Manual;
+            Text = "";
 
-            // フォームを作成
-            _host = new Form
-            {
-                FormBorderStyle = FormBorderStyle.None,
-                ShowInTaskbar = false,
-                StartPosition = FormStartPosition.Manual,
-                Location = location,
-                Size = this.Size,
-                TopMost = true
-            };
+            Location = location;
+            Size = this.Size;
+            TopMost = true;
 
-            // 画面外にはみ出さないように位置を調整
-            Rectangle screenBounds = Screen.FromControl(parentControl).WorkingArea;
-            if (_host.Right > screenBounds.Right)
-            {
-                _host.Left = screenBounds.Right - _host.Width;
-            }
-            if (_host.Bottom > screenBounds.Bottom)
-            {
-                _host.Top = screenBounds.Bottom - _host.Height;
-            }
-            if (_host.Left < screenBounds.Left)
-            {
-                _host.Left = screenBounds.Left;
-            }
-            if (_host.Top < screenBounds.Top)
-            {
-                _host.Top = screenBounds.Top;
-            }
-
-            // コントロールをフォームに追加
-            _host.Controls.Add(this);
-            this.Dock = DockStyle.Fill;
-            this.Visible = true;
-
-            // フォームのDeactivatedイベントを処理
-            _host.Deactivate += (s, e) =>
-            {
-                if (CloseOnOutsideClick)
-                {
-                    Close(true);
-                }
-            };
-
-            // キー入力処理
-            _host.KeyPreview = true;
-            _host.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Escape && CancelOnEscKey)
-                {
-                    OnCancelClicked();
-                    e.Handled = true;
-                }
-                else if (e.KeyCode == Keys.Enter && OKOnEnterKey)
-                {
-                    OnOKClicked();
-                    e.Handled = true;
-                }
-            };
-
-            // フォームを表示
-            _isShown = true;
-            _host.Show();
-            this.Focus();
         }
 
-        /// <summary>
-        /// コントロールを閉じます
-        /// </summary>
-        /// <param name="isCancel">キャンセル扱いかどうか</param>
-        public void Close(bool isCancel = false)
+        private void reLocate(Control targetControl)
         {
-            if (!_isShown)
-                return;
-
-            // Closingイベント発生
-            CancelEventArgs args = new CancelEventArgs();
-            OnClosing(args);
-
-            if (args.Cancel)
+            // 画面外にはみ出さないように位置を調整
+            Rectangle screenBounds = Screen.FromControl(targetControl).WorkingArea;
+            if (this.Right > screenBounds.Right)
             {
-                return;
+                this.Left = screenBounds.Right - this.Width;
             }
-
-            _isShown = false;
-
-            if (_host != null && !_host.IsDisposed)
+            if (this.Bottom > screenBounds.Bottom)
             {
-                this.Visible = false;
-                _host.Controls.Remove(this);
-                _host.Close();
-                _host.Dispose();
-                _host = null;
+                this.Top = screenBounds.Bottom - this.Height;
+            }
+            if (this.Left < screenBounds.Left)
+            {
+                this.Left = screenBounds.Left;
+            }
+            if (this.Top < screenBounds.Top)
+            {
+                this.Top = screenBounds.Top;
             }
         }
 
@@ -296,7 +236,7 @@ namespace CoreLibWinforms.UserControls
 
             if (CloseOnCancel)
             {
-                Close(true);
+                Close();
             }
         }
 
