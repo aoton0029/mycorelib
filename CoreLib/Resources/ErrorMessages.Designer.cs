@@ -151,6 +151,33 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Type &apos;{0}&apos; is not supported for AOT serialization. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorAotSerializationNotSupported {
+            get {
+                return ResourceManager.GetString("ErrorAotSerializationNotSupported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   API &apos;{0}&apos; is deprecated and will be removed in future versions. Use &apos;{1}&apos; instead. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorAPIDeprecated {
+            get {
+                return ResourceManager.GetString("ErrorAPIDeprecated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   API rate limit exceeded. Maximum rate: {0} requests per {1}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorAPIRateLimit {
+            get {
+                return ResourceManager.GetString("ErrorAPIRateLimit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Authentication failed. Please check your credentials. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorAuthenticationFailed {
@@ -169,11 +196,47 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Bulk insert operation failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorBulkInsertFailed {
+            get {
+                return ResourceManager.GetString("ErrorBulkInsertFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Bulk update operation failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorBulkUpdateFailed {
+            get {
+                return ResourceManager.GetString("ErrorBulkUpdateFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   The certificate is invalid or has expired. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorCertificateInvalid {
             get {
                 return ResourceManager.GetString("ErrorCertificateInvalid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to detect character encoding for the data. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorCharacterEncodingDetectionFailed {
+            get {
+                return ResourceManager.GetString("ErrorCharacterEncodingDetectionFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Clock skew detected. Local time differs from server time by {0} seconds. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorClockSkew {
+            get {
+                return ResourceManager.GetString("ErrorClockSkew", resourceCulture);
             }
         }
         
@@ -214,11 +277,128 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Container resource limit reached: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorContainerLimit {
+            get {
+                return ResourceManager.GetString("ErrorContainerLimit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   CSV parsing failed at line {0}: {1} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorCSVParsingFailed {
+            get {
+                return ResourceManager.GetString("ErrorCSVParsingFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Access denied to data resource &apos;{0}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataAccessDenied {
+            get {
+                return ResourceManager.GetString("ErrorDataAccessDenied", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Database connection pool limit reached. Current connections: {0}, Maximum: {1} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDatabaseConnectionPool {
+            get {
+                return ResourceManager.GetString("ErrorDatabaseConnectionPool", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data binding failed for property &apos;{0}&apos;: {1} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataBindingFailed {
+            get {
+                return ResourceManager.GetString("ErrorDataBindingFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data binding source is invalid or not supported. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataBindingSourceInvalid {
+            get {
+                return ResourceManager.GetString("ErrorDataBindingSourceInvalid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data cache miss for key &apos;{0}&apos;. Object may have been evicted or expired. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataCacheMiss {
+            get {
+                return ResourceManager.GetString("ErrorDataCacheMiss", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data command execution failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataCommandFailed {
+            get {
+                return ResourceManager.GetString("ErrorDataCommandFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to connect to data source: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataConnectionFailed {
+            get {
+                return ResourceManager.GetString("ErrorDataConnectionFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data constraint violation: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataConstraintViolation {
+            get {
+                return ResourceManager.GetString("ErrorDataConstraintViolation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to convert data from &apos;{0}&apos; to &apos;{1}&apos;: {2} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataConversionFailed {
+            get {
+                return ResourceManager.GetString("ErrorDataConversionFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Data is corrupted and cannot be processed. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorDataCorrupted {
             get {
                 return ResourceManager.GetString("ErrorDataCorrupted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   A deadlock was detected while accessing data. The transaction has been terminated. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataDeadlock {
+            get {
+                return ResourceManager.GetString("ErrorDataDeadlock", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Dependency cycle detected in data processing pipeline: {0}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataDependencyCycle {
+            get {
+                return ResourceManager.GetString("ErrorDataDependencyCycle", resourceCulture);
             }
         }
         
@@ -232,6 +412,87 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Data integrity violation: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataIntegrityViolation {
+            get {
+                return ResourceManager.GetString("ErrorDataIntegrityViolation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Optimistic concurrency control failed. The record has been modified since it was last retrieved. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataOptimisticLockingFailed {
+            get {
+                return ResourceManager.GetString("ErrorDataOptimisticLockingFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Dataset relation constraint violation: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDatasetRelationViolation {
+            get {
+                return ResourceManager.GetString("ErrorDatasetRelationViolation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data source connection timeout after {0} seconds. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataSourceTimeout {
+            get {
+                return ResourceManager.GetString("ErrorDataSourceTimeout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data stream compression failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataStreamCompression {
+            get {
+                return ResourceManager.GetString("ErrorDataStreamCompression", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data stream decompression failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataStreamDecompression {
+            get {
+                return ResourceManager.GetString("ErrorDataStreamDecompression", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data structure mismatch. Expected structure: &apos;{0}&apos;, Actual: &apos;{1}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataStructureMismatch {
+            get {
+                return ResourceManager.GetString("ErrorDataStructureMismatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data synchronization conflict detected: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataSyncConflict {
+            get {
+                return ResourceManager.GetString("ErrorDataSyncConflict", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   DataTable schema violation: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDatatableSchemaViolation {
+            get {
+                return ResourceManager.GetString("ErrorDatatableSchemaViolation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Data size exceeds the maximum allowed limit. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorDataTooLarge {
@@ -241,11 +502,38 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Data transaction was aborted: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataTransactionAborted {
+            get {
+                return ResourceManager.GetString("ErrorDataTransactionAborted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data type &apos;{0}&apos; is not supported for this operation. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDataTypeNotSupported {
+            get {
+                return ResourceManager.GetString("ErrorDataTypeNotSupported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Data validation failed: {0} に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorDataValidationFailed {
             get {
                 return ResourceManager.GetString("ErrorDataValidationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   DateOnly value &apos;{0}&apos; is outside the supported range. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDateOnlyOverflow {
+            get {
+                return ResourceManager.GetString("ErrorDateOnlyOverflow", resourceCulture);
             }
         }
         
@@ -277,6 +565,24 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Domain trust relationship failure between &apos;{0}&apos; and &apos;{1}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDomainTrustFailure {
+            get {
+                return ResourceManager.GetString("ErrorDomainTrustFailure", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Domain &apos;{0}&apos; is unreachable. DNS resolution failed. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorDomainUnreachable {
+            get {
+                return ResourceManager.GetString("ErrorDomainUnreachable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Required device driver is not installed: {0} に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorDriverNotInstalled {
@@ -286,11 +592,47 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Value &apos;{0}&apos; is not a valid option for &apos;{1}&apos;. Valid options are: {2}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorEnumValueInvalid {
+            get {
+                return ResourceManager.GetString("ErrorEnumValueInvalid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Required environment variable {0} not found or invalid. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorEnvironmentVariable {
             get {
                 return ResourceManager.GetString("ErrorEnvironmentVariable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Field &apos;{0}&apos; has incorrect type. Expected: {1}, Actual: {2}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorFieldTypeMismatch {
+            get {
+                return ResourceManager.GetString("ErrorFieldTypeMismatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   File system quota exceeded. Available space: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorFileSystemQuota {
+            get {
+                return ResourceManager.GetString("ErrorFileSystemQuota", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   File system is in read-only mode. Write operations are disabled. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorFileSystemReadOnly {
+            get {
+                return ResourceManager.GetString("ErrorFileSystemReadOnly", resourceCulture);
             }
         }
         
@@ -322,6 +664,15 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Internationalization support for locale &apos;{0}&apos; is not installed. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorI18NSupport {
+            get {
+                return ResourceManager.GetString("ErrorI18NSupport", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Incompatible version. Required: {0}, Current: {1} に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorIncompatibleVersion {
@@ -349,6 +700,51 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Data format &apos;{0}&apos; is invalid or not recognized. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidDataFormat {
+            get {
+                return ResourceManager.GetString("ErrorInvalidDataFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid data segment at offset {0}: {1}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidDataSegment {
+            get {
+                return ResourceManager.GetString("ErrorInvalidDataSegment", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid garbage collection operation. The operation might interfere with the runtime. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidGCOperation {
+            get {
+                return ResourceManager.GetString("ErrorInvalidGCOperation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hardware acceleration is not available or failed to initialize: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidHardwareAcceleration {
+            get {
+                return ResourceManager.GetString("ErrorInvalidHardwareAcceleration", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid JSON format at position {0}: {1} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidJson {
+            get {
+                return ResourceManager.GetString("ErrorInvalidJson", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Invalid operation. This action cannot be performed at this time. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorInvalidOperation {
@@ -367,11 +763,137 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Invalid Span operation. The operation might cause access violation. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidSpanOperation {
+            get {
+                return ResourceManager.GetString("ErrorInvalidSpanOperation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   System is in an invalid state: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidSystemState {
+            get {
+                return ResourceManager.GetString("ErrorInvalidSystemState", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid UTF-8 sequence detected at position {0}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidUtf8Sequence {
+            get {
+                return ResourceManager.GetString("ErrorInvalidUtf8Sequence", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid XML format: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidXml {
+            get {
+                return ResourceManager.GetString("ErrorInvalidXml", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   JSON deserialization failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorJsonDeserializationFailed {
+            get {
+                return ResourceManager.GetString("ErrorJsonDeserializationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   JsonNode type mismatch. Expected: &apos;{0}&apos;, Actual: &apos;{1}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorJsonNodeTypeIncorrect {
+            get {
+                return ResourceManager.GetString("ErrorJsonNodeTypeIncorrect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   JSON polymorphic type resolution failed. Type discriminator &apos;{0}&apos; is invalid. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorJsonPolymorphicTypeFailed {
+            get {
+                return ResourceManager.GetString("ErrorJsonPolymorphicTypeFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required JSON property &apos;{0}&apos; is missing. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorJsonPropertyMissing {
+            get {
+                return ResourceManager.GetString("ErrorJsonPropertyMissing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   JSON schema validation error: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorJsonSchemaMismatch {
+            get {
+                return ResourceManager.GetString("ErrorJsonSchemaMismatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   JSON serialization failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorJsonSerializationFailed {
+            get {
+                return ResourceManager.GetString("ErrorJsonSerializationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   JSON source generation failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorJsonSourceGenerationFailed {
+            get {
+                return ResourceManager.GetString("ErrorJsonSourceGenerationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required kernel module &apos;{0}&apos; is not loaded. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorKernelModuleNotLoaded {
+            get {
+                return ResourceManager.GetString("ErrorKernelModuleNotLoaded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Low disk space. Only {0} MB available. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorLowDiskSpace {
             get {
                 return ResourceManager.GetString("ErrorLowDiskSpace", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Maximum number of concurrent sessions reached. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorMaximumSessionsReached {
+            get {
+                return ResourceManager.GetString("ErrorMaximumSessionsReached", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Memory buffer is too small for the data processing operation. Required: {0} bytes, Available: {1} bytes. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorMemoryBufferTooSmall {
+            get {
+                return ResourceManager.GetString("ErrorMemoryBufferTooSmall", resourceCulture);
             }
         }
         
@@ -394,11 +916,65 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Missing runtime pack for target framework &apos;{0}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorMissingRuntimePack {
+            get {
+                return ResourceManager.GetString("ErrorMissingRuntimePack", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Model validation failed with {0} error(s). に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorModelValidationFailed {
+            get {
+                return ResourceManager.GetString("ErrorModelValidationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Native AOT compilation error: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorNativeAOTCompilation {
+            get {
+                return ResourceManager.GetString("ErrorNativeAOTCompilation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Network interface &apos;{0}&apos; is down or disconnected. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorNetworkInterfaceDown {
+            get {
+                return ResourceManager.GetString("ErrorNetworkInterfaceDown", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Significant network packet loss detected: {0}% に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorNetworkPacketLoss {
+            get {
+                return ResourceManager.GetString("ErrorNetworkPacketLoss", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   No response from server. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorNoResponse {
             get {
                 return ResourceManager.GetString("ErrorNoResponse", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Circular reference detected in object graph at &apos;{0}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorObjectGraphCircularReference {
+            get {
+                return ResourceManager.GetString("ErrorObjectGraphCircularReference", resourceCulture);
             }
         }
         
@@ -412,11 +988,47 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Parallel data processing failed with {0} tasks failed out of {1}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorParallelDataProcessingFailed {
+            get {
+                return ResourceManager.GetString("ErrorParallelDataProcessingFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Failed to parse data: {0} に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorParsingFailed {
             get {
                 return ResourceManager.GetString("ErrorParsingFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Pattern matching failed. Value &apos;{0}&apos; does not match pattern &apos;{1}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorPatternMatchingFailed {
+            get {
+                return ResourceManager.GetString("ErrorPatternMatchingFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Memory leak detected in process. Available memory decreasing over time. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorProcessMemoryLeak {
+            get {
+                return ResourceManager.GetString("ErrorProcessMemoryLeak", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Processor thermal throttling detected. Performance may be degraded. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorProcessorThermalThrottle {
+            get {
+                return ResourceManager.GetString("ErrorProcessorThermalThrottle", resourceCulture);
             }
         }
         
@@ -439,6 +1051,24 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Record batch processing failed at batch {0}: {1} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorRecordBatchProcessingFailed {
+            get {
+                return ResourceManager.GetString("ErrorRecordBatchProcessingFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Record validation failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorRecordValidationFailed {
+            get {
+                return ResourceManager.GetString("ErrorRecordValidationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Recovery operation failed. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorRecoveryFailed {
@@ -448,11 +1078,38 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Referential integrity violation. {0} references {1} which does not exist. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorReferentialIntegrityViolation {
+            get {
+                return ResourceManager.GetString("ErrorReferentialIntegrityViolation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Unable to access the system registry. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorRegistryAccess {
             get {
                 return ResourceManager.GetString("ErrorRegistryAccess", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required field &apos;{0}&apos; is missing or empty. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorRequiredFieldMissing {
+            get {
+                return ResourceManager.GetString("ErrorRequiredFieldMissing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   System resource limit reached for: {0}. Current usage: {1}, Limit: {2} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorResourceLimitReached {
+            get {
+                return ResourceManager.GetString("ErrorResourceLimitReached", resourceCulture);
             }
         }
         
@@ -475,6 +1132,24 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Source-generated data context failed to initialize: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSourceGeneratorDataContextFailed {
+            get {
+                return ResourceManager.GetString("ErrorSourceGeneratorDataContextFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Source generator failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSourceGeneratorFailed {
+            get {
+                return ResourceManager.GetString("ErrorSourceGeneratorFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   SSL/TLS error: {0} に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorSSLError {
@@ -493,11 +1168,83 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   System call &apos;{0}&apos; failed with error code: {1} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSystemCallFailure {
+            get {
+                return ResourceManager.GetString("ErrorSystemCallFailure", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   System clock error detected. Current time may be inaccurate. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSystemClock {
+            get {
+                return ResourceManager.GetString("ErrorSystemClock", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   System is currently in maintenance mode until {0}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSystemMaintenance {
+            get {
+                return ResourceManager.GetString("ErrorSystemMaintenance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   System is in an unstable state. Restart recommended. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorSystemNotStable {
             get {
                 return ResourceManager.GetString("ErrorSystemNotStable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   System update required to run this application. Minimum required: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorSystemUpdateRequired {
+            get {
+                return ResourceManager.GetString("ErrorSystemUpdateRequired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Task scheduler encountered an error: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorTaskSchedulerException {
+            get {
+                return ResourceManager.GetString("ErrorTaskSchedulerException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Thread deadlock detected between threads: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorThreadDeadlock {
+            get {
+                return ResourceManager.GetString("ErrorThreadDeadlock", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Thread pool starvation detected. Consider adjusting thread pool settings. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorThreadPoolStarvation {
+            get {
+                return ResourceManager.GetString("ErrorThreadPoolStarvation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   TimeOnly value &apos;{0}&apos; is outside the supported range. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorTimeOnlyOverflow {
+            get {
+                return ResourceManager.GetString("ErrorTimeOnlyOverflow", resourceCulture);
             }
         }
         
@@ -529,11 +1276,83 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Encoding &apos;{0}&apos; is not supported. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorUnsupportedEncoding {
+            get {
+                return ResourceManager.GetString("ErrorUnsupportedEncoding", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   This operation is not supported on this platform. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ErrorUnsupportedPlatform {
             get {
                 return ResourceManager.GetString("ErrorUnsupportedPlatform", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   UTF-8 encoding operation exceeded buffer size of {0} bytes. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorUtf8EncodingOverflow {
+            get {
+                return ResourceManager.GetString("ErrorUtf8EncodingOverflow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Value &apos;{0}&apos; for &apos;{1}&apos; is out of range. Valid range: {2} to {3}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorValueOutOfRange {
+            get {
+                return ResourceManager.GetString("ErrorValueOutOfRange", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Virtual machine resource limit reached: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorVirtualMachineLimit {
+            get {
+                return ResourceManager.GetString("ErrorVirtualMachineLimit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   XML deserialization failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorXmlDeserializationFailed {
+            get {
+                return ResourceManager.GetString("ErrorXmlDeserializationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required XML element &apos;{0}&apos; is missing. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorXmlElementMissing {
+            get {
+                return ResourceManager.GetString("ErrorXmlElementMissing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   XML schema validation error: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorXmlSchemaMismatch {
+            get {
+                return ResourceManager.GetString("ErrorXmlSchemaMismatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   XML serialization failed: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorXmlSerializationFailed {
+            get {
+                return ResourceManager.GetString("ErrorXmlSerializationFailed", resourceCulture);
             }
         }
         

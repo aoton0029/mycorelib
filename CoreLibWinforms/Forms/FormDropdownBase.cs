@@ -10,6 +10,15 @@ using System.Windows.Forms;
 
 namespace CoreLibWinforms.Forms
 {
+    public enum Position
+    {
+        Below,
+        Above,
+        Right,
+        Left,
+        Centered
+    }
+    
     public partial class FormDropdownBase : Form
     {
         private Control _targetControl;
@@ -70,37 +79,42 @@ namespace CoreLibWinforms.Forms
         public bool OKOnEnterKey { get; set; } = false;
 
         #endregion
+        
         public FormDropdownBase()
         {
             InitializeComponent();
-            // フォームのDeactivatedイベントを処理
-            this.Deactivate += (s, e) =>
-            {
-                if (CloseOnOutsideClick)
-                {
-                    Close(true);
-                }
-            };
-
-            // キー入力処理
-            this.KeyPreview = true;
-            this.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Escape && CancelOnEscKey)
-                {
-                    OnCancelClicked();
-                    e.Handled = true;
-                }
-                else if (e.KeyCode == Keys.Enter && OKOnEnterKey)
-                {
-                    OnOKClicked();
-                    e.Handled = true;
-                }
-            };
+            
         }
 
         #region パブリックメソッド
 
+        public void Show(Position position, Control targetControl)
+        {
+            _targetControl = targetControl;
+            Form hostForm = targetControl.FindForm();
+            hostForm.SizeChanged += (s, e) => reLocate(targetControl);
+            hostForm.LocationChanged += (s, e) => reLocate(targetControl);
+            switch (position)
+            {
+                case Position.Below:
+                    ShowBelowControl(targetControl);
+                    break;
+                case Position.Above:
+                    ShowAboveControl(targetControl);
+                    break;
+                case Position.Right:
+                    ShowNextToControl(targetControl);
+                    break;
+                case Position.Left:
+                    ShowLeftOfControl(targetControl);
+                    break;
+                case Position.Centered:
+                    ShowCenteredOnControl(targetControl);
+                    break;
+            }
+            reLocate(targetControl);
+            Show();
+        }
         /// <summary>
         /// 指定したコントロールの下に表示します
         /// </summary>
@@ -249,5 +263,24 @@ namespace CoreLibWinforms.Forms
         }
 
         #endregion
+
+        private void FormDropdownBase_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape && CancelOnEscKey)
+            {
+                OnCancelClicked();
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.Enter && OKOnEnterKey)
+            {
+                OnOKClicked();
+                e.Handled = true;
+            }
+        }
+
+        private void FormDropdownBase_Deactivate(object sender, EventArgs e)
+        {
+            Close();
+        }
     }
 }

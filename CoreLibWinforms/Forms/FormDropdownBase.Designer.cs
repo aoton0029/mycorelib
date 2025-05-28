@@ -32,12 +32,16 @@
             // 
             // FormDropdownBase
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(335, 292);
+            ClientSize = new Size(383, 389);
             ControlBox = false;
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            KeyPreview = true;
+            Margin = new Padding(3, 4, 3, 4);
             Name = "FormDropdownBase";
+            Deactivate += FormDropdownBase_Deactivate;
+            KeyDown += FormDropdownBase_KeyDown;
             ResumeLayout(false);
         }
 

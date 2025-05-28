@@ -61,6 +61,528 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   Closing application... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppClosing {
+            get {
+                return ResourceManager.GetString("AppClosing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Error Context: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppErrorContext {
+            get {
+                return ResourceManager.GetString("AppErrorContext", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Application Error Details に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppErrorDetails {
+            get {
+                return ResourceManager.GetString("AppErrorDetails", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Error Location: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppErrorLocation {
+            get {
+                return ResourceManager.GetString("AppErrorLocation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Error Module: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppErrorModule {
+            get {
+                return ResourceManager.GetString("AppErrorModule", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Initializing application... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppInitializing {
+            get {
+                return ResourceManager.GetString("AppInitializing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Application language changed to {0}. Some changes will take effect after restart. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppLanguageChanged {
+            get {
+                return ResourceManager.GetString("AppLanguageChanged", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Application loaded successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppLoaded {
+            get {
+                return ResourceManager.GetString("AppLoaded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Loading data... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppLoading {
+            get {
+                return ResourceManager.GetString("AppLoading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   No data available. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppNoData {
+            get {
+                return ResourceManager.GetString("AppNoData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Changes require application restart. Restart now? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppRestartRequired {
+            get {
+                return ResourceManager.GetString("AppRestartRequired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Searching... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppSearching {
+            get {
+                return ResourceManager.GetString("AppSearching", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   No results found for &apos;{0}&apos; に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppSearchNoResults {
+            get {
+                return ResourceManager.GetString("AppSearchNoResults", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Application settings have been reset to defaults. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppSettingsReset {
+            get {
+                return ResourceManager.GetString("AppSettingsReset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Application settings saved. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppSettingsSaved {
+            get {
+                return ResourceManager.GetString("AppSettingsSaved", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Application is starting... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppStarting {
+            get {
+                return ResourceManager.GetString("AppStarting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Application theme changed to {0}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppThemeChanged {
+            get {
+                return ResourceManager.GetString("AppThemeChanged", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   A new version ({0}) is available. Would you like to update now? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppUpdateAvailable {
+            get {
+                return ResourceManager.GetString("AppUpdateAvailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Update completed successfully. The application will now restart. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppUpdateComplete {
+            get {
+                return ResourceManager.GetString("AppUpdateComplete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Downloading update... {0}% complete に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppUpdateDownloading {
+            get {
+                return ResourceManager.GetString("AppUpdateDownloading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to update application: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppUpdateFailed {
+            get {
+                return ResourceManager.GetString("AppUpdateFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Installing update... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppUpdateInstalling {
+            get {
+                return ResourceManager.GetString("AppUpdateInstalling", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Version {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppVersionInfo {
+            get {
+                return ResourceManager.GetString("AppVersionInfo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Welcome to {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AppWelcome {
+            get {
+                return ResourceManager.GetString("AppWelcome", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid username or password. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AuthInvalidCredentials {
+            get {
+                return ResourceManager.GetString("AuthInvalidCredentials", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Please log in to continue. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AuthLoginRequired {
+            get {
+                return ResourceManager.GetString("AuthLoginRequired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Login successful. Welcome, {0}! に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AuthLoginSuccessful {
+            get {
+                return ResourceManager.GetString("AuthLoginSuccessful", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Are you sure you want to log out? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AuthLogoutConfirmation {
+            get {
+                return ResourceManager.GetString("AuthLogoutConfirmation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   You have been logged out successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AuthLogoutSuccessful {
+            get {
+                return ResourceManager.GetString("AuthLogoutSuccessful", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Your session has expired. Please log in again. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AuthSessionExpired {
+            get {
+                return ResourceManager.GetString("AuthSessionExpired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Abort に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonAbort {
+            get {
+                return ResourceManager.GetString("ButtonAbort", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Apply に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonApply {
+            get {
+                return ResourceManager.GetString("ButtonApply", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Back に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonBack {
+            get {
+                return ResourceManager.GetString("ButtonBack", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Cancel に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonCancel {
+            get {
+                return ResourceManager.GetString("ButtonCancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Close に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonClose {
+            get {
+                return ResourceManager.GetString("ButtonClose", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Continue に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonContinue {
+            get {
+                return ResourceManager.GetString("ButtonContinue", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ignore に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonIgnore {
+            get {
+                return ResourceManager.GetString("ButtonIgnore", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Next に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonNext {
+            get {
+                return ResourceManager.GetString("ButtonNext", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   No に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonNo {
+            get {
+                return ResourceManager.GetString("ButtonNo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   OK に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonOK {
+            get {
+                return ResourceManager.GetString("ButtonOK", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Retry に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonRetry {
+            get {
+                return ResourceManager.GetString("ButtonRetry", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Save に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonSave {
+            get {
+                return ResourceManager.GetString("ButtonSave", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Yes に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ButtonYes {
+            get {
+                return ResourceManager.GetString("ButtonYes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Are you sure you want to cancel this operation? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ConfirmCancel {
+            get {
+                return ResourceManager.GetString("ConfirmCancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Are you sure you want to delete this item? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ConfirmDelete {
+            get {
+                return ResourceManager.GetString("ConfirmDelete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Are you sure you want to discard changes? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ConfirmDiscard {
+            get {
+                return ResourceManager.GetString("ConfirmDiscard", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Are you sure you want to exit? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ConfirmExit {
+            get {
+                return ResourceManager.GetString("ConfirmExit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Are you sure you want to delete these {0} items? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ConfirmMultipleDelete {
+            get {
+                return ResourceManager.GetString("ConfirmMultipleDelete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Are you sure you want to reset to default settings? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ConfirmReset {
+            get {
+                return ResourceManager.GetString("ConfirmReset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Access denied. You don&apos;t have permission to perform this action. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorAccessDenied {
+            get {
+                return ResourceManager.GetString("ErrorAccessDenied", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} already exists. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorAlreadyExists {
+            get {
+                return ResourceManager.GetString("ErrorAlreadyExists", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   An error occurred. Please try again. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorGeneric {
+            get {
+                return ResourceManager.GetString("ErrorGeneric", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} has an invalid format. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidFormat {
+            get {
+                return ResourceManager.GetString("ErrorInvalidFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid input. Please check your entries. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorInvalidInput {
+            get {
+                return ResourceManager.GetString("ErrorInvalidInput", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Network connection error. Please check your connection and try again. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorNetworkConnection {
+            get {
+                return ResourceManager.GetString("ErrorNetworkConnection", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} not found. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorNotFound {
+            get {
+                return ResourceManager.GetString("ErrorNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} is required. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorRequired {
+            get {
+                return ResourceManager.GetString("ErrorRequired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The operation timed out. Please try again. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ErrorTimeout {
+            get {
+                return ResourceManager.GetString("ErrorTimeout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   A backup of the original file has been created at &apos;{0}&apos;. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string FileBackupCreated {
@@ -75,6 +597,24 @@ namespace CoreLib.Resources {
         internal static string FileDiskFullError {
             get {
                 return ResourceManager.GetString("FileDiskFullError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Exporting file... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string FileExporting {
+            get {
+                return ResourceManager.GetString("FileExporting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Importing file... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string FileImporting {
+            get {
+                return ResourceManager.GetString("FileImporting", resourceCulture);
             }
         }
         
@@ -97,11 +637,29 @@ namespace CoreLib.Resources {
         }
         
         /// <summary>
+        ///   The file no longer exists: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string FileNoLongerExists {
+            get {
+                return ResourceManager.GetString("FileNoLongerExists", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Please specify a file name. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string FileNotSpecified {
             get {
                 return ResourceManager.GetString("FileNotSpecified", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   An error occurred while opening the file: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string FileOpeningError {
+            get {
+                return ResourceManager.GetString("FileOpeningError", resourceCulture);
             }
         }
         
@@ -129,6 +687,15 @@ namespace CoreLib.Resources {
         internal static string FilePermissionError {
             get {
                 return ResourceManager.GetString("FilePermissionError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Processing file... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string FileProcessing {
+            get {
+                return ResourceManager.GetString("FileProcessing", resourceCulture);
             }
         }
         
@@ -228,6 +795,1221 @@ namespace CoreLib.Resources {
         internal static string FileUnsavedChanges {
             get {
                 return ResourceManager.GetString("FileUnsavedChanges", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   About に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string HelpAbout {
+            get {
+                return ResourceManager.GetString("HelpAbout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Contact Support に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string HelpContactSupport {
+            get {
+                return ResourceManager.GetString("HelpContactSupport", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Frequently Asked Questions に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string HelpFAQ {
+            get {
+                return ResourceManager.GetString("HelpFAQ", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Get Started に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string HelpGetStarted {
+            get {
+                return ResourceManager.GetString("HelpGetStarted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Tips and Tricks に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string HelpTips {
+            get {
+                return ResourceManager.GetString("HelpTips", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Help に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string HelpTitle {
+            get {
+                return ResourceManager.GetString("HelpTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hide tooltips に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string HelpTooltipHide {
+            get {
+                return ResourceManager.GetString("HelpTooltipHide", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Show tooltips に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string HelpTooltipShow {
+            get {
+                return ResourceManager.GetString("HelpTooltipShow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Category に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelCategory {
+            get {
+                return ResourceManager.GetString("LabelCategory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Created at に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelCreatedAt {
+            get {
+                return ResourceManager.GetString("LabelCreatedAt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Date に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelDate {
+            get {
+                return ResourceManager.GetString("LabelDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Delete に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelDelete {
+            get {
+                return ResourceManager.GetString("LabelDelete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Description に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelDescription {
+            get {
+                return ResourceManager.GetString("LabelDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Details に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelDetails {
+            get {
+                return ResourceManager.GetString("LabelDetails", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Edit に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelEdit {
+            get {
+                return ResourceManager.GetString("LabelEdit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Filter に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelFilter {
+            get {
+                return ResourceManager.GetString("LabelFilter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   From に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelFrom {
+            get {
+                return ResourceManager.GetString("LabelFrom", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Name に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelName {
+            get {
+                return ResourceManager.GetString("LabelName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Search に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelSearch {
+            get {
+                return ResourceManager.GetString("LabelSearch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Settings に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelSettings {
+            get {
+                return ResourceManager.GetString("LabelSettings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sort に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelSort {
+            get {
+                return ResourceManager.GetString("LabelSort", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Status に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelStatus {
+            get {
+                return ResourceManager.GetString("LabelStatus", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Time に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelTime {
+            get {
+                return ResourceManager.GetString("LabelTime", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   To に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelTo {
+            get {
+                return ResourceManager.GetString("LabelTo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Type に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelType {
+            get {
+                return ResourceManager.GetString("LabelType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Updated at に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelUpdatedAt {
+            get {
+                return ResourceManager.GetString("LabelUpdatedAt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   View に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string LabelView {
+            get {
+                return ResourceManager.GetString("LabelView", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Connecting to server... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string NetworkConnecting {
+            get {
+                return ResourceManager.GetString("NetworkConnecting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Disconnected from server. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string NetworkDisconnected {
+            get {
+                return ResourceManager.GetString("NetworkDisconnected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Downloading... {0}% に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string NetworkDownloading {
+            get {
+                return ResourceManager.GetString("NetworkDownloading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   You are currently offline. Some features may not be available. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string NetworkOffline {
+            get {
+                return ResourceManager.GetString("NetworkOffline", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The server request timed out. Please try again. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string NetworkRequestTimeout {
+            get {
+                return ResourceManager.GetString("NetworkRequestTimeout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Server error: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string NetworkServerError {
+            get {
+                return ResourceManager.GetString("NetworkServerError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Uploading... {0}% に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string NetworkUploading {
+            get {
+                return ResourceManager.GetString("NetworkUploading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Print completed. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string PrintCompleted {
+            get {
+                return ResourceManager.GetString("PrintCompleted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Printer not found: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string PrinterNotFound {
+            get {
+                return ResourceManager.GetString("PrinterNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   An error occurred during printing: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string PrintError {
+            get {
+                return ResourceManager.GetString("PrintError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Printing in progress... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string PrintInProgress {
+            get {
+                return ResourceManager.GetString("PrintInProgress", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Preparing to print... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string PrintPreparing {
+            get {
+                return ResourceManager.GetString("PrintPreparing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Print Preview に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string PrintPreview {
+            get {
+                return ResourceManager.GetString("PrintPreview", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Cancelling operation... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProgressCancellingOperation {
+            get {
+                return ResourceManager.GetString("ProgressCancellingOperation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Estimated time remaining: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProgressEstimatedTimeRemaining {
+            get {
+                return ResourceManager.GetString("ProgressEstimatedTimeRemaining", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Processed {0} of {1} items に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProgressItemsProcessed {
+            get {
+                return ResourceManager.GetString("ProgressItemsProcessed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0}% complete に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProgressPercentComplete {
+            get {
+                return ResourceManager.GetString("ProgressPercentComplete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Please wait... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProgressPleaseWait {
+            get {
+                return ResourceManager.GetString("ProgressPleaseWait", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Step {0} of {1} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProgressStepOf {
+            get {
+                return ResourceManager.GetString("ProgressStepOf", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Add Dependency に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectAddDependency {
+            get {
+                return ResourceManager.GetString("ProjectAddDependency", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Add Item to Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectAddItem {
+            get {
+                return ResourceManager.GetString("ProjectAddItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project backup created at &apos;{0}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectBackup {
+            get {
+                return ResourceManager.GetString("ProjectBackup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project backup restored from &apos;{0}&apos;. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectBackupRestored {
+            get {
+                return ResourceManager.GetString("ProjectBackupRestored", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Build Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectBuild {
+            get {
+                return ResourceManager.GetString("ProjectBuild", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Build completed successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectBuildCompleted {
+            get {
+                return ResourceManager.GetString("ProjectBuildCompleted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Build failed with {0} errors and {1} warnings. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectBuildFailed {
+            get {
+                return ResourceManager.GetString("ProjectBuildFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Building project... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectBuilding {
+            get {
+                return ResourceManager.GetString("ProjectBuilding", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Close Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectClose {
+            get {
+                return ResourceManager.GetString("ProjectClose", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project &apos;{0}&apos; has been closed. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectClosed {
+            get {
+                return ResourceManager.GetString("ProjectClosed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Create New Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectCreate {
+            get {
+                return ResourceManager.GetString("ProjectCreate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project &apos;{0}&apos; has been created successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectCreated {
+            get {
+                return ResourceManager.GetString("ProjectCreated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Debug Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectDebug {
+            get {
+                return ResourceManager.GetString("ProjectDebug", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project Dependencies に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectDependencies {
+            get {
+                return ResourceManager.GetString("ProjectDependencies", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Dependency &apos;{0}&apos; has been added to the project. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectDependencyAdded {
+            get {
+                return ResourceManager.GetString("ProjectDependencyAdded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Dependency &apos;{0}&apos; has been removed from the project. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectDependencyRemoved {
+            get {
+                return ResourceManager.GetString("ProjectDependencyRemoved", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to resolve project dependencies: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectDependencyResolutionFailed {
+            get {
+                return ResourceManager.GetString("ProjectDependencyResolutionFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project dependencies resolved successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectDependencyResolved {
+            get {
+                return ResourceManager.GetString("ProjectDependencyResolved", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Resolving project dependencies... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectDependencyResolving {
+            get {
+                return ResourceManager.GetString("ProjectDependencyResolving", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Dependency &apos;{0}&apos; has been updated from version {1} to {2}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectDependencyUpdated {
+            get {
+                return ResourceManager.GetString("ProjectDependencyUpdated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Build ID: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectErrorBuildId {
+            get {
+                return ResourceManager.GetString("ProjectErrorBuildId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project Error Details に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectErrorDetails {
+            get {
+                return ResourceManager.GetString("ProjectErrorDetails", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   File Name: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectErrorFileName {
+            get {
+                return ResourceManager.GetString("ProjectErrorFileName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Last Action: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectErrorLastAction {
+            get {
+                return ResourceManager.GetString("ProjectErrorLastAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Line Number: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectErrorLineNumber {
+            get {
+                return ResourceManager.GetString("ProjectErrorLineNumber", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project Path: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectErrorPath {
+            get {
+                return ResourceManager.GetString("ProjectErrorPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project Error Type: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectErrorType {
+            get {
+                return ResourceManager.GetString("ProjectErrorType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Export Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectExport {
+            get {
+                return ResourceManager.GetString("ProjectExport", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project has been exported successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectExported {
+            get {
+                return ResourceManager.GetString("ProjectExported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Import Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectImport {
+            get {
+                return ResourceManager.GetString("ProjectImport", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project has been imported successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectImported {
+            get {
+                return ResourceManager.GetString("ProjectImported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Item &apos;{0}&apos; has been added to the project. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectItemAdded {
+            get {
+                return ResourceManager.GetString("ProjectItemAdded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Item &apos;{0}&apos; has been removed from the project. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectItemRemoved {
+            get {
+                return ResourceManager.GetString("ProjectItemRemoved", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project has been modified. Would you like to save changes? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectModified {
+            get {
+                return ResourceManager.GetString("ProjectModified", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   This project contains no items. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectNoItems {
+            get {
+                return ResourceManager.GetString("ProjectNoItems", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Open Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectOpen {
+            get {
+                return ResourceManager.GetString("ProjectOpen", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project &apos;{0}&apos; has been opened successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectOpened {
+            get {
+                return ResourceManager.GetString("ProjectOpened", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project Properties に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectProperties {
+            get {
+                return ResourceManager.GetString("ProjectProperties", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Recent Projects に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectRecent {
+            get {
+                return ResourceManager.GetString("ProjectRecent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Recent projects list has been cleared. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectRecentCleared {
+            get {
+                return ResourceManager.GetString("ProjectRecentCleared", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   No recent projects. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectRecentEmpty {
+            get {
+                return ResourceManager.GetString("ProjectRecentEmpty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Remove Dependency に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectRemoveDependency {
+            get {
+                return ResourceManager.GetString("ProjectRemoveDependency", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Remove Item from Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectRemoveItem {
+            get {
+                return ResourceManager.GetString("ProjectRemoveItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Run Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectRun {
+            get {
+                return ResourceManager.GetString("ProjectRun", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Save Project に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectSave {
+            get {
+                return ResourceManager.GetString("ProjectSave", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Save Project As... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectSaveAs {
+            get {
+                return ResourceManager.GetString("ProjectSaveAs", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Project &apos;{0}&apos; has been saved successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectSaved {
+            get {
+                return ResourceManager.GetString("ProjectSaved", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Update Dependency に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ProjectUpdateDependency {
+            get {
+                return ResourceManager.GetString("ProjectUpdateDependency", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Active に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateActive {
+            get {
+                return ResourceManager.GetString("StateActive", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Collapsed に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateCollapsed {
+            get {
+                return ResourceManager.GetString("StateCollapsed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Deselect All に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateDeselectAll {
+            get {
+                return ResourceManager.GetString("StateDeselectAll", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Disabled に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateDisabled {
+            get {
+                return ResourceManager.GetString("StateDisabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Enabled に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateEnabled {
+            get {
+                return ResourceManager.GetString("StateEnabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Expanded に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateExpanded {
+            get {
+                return ResourceManager.GetString("StateExpanded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Inactive に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateInactive {
+            get {
+                return ResourceManager.GetString("StateInactive", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Select All に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateSelectAll {
+            get {
+                return ResourceManager.GetString("StateSelectAll", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Selected に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StateSelected {
+            get {
+                return ResourceManager.GetString("StateSelected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Operation canceled. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StatusCanceled {
+            get {
+                return ResourceManager.GetString("StatusCanceled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Operation completed. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StatusCompleted {
+            get {
+                return ResourceManager.GetString("StatusCompleted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Operation failed. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StatusFailed {
+            get {
+                return ResourceManager.GetString("StatusFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Initializing... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StatusInitializing {
+            get {
+                return ResourceManager.GetString("StatusInitializing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Loading... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StatusLoading {
+            get {
+                return ResourceManager.GetString("StatusLoading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Pending... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StatusPending {
+            get {
+                return ResourceManager.GetString("StatusPending", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Processing... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StatusProcessing {
+            get {
+                return ResourceManager.GetString("StatusProcessing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Updating... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string StatusUpdating {
+            get {
+                return ResourceManager.GetString("StatusUpdating", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} has been created successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string SuccessCreated {
+            get {
+                return ResourceManager.GetString("SuccessCreated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} has been deleted successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string SuccessDeleted {
+            get {
+                return ResourceManager.GetString("SuccessDeleted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data has been exported successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string SuccessExported {
+            get {
+                return ResourceManager.GetString("SuccessExported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Data has been imported successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string SuccessImported {
+            get {
+                return ResourceManager.GetString("SuccessImported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} has been updated successfully. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string SuccessUpdated {
+            get {
+                return ResourceManager.GetString("SuccessUpdated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} days ago に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TimeDaysAgo {
+            get {
+                return ResourceManager.GetString("TimeDaysAgo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} hours ago に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TimeHoursAgo {
+            get {
+                return ResourceManager.GetString("TimeHoursAgo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Just now に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TimeJustNow {
+            get {
+                return ResourceManager.GetString("TimeJustNow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} minutes ago に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TimeMinutesAgo {
+            get {
+                return ResourceManager.GetString("TimeMinutesAgo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} months ago に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TimeMonthsAgo {
+            get {
+                return ResourceManager.GetString("TimeMonthsAgo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} weeks ago に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TimeWeeksAgo {
+            get {
+                return ResourceManager.GetString("TimeWeeksAgo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   {0} years ago に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TimeYearsAgo {
+            get {
+                return ResourceManager.GetString("TimeYearsAgo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Confirmation に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TitleConfirmation {
+            get {
+                return ResourceManager.GetString("TitleConfirmation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Error に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TitleError {
+            get {
+                return ResourceManager.GetString("TitleError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Information に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TitleInformation {
+            get {
+                return ResourceManager.GetString("TitleInformation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Success に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TitleSuccess {
+            get {
+                return ResourceManager.GetString("TitleSuccess", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Warning に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string TitleWarning {
+            get {
+                return ResourceManager.GetString("TitleWarning", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Validation error: {0} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ValidationError {
+            get {
+                return ResourceManager.GetString("ValidationError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Please enter a valid date. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ValidationInvalidDate {
+            get {
+                return ResourceManager.GetString("ValidationInvalidDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Please enter a valid email address. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ValidationInvalidEmail {
+            get {
+                return ResourceManager.GetString("ValidationInvalidEmail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Please enter a valid phone number. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ValidationInvalidPhone {
+            get {
+                return ResourceManager.GetString("ValidationInvalidPhone", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Value must be between {0} and {1}. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ValidationNumberRange {
+            get {
+                return ResourceManager.GetString("ValidationNumberRange", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Passwords do not match. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ValidationPasswordMismatch {
+            get {
+                return ResourceManager.GetString("ValidationPasswordMismatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Password must be at least {0} characters long and include numbers and special characters. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ValidationPasswordRequirements {
+            get {
+                return ResourceManager.GetString("ValidationPasswordRequirements", resourceCulture);
             }
         }
     }
