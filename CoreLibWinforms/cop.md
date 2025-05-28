@@ -1,3 +1,388 @@
+理解しました。個々のアプリケーションが独自の権限システムを持つ形で、アプリケーション全体の管理は不要なシステムを設計します。それぞれのアプリケーションが独自に権限を定義・管理できる柔軟な設計に変更します。
+
+# C# デスクトップアプリ用の独立型ユーザー権限システムの設計
+
+## 基本設計 (改訂版)
+
+### 1. アプリケーション独自の権限システム
+
+```csharp
+// 柔軟な権限定義のための基本クラス
+public class PermissionDefinition
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+}
+
+// 具体的なアプリケーションでの権限実装例
+public class InvoiceAppPermissions
+{
+    public static readonly PermissionDefinition ViewInvoices = new PermissionDefinition 
+    { 
+        Id = "invoice_view", 
+        Name = "請求書閲覧", 
+        Description = "請求書の閲覧権限" 
+    };
+    
+    public static readonly PermissionDefinition CreateInvoices = new PermissionDefinition 
+    { 
+        Id = "invoice_create", 
+        Name = "請求書作成", 
+        Description = "請求書の作成権限" 
+    };
+    
+    // 他の権限も同様に定義...
+    
+    // アプリケーションで使用する全ての権限を取得
+    public static IEnumerable<PermissionDefinition> GetAllPermissions()
+    {
+        return new[] { ViewInvoices, CreateInvoices /* 他の権限も追加 */ };
+    }
+}
+```
+
+### 2. ロールベース権限システム (単一アプリケーション用)
+
+```csharp
+// ロール定義
+public class Role
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public HashSet<string> PermissionIds { get; set; } = new HashSet<string>();
+    
+    public bool HasPermission(string permissionId)
+    {
+        return PermissionIds.Contains(permissionId);
+    }
+}
+
+// ユーザー定義
+public class User
+{
+    public string Id { get; set; }
+    public string Username { get; set; }
+    public List<string> RoleIds { get; set; } = new List<string>();
+    
+    // ユーザー固有の権限オーバーライド（特定権限の許可または拒否）
+    public Dictionary<string, bool> PermissionOverrides { get; set; } = new Dictionary<string, bool>();
+}
+```
+
+### 3. 権限管理サービス (単一アプリ用)
+
+```csharp
+public class PermissionService
+{
+    private readonly Dictionary<string, Role> _roles = new Dictionary<string, Role>();
+    private readonly Dictionary<string, User> _users = new Dictionary<string, User>();
+    private readonly string _configFilePath;
+    
+    public PermissionService(string appName)
+    {
+        // アプリごとに個別の設定ファイルを使用
+        string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string configDir = Path.Combine(appDataPath, appName, "Config");
+        
+        if (!Directory.Exists(configDir))
+            Directory.CreateDirectory(configDir);
+            
+        _configFilePath = Path.Combine(configDir, "permissions.json");
+        LoadConfiguration();
+    }
+    
+    private void LoadConfiguration()
+    {
+        if (!File.Exists(_configFilePath))
+            return;
+            
+        try
+        {
+            var json = File.ReadAllText(_configFilePath);
+            var config = JsonSerializer.Deserialize<PermissionConfig>(json);
+            
+            if (config != null)
+            {
+                _roles = config.Roles ?? new Dictionary<string, Role>();
+                _users = config.Users ?? new Dictionary<string, User>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"設定ファイルの読み込みエラー: {ex.Message}");
+            // エラーログに記録など
+        }
+    }
+    
+    public void SaveConfiguration()
+    {
+        var config = new PermissionConfig
+        {
+            Roles = _roles,
+            Users = _users
+        };
+        
+        try
+        {
+            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_configFilePath, json);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"設定ファイルの保存エラー: {ex.Message}");
+            // エラーログに記録など
+        }
+    }
+    
+    // ユーザーが特定の権限を持っているか確認
+    public bool HasPermission(string userId, string permissionId)
+    {
+        if (!_users.TryGetValue(userId, out var user))
+            return false;
+            
+        // ユーザー固有のオーバーライドがある場合はそれを優先
+        if (user.PermissionOverrides.TryGetValue(permissionId, out var hasPermission))
+            return hasPermission;
+            
+        // ユーザーのロールを確認
+        foreach (var roleId in user.RoleIds)
+        {
+            if (_roles.TryGetValue(roleId, out var role) && role.HasPermission(permissionId))
+                return true;
+        }
+        
+        return false;
+    }
+    
+    // ユーザー、ロールの管理メソッド
+    public void AddUser(User user) => _users[user.Id] = user;
+    public void AddRole(Role role) => _roles[role.Id] = role;
+    public User GetUser(string userId) => _users.TryGetValue(userId, out var user) ? user : null;
+    public Role GetRole(string roleId) => _roles.TryGetValue(roleId, out var role) ? role : null;
+    
+    // その他の必要なメソッド...
+    
+    // 設定ファイル用のクラス
+    private class PermissionConfig
+    {
+        public Dictionary<string, Role> Roles { get; set; }
+        public Dictionary<string, User> Users { get; set; }
+    }
+}
+```
+
+### 4. アプリケーションでの使用例
+
+```csharp
+public class InvoiceApplication
+{
+    private readonly PermissionService _permissionService;
+    private readonly string _currentUserId;
+    
+    public InvoiceApplication(string currentUserId)
+    {
+        _currentUserId = currentUserId;
+        _permissionService = new PermissionService("InvoiceApp");
+        
+        // アプリ起動時に基本ロールがなければ初期化
+        InitializeDefaultRolesIfNeeded();
+    }
+    
+    private void InitializeDefaultRolesIfNeeded()
+    {
+        if (_permissionService.GetRole("admin") == null)
+        {
+            // 管理者ロールの作成
+            var adminRole = new Role
+            {
+                Id = "admin",
+                Name = "管理者",
+                PermissionIds = new HashSet<string>(
+                    InvoiceAppPermissions.GetAllPermissions().Select(p => p.Id))
+            };
+            _permissionService.AddRole(adminRole);
+            
+            // 一般ユーザーロールの作成
+            var userRole = new Role
+            {
+                Id = "user",
+                Name = "一般ユーザー",
+                PermissionIds = new HashSet<string> { InvoiceAppPermissions.ViewInvoices.Id }
+            };
+            _permissionService.AddRole(userRole);
+            
+            _permissionService.SaveConfiguration();
+        }
+    }
+    
+    // UI要素の可視性を設定
+    public bool CanViewInvoices => _permissionService.HasPermission(_currentUserId, InvoiceAppPermissions.ViewInvoices.Id);
+    public bool CanCreateInvoices => _permissionService.HasPermission(_currentUserId, InvoiceAppPermissions.CreateInvoices.Id);
+    
+    // 機能実行時の権限チェック
+    public void CreateInvoice()
+    {
+        if (!CanCreateInvoices)
+        {
+            MessageBox.Show("請求書を作成する権限がありません。");
+            return;
+        }
+        
+        // 請求書作成のロジック...
+    }
+}
+```
+
+## 拡張機能と応用例
+
+### 1. 動的な権限設定 UI
+
+```csharp
+public class PermissionSettingsForm : Form
+{
+    private readonly PermissionService _permissionService;
+    
+    public PermissionSettingsForm(PermissionService permissionService)
+    {
+        _permissionService = permissionService;
+        InitializeComponent();
+    }
+    
+    private void InitializeComponent()
+    {
+        // UI要素の初期化（簡略化）
+        // ...
+        
+        // ロール一覧を表示
+        ShowRoles();
+    }
+    
+    private void ShowRoles()
+    {
+        // ロールをリストビューに表示
+        // ...
+        
+        // 選択されたロールの権限一覧を表示
+        // ...
+    }
+    
+    private void SavePermissionChanges()
+    {
+        // UI上での変更をモデルに適用
+        // ...
+        
+        // 変更を保存
+        _permissionService.SaveConfiguration();
+    }
+}
+```
+
+### 2. 権限プロファイル機能
+
+```csharp
+public class PermissionProfile
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public Dictionary<string, Role> Roles { get; set; } = new Dictionary<string, Role>();
+    
+    // プロファイルのインポート/エクスポート
+    public static PermissionProfile FromJson(string json)
+    {
+        return JsonSerializer.Deserialize<PermissionProfile>(json);
+    }
+    
+    public string ToJson()
+    {
+        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+    }
+}
+
+// PermissionServiceに追加するメソッド
+public void ImportProfile(PermissionProfile profile)
+{
+    // プロファイルからロールをインポート
+    foreach (var role in profile.Roles.Values)
+    {
+        _roles[role.Id] = role;
+    }
+    SaveConfiguration();
+}
+
+public PermissionProfile ExportProfile(string profileId, string profileName)
+{
+    return new PermissionProfile
+    {
+        Id = profileId,
+        Name = profileName,
+        Roles = new Dictionary<string, Role>(_roles)
+    };
+}
+```
+
+## 代替アプローチ: 属性ベースの権限システム
+
+より柔軟で宣言的な権限チェックを行いたい場合は、属性を使用したアプローチも有効です：
+
+```csharp
+// 権限チェック属性
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+public class RequirePermissionAttribute : Attribute
+{
+    public string PermissionId { get; }
+    
+    public RequirePermissionAttribute(string permissionId)
+    {
+        PermissionId = permissionId;
+    }
+}
+
+// 拡張メソッドを使用した権限チェック
+public static class PermissionExtensions
+{
+    public static void CheckPermission(this PermissionService service, string userId, string permissionId)
+    {
+        if (!service.HasPermission(userId, permissionId))
+        {
+            throw new UnauthorizedAccessException($"権限がありません: {permissionId}");
+        }
+    }
+}
+
+// 使用例
+public class InvoiceService
+{
+    private readonly PermissionService _permissionService;
+    private readonly string _currentUserId;
+    
+    public InvoiceService(PermissionService permissionService, string currentUserId)
+    {
+        _permissionService = permissionService;
+        _currentUserId = currentUserId;
+    }
+    
+    [RequirePermission("invoice_create")]
+    public void CreateInvoice(Invoice invoice)
+    {
+        // リフレクションを使って属性を取得し権限チェックを行う
+        // （通常はAOPフレームワークを使用）
+        
+        // メソッドの実行...
+    }
+    
+    // 明示的な権限チェック
+    public void DeleteInvoice(int invoiceId)
+    {
+        _permissionService.CheckPermission(_currentUserId, "invoice_delete");
+        
+        // 削除処理...
+    }
+}
+```
+
+この設計により、各アプリケーションが完全に独立した権限システムを持ち、アプリケーション間の管理は必要ない柔軟なシステムを実現できます。JSONファイルを使用して権限情報を保存することで、データベースを使わずに権限を管理できます。
+
 Thank you for providing that information. Now I understand that you're looking to implement EventBus and EventHandlerManager classes in C#.
 
 Let me help you create implementations for these classes that handle control events, PropertyChanged, and CollectionChanged events using WeakReferences.
