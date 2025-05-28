@@ -1,3 +1,561 @@
+I can see you mentioned "フラグを使わずに組み合わせ可能な権限" which translates to "combinable permissions without using flags." Let me help you design a permission system that allows for flexible combinations without relying on the enum flags approach.
+
+Let me check your GitHub repository first to understand the context better.# フラグを使わずに組み合わせ可能な権限システムの設計
+
+リポジトリのコードを確認したところ、`CoreLibWinforms/Core/Permissions/PermissionType.cs`に興味深い実装がありました。これをベースにフラグを使用せず、組み合わせ可能な権限システムを設計します。
+
+## 1. 権限インターフェースの定義
+
+```csharp
+/// <summary>
+/// 権限を表すインターフェース
+/// </summary>
+public interface IPermission
+{
+    /// <summary>
+    /// 権限の数値値
+    /// </summary>
+    int Value { get; }
+
+    /// <summary>
+    /// 権限の名前
+    /// </summary>
+    string Name { get; }
+
+    /// <summary>
+    /// 説明
+    /// </summary>
+    string Description { get; }
+
+    /// <summary>
+    /// 他の権限と組み合わせることができるか
+    /// </summary>
+    bool IsCombineable { get; }
+}
+```
+
+## 2. 基本権限クラスの実装
+
+```csharp
+/// <summary>
+/// 基本的な権限を表すクラス
+/// </summary>
+public class Permission : IPermission
+{
+    /// <summary>
+    /// 権限の数値値（固有のプライム値を使用）
+    /// </summary>
+    public int Value { get; }
+
+    /// <summary>
+    /// 権限の名前
+    /// </summary>
+    public string Name { get; }
+
+    /// <summary>
+    /// 説明
+    /// </summary>
+    public string Description { get; }
+
+    /// <summary>
+    /// 他の権限と組み合わせることができるか
+    /// </summary>
+    public bool IsCombineable { get; }
+
+    /// <summary>
+    /// 権限に関連付けられたメタデータ
+    /// </summary>
+    public Dictionary<string, object> Metadata { get; } = new Dictionary<string, object>();
+
+    /// <summary>
+    /// 新しい権限を作成します
+    /// </summary>
+    public Permission(int value, string name, string description, bool isCombineable = true)
+    {
+        Value = value;
+        Name = name;
+        Description = description;
+        IsCombineable = isCombineable;
+    }
+
+    public override string ToString() => Name;
+
+    public override bool Equals(object obj)
+    {
+        return obj is Permission permission && Value == permission.Value;
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public static bool operator ==(Permission left, Permission right)
+    {
+        if (left is null)
+            return right is null;
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(Permission left, Permission right)
+    {
+        return !(left == right);
+    }
+}
+```
+
+## 3. 複合権限クラスの実装
+
+```csharp
+/// <summary>
+/// 複数の権限を組み合わせた権限
+/// </summary>
+public class CompositePermission : IPermission
+{
+    /// <summary>
+    /// この複合権限に含まれる個々の権限
+    /// </summary>
+    public IReadOnlyList<IPermission> Permissions { get; }
+
+    /// <summary>
+    /// 権限の数値値（含まれるすべての権限の値の合計）
+    /// </summary>
+    public int Value { get; }
+
+    /// <summary>
+    /// 権限の名前（含まれる権限名をパイプで結合）
+    /// </summary>
+    public string Name { get; }
+
+    /// <summary>
+    /// 説明（含まれる権限の説明を結合）
+    /// </summary>
+    public string Description { get; }
+
+    /// <summary>
+    /// 他の権限と組み合わせることができるか（常にtrue）
+    /// </summary>
+    public bool IsCombineable => true;
+
+    /// <summary>
+    /// 複合権限に関連付けられたメタデータ
+    /// </summary>
+    public Dictionary<string, object> Metadata { get; } = new Dictionary<string, object>();
+
+    /// <summary>
+    /// 新しい複合権限を作成します
+    /// </summary>
+    public CompositePermission(IEnumerable<IPermission> permissions)
+    {
+        if (permissions == null)
+            throw new ArgumentNullException(nameof(permissions));
+
+        var permList = permissions.ToList();
+        
+        // 組み合わせ不可能な権限がないかチェック
+        var nonCombineablePermission = permList.FirstOrDefault(p => !p.IsCombineable);
+        if (nonCombineablePermission != null)
+            throw new InvalidOperationException($"権限 '{nonCombineablePermission.Name}' は組み合わせることができません。");
+
+        Permissions = permList.ToArray();
+        Value = CalculateValue(permList);
+        Name = string.Join("|", permList.Select(p => p.Name));
+        Description = string.Join("、", permList.Select(p => p.Description));
+    }
+
+    /// <summary>
+    /// 複合権限の値を計算（権限値の積またはハッシュ値を使用）
+    /// </summary>
+    private int CalculateValue(List<IPermission> permissions)
+    {
+        return permissions.Aggregate(0, (current, permission) => current + permission.Value);
+    }
+
+    /// <summary>
+    /// この権限が指定された権限を含むかをチェックします
+    /// </summary>
+    public bool Contains(IPermission permission)
+    {
+        if (permission == null)
+            return false;
+
+        // 指定された権限自体が含まれているか、あるいは
+        // 複合権限の場合はその中の個々の権限が含まれているかをチェック
+        if (permission is CompositePermission compositePermission)
+        {
+            return compositePermission.Permissions.All(p => Contains(p));
+        }
+
+        return Permissions.Any(p => p.Equals(permission)) || 
+               Permissions.OfType<CompositePermission>().Any(cp => cp.Contains(permission));
+    }
+
+    public override string ToString() => Name;
+
+    public override bool Equals(object obj)
+    {
+        return obj is CompositePermission other && 
+               Value == other.Value && 
+               Permissions.Count == other.Permissions.Count && 
+               Permissions.All(p => other.Contains(p));
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+}
+```
+
+## 4. 権限マネージャークラス
+
+```csharp
+/// <summary>
+/// 権限を管理するクラス
+/// </summary>
+public class PermissionManager
+{
+    private static PermissionManager _instance;
+    public static PermissionManager Instance => _instance ??= new PermissionManager();
+
+    // 権限のコレクション
+    private readonly Dictionary<string, Permission> _permissions = new();
+    
+    // 権限の組み合わせをキャッシュ
+    private readonly Dictionary<string, CompositePermission> _compositeCache = new();
+
+    // ユーザーに割り当てられた権限
+    private readonly Dictionary<string, HashSet<IPermission>> _userPermissions = new();
+    
+    // 現在のユーザー
+    public string CurrentUser { get; private set; }
+
+    /// <summary>
+    /// 権限を登録
+    /// </summary>
+    public Permission RegisterPermission(string name, string description, bool isCombineable = true)
+    {
+        if (_permissions.ContainsKey(name))
+            return _permissions[name];
+            
+        // 固有の素数値を使用することで、権限の一意性を確保
+        int value = GenerateUniqueValue();
+        var permission = new Permission(value, name, description, isCombineable);
+        _permissions[name] = permission;
+        return permission;
+    }
+
+    /// <summary>
+    /// 固有の値を生成（素数を使用）
+    /// </summary>
+    private int GenerateUniqueValue()
+    {
+        // 既存の権限から使用されていない素数を見つける
+        int[] primes = { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 };
+        
+        var usedValues = _permissions.Values.Select(p => p.Value).ToHashSet();
+        return primes.FirstOrDefault(p => !usedValues.Contains(p));
+    }
+
+    /// <summary>
+    /// 権限の組み合わせを作成
+    /// </summary>
+    public CompositePermission CombinePermissions(params string[] permissionNames)
+    {
+        // キャッシュキーを作成（ソート済み名前のリスト）
+        string cacheKey = string.Join(",", permissionNames.OrderBy(n => n));
+        
+        if (_compositeCache.TryGetValue(cacheKey, out var cached))
+            return cached;
+            
+        var permissions = new List<IPermission>();
+        foreach (var name in permissionNames)
+        {
+            if (_permissions.TryGetValue(name, out var permission))
+                permissions.Add(permission);
+        }
+        
+        var composite = new CompositePermission(permissions);
+        _compositeCache[cacheKey] = composite;
+        return composite;
+    }
+
+    /// <summary>
+    /// ユーザーに権限を割り当て
+    /// </summary>
+    public void AssignPermissionToUser(string userId, IPermission permission)
+    {
+        if (!_userPermissions.TryGetValue(userId, out var permissions))
+        {
+            permissions = new HashSet<IPermission>();
+            _userPermissions[userId] = permissions;
+        }
+        
+        permissions.Add(permission);
+    }
+
+    /// <summary>
+    /// ユーザーの権限を確認
+    /// </summary>
+    public bool UserHasPermission(string userId, IPermission requiredPermission)
+    {
+        if (!_userPermissions.TryGetValue(userId, out var permissions))
+            return false;
+            
+        // 直接一致する権限があるか確認
+        if (permissions.Contains(requiredPermission))
+            return true;
+            
+        // 複合権限の場合、その構成要素を含む権限があるか確認
+        if (requiredPermission is CompositePermission composite)
+        {
+            // 必要な権限がすべて含まれているか確認
+            return composite.Permissions.All(p => 
+                permissions.Any(userPerm => 
+                    userPerm.Equals(p) || 
+                    (userPerm is CompositePermission userComp && userComp.Contains(p))
+                )
+            );
+        }
+        
+        // 複合権限の中に必要な権限が含まれているか確認
+        return permissions.OfType<CompositePermission>().Any(cp => cp.Contains(requiredPermission));
+    }
+
+    /// <summary>
+    /// 現在のユーザーを設定
+    /// </summary>
+    public void SetCurrentUser(string userId)
+    {
+        CurrentUser = userId;
+    }
+
+    /// <summary>
+    /// 現在のユーザーの権限を確認
+    /// </summary>
+    public bool CurrentUserHasPermission(IPermission requiredPermission)
+    {
+        return !string.IsNullOrEmpty(CurrentUser) && 
+               UserHasPermission(CurrentUser, requiredPermission);
+    }
+}
+```
+
+## 5. 使用例
+
+```csharp
+public class PermissionSystemExample
+{
+    public void InitializePermissions()
+    {
+        // 権限マネージャーの取得
+        var permManager = PermissionManager.Instance;
+        
+        // 基本権限の登録
+        var viewPermission = permManager.RegisterPermission("View", "閲覧する権限");
+        var createPermission = permManager.RegisterPermission("Create", "作成する権限");
+        var editPermission = permManager.RegisterPermission("Edit", "編集する権限");
+        var deletePermission = permManager.RegisterPermission("Delete", "削除する権限");
+        var approvePermission = permManager.RegisterPermission("Approve", "承認する権限");
+        var adminPermission = permManager.RegisterPermission("Admin", "管理者権限", false); // 組み合わせ不可
+        
+        // 複合権限の作成
+        var editorPermission = permManager.CombinePermissions("View", "Create", "Edit");
+        var managerPermission = permManager.CombinePermissions("View", "Create", "Edit", "Delete");
+        
+        // ユーザーの作成と権限の割り当て
+        permManager.AssignPermissionToUser("user1", viewPermission);
+        permManager.AssignPermissionToUser("user2", editorPermission);
+        permManager.AssignPermissionToUser("admin", adminPermission);
+        
+        // 特定のユーザーに追加の権限を割り当て
+        permManager.AssignPermissionToUser("manager", managerPermission);
+        permManager.AssignPermissionToUser("manager", approvePermission);
+    }
+    
+    public void CheckPermissions()
+    {
+        var permManager = PermissionManager.Instance;
+        
+        // 現在のユーザーを設定
+        permManager.SetCurrentUser("user2");
+        
+        // シンプルな権限チェック
+        var viewPermission = permManager.RegisterPermission("View", "閲覧する権限");
+        bool canView = permManager.CurrentUserHasPermission(viewPermission);
+        Console.WriteLine($"Can view: {canView}"); // true
+        
+        // 複合権限のチェック
+        var deletePermission = permManager.RegisterPermission("Delete", "削除する権限");
+        bool canDelete = permManager.CurrentUserHasPermission(deletePermission);
+        Console.WriteLine($"Can delete: {canDelete}"); // false
+        
+        // ユーザーを変更して複合権限をチェック
+        permManager.SetCurrentUser("manager");
+        canDelete = permManager.CurrentUserHasPermission(deletePermission);
+        Console.WriteLine($"Manager can delete: {canDelete}"); // true
+    }
+}
+```
+
+## 6. リソース別権限の実装
+
+```csharp
+/// <summary>
+/// リソースに対する権限
+/// </summary>
+public class ResourcePermission
+{
+    /// <summary>
+    /// リソースID
+    /// </summary>
+    public string ResourceId { get; }
+    
+    /// <summary>
+    /// 権限
+    /// </summary>
+    public IPermission Permission { get; }
+    
+    public ResourcePermission(string resourceId, IPermission permission)
+    {
+        ResourceId = resourceId ?? throw new ArgumentNullException(nameof(resourceId));
+        Permission = permission ?? throw new ArgumentNullException(nameof(permission));
+    }
+}
+
+/// <summary>
+/// リソース別権限の拡張
+/// </summary>
+public class ResourcePermissionManager
+{
+    // リソースタイプ別の権限マッピング
+    private readonly Dictionary<string, Dictionary<string, ResourcePermission>> _userResourcePermissions = new();
+    private readonly PermissionManager _permissionManager;
+    
+    public ResourcePermissionManager(PermissionManager permissionManager)
+    {
+        _permissionManager = permissionManager;
+    }
+    
+    /// <summary>
+    /// ユーザーにリソース権限を割り当て
+    /// </summary>
+    public void AssignResourcePermission(string userId, string resourceId, IPermission permission)
+    {
+        if (!_userResourcePermissions.TryGetValue(userId, out var resourcePermissions))
+        {
+            resourcePermissions = new Dictionary<string, ResourcePermission>();
+            _userResourcePermissions[userId] = resourcePermissions;
+        }
+        
+        resourcePermissions[resourceId] = new ResourcePermission(resourceId, permission);
+    }
+    
+    /// <summary>
+    /// ユーザーがリソースに対して権限を持っているか確認
+    /// </summary>
+    public bool CheckResourcePermission(string userId, string resourceId, IPermission requiredPermission)
+    {
+        // 1. まずリソース固有の権限をチェック
+        if (_userResourcePermissions.TryGetValue(userId, out var resourcePermissions) &&
+            resourcePermissions.TryGetValue(resourceId, out var permission))
+        {
+            if (permission.Permission is CompositePermission composite)
+            {
+                if (composite.Contains(requiredPermission))
+                    return true;
+            }
+            else if (permission.Permission.Equals(requiredPermission))
+            {
+                return true;
+            }
+        }
+        
+        // 2. グローバル権限をチェック
+        return _permissionManager.UserHasPermission(userId, requiredPermission);
+    }
+}
+```
+
+## 7. シリアライゼーション対応
+
+```csharp
+/// <summary>
+/// 権限構成のシリアライゼーション
+/// </summary>
+public class PermissionSerializer
+{
+    private class PermissionData
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public int Value { get; set; }
+        public bool IsCombineable { get; set; }
+    }
+    
+    private class CompositePermissionData
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public List<string> PermissionNames { get; set; }
+    }
+    
+    private class UserPermissionData
+    {
+        public string UserId { get; set; }
+        public List<string> PermissionNames { get; set; }
+        public Dictionary<string, List<string>> ResourcePermissions { get; set; }
+    }
+    
+    /// <summary>
+    /// 権限設定を保存
+    /// </summary>
+    public static void SavePermissions(PermissionManager permissionManager, string filePath)
+    {
+        // 権限マネージャーから必要なデータを抽出してシリアライズ
+        // ...
+    }
+    
+    /// <summary>
+    /// 権限設定を読み込み
+    /// </summary>
+    public static void LoadPermissions(PermissionManager permissionManager, string filePath)
+    {
+        // ファイルからデータを読み込んで権限マネージャーに復元
+        // ...
+    }
+}
+```
+
+## まとめ
+
+この設計では、フラグを使用せずに権限を組み合わせる方法を示しました。主な特長は以下の通りです：
+
+1. **オブジェクト指向アプローチ**：
+   - 各権限は独自のオブジェクトとして表現
+   - コンポジットパターンを使用して複雑な権限構造を構築
+
+2. **優れた拡張性**：
+   - 新しい権限タイプを簡単に追加可能
+   - メタデータを通じて権限に追加情報を付与可能
+
+3. **型安全性**：
+   - フラグ型Enumと異なり、権限チェックが型安全
+
+4. **明示的な権限組み合わせ**：
+   - 権限の組み合わせが明示的で追跡しやすい
+   - コンポジットオブジェクトを通じて階層的な権限構造を実現
+
+5. **柔軟な権限チェックロジック**：
+   - 単純な一致だけでなく、構造的なチェックが可能
+   - リソース別の権限管理が容易
+
+この設計は柔軟性が高く、アプリケーション間で共有できる汎用的な権限システムとして機能します。
+
+なお、GitHub上の検索結果には制限があり、完全な結果が表示されていない可能性があります。
+---
+
+
 理解しました。個々のアプリケーションが独自の権限システムを持つ形で、アプリケーション全体の管理は不要なシステムを設計します。それぞれのアプリケーションが独自に権限を定義・管理できる柔軟な設計に変更します。
 
 # C# デスクトップアプリ用の独立型ユーザー権限システムの設計
