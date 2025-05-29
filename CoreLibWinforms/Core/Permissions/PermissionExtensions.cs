@@ -6,157 +6,230 @@ using System.Threading.Tasks;
 
 namespace CoreLibWinforms.Core.Permissions
 {
-    /// <summary>
-    /// コントロールへの権限適用に関する拡張メソッドを提供するクラス
-    /// </summary>
-    public static class ControlPermissionExtensions
+    public static  class PermissionExtensions
     {
         /// <summary>
-        /// コントロールに権限を適用します
+        /// コントロールに権限を適用します。
+        /// 権限がない場合、コントロールは無効化されます。
         /// </summary>
-        /// <param name="control">対象コントロール</param>
-        /// <param name="featureId">機能ID</param>
-        /// <param name="requiredPermission">必要な権限</param>
-        /// <returns>同じコントロールを返し、メソッドチェーンを可能にします</returns>
-        public static Control ApplyPermission(this Control control, string featureId, IPermission requiredPermission)
+        /// <param name="control">対象となるコントロール</param>
+        /// <param name="permissionId">必要な権限ID</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <returns>変更されたコントロール</returns>
+        public static T ApplyPermission<T>(this T control, int permissionId, string userId) where T : Control
         {
-            PermissionManager.Instance.ApplyPermissionToControl(control, featureId, requiredPermission);
+            bool hasPermission = PermissionHelper.HasPermission(userId, permissionId);
+            control.Enabled = hasPermission;
             return control;
         }
 
         /// <summary>
-        /// ToolStripItemに権限を適用します
+        /// コントロールとその子コントロールすべてに権限を適用します。
         /// </summary>
-        /// <param name="item">対象ToolStripItem</param>
-        /// <param name="featureId">機能ID</param>
-        /// <param name="requiredPermission">必要な権限</param>
-        /// <returns>同じToolStripItemを返し、メソッドチェーンを可能にします</returns>
-        public static ToolStripItem ApplyPermission(this ToolStripItem item, string featureId, IPermission requiredPermission)
+        /// <param name="control">ルートコントロール</param>
+        /// <param name="permissionId">必要な権限ID</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <returns>変更されたコントロール</returns>
+        public static T ApplyPermissionToAll<T>(this T control, int permissionId, string userId) where T : Control
         {
-            PermissionManager.Instance.ApplyPermissionToControl(item, featureId, requiredPermission);
-            return item;
+            bool hasPermission = PermissionHelper.HasPermission(userId, permissionId);
+            control.Enabled = hasPermission;
+
+            foreach (Control childControl in control.Controls)
+            {
+                ApplyPermissionToAll(childControl, permissionId, userId);
+            }
+
+            return control;
         }
 
         /// <summary>
-        /// コントロールコレクションに一括して権限を適用します
+        /// 特定のタグを持つコントロールに権限を適用します。
         /// </summary>
-        /// <param name="controls">対象コントロールのコレクション</param>
-        /// <param name="featureId">機能ID</param>
-        /// <param name="requiredPermission">必要な権限</param>
-        public static void ApplyPermissionToAll(this Control.ControlCollection controls, string featureId, IPermission requiredPermission)
+        /// <param name="control">対象となるコントロール</param>
+        /// <param name="permissionId">必要な権限ID</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="tag">対象とするタグ</param>
+        /// <returns>変更されたコントロール</returns>
+        public static T ApplyPermissionByTag<T>(this T control, int permissionId, string userId, object tag) where T : Control
         {
-            foreach (Control control in controls)
+            if (control.Tag != null && control.Tag.Equals(tag))
             {
-                control.ApplyPermission(featureId, requiredPermission);
+                bool hasPermission = PermissionHelper.HasPermission(userId, permissionId);
+                control.Enabled = hasPermission;
+            }
+
+            return control;
+        }
+
+        /// <summary>
+        /// ユーザーの全権限をコントロールに自動適用します。
+        /// コントロールのTagにPermissionId（整数）が設定されている場合、
+        /// そのPermissionIdに対応する権限をチェックします。
+        /// </summary>
+        /// <param name="container">権限を適用するコンテナ</param>
+        /// <param name="userId">ユーザーID</param>
+        public static void AutoApplyPermissions(this Control container, string userId)
+        {
+            var userPermissions = PermissionHelper.GetUserPermissions(userId);
+            var permissionIds = userPermissions.Select(p => p.Id).ToHashSet();
+
+            ApplyPermissionsRecursively(container, permissionIds);
+        }
+
+        // 再帰的に権限を適用するヘルパーメソッド
+        private static void ApplyPermissionsRecursively(Control control, HashSet<int> permissionIds)
+        {
+            if (control.Tag is int permissionId)
+            {
+                control.Enabled = permissionIds.Contains(permissionId);
+            }
+
+            foreach (Control childControl in control.Controls)
+            {
+                ApplyPermissionsRecursively(childControl, permissionIds);
             }
         }
 
         /// <summary>
-        /// ToolStripItemコレクションに一括して権限を適用します
+        /// タグに基づいて複数のコントロールにまとめて権限を適用します。
         /// </summary>
-        /// <param name="items">対象ToolStripItemのコレクション</param>
-        /// <param name="featureId">機能ID</param>
-        /// <param name="requiredPermission">必要な権限</param>
-        public static void ApplyPermissionToAll(this ToolStripItemCollection items, string featureId, IPermission requiredPermission)
+        /// <param name="container">コントロールを含むコンテナ</param>
+        /// <param name="permissionId">必要な権限ID</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="tag">対象とするタグ</param>
+        public static void ApplyPermissionsByTag(this Control container, int permissionId, string userId, object tag)
         {
-            foreach (ToolStripItem item in items)
+            bool hasPermission = PermissionHelper.HasPermission(userId, permissionId);
+            ApplyPermissionsByTagRecursively(container, tag, hasPermission);
+        }
+
+        // タグに基づいて再帰的に権限を適用するヘルパーメソッド
+        private static void ApplyPermissionsByTagRecursively(Control control, object tag, bool hasPermission)
+        {
+            if (control.Tag != null && control.Tag.Equals(tag))
             {
-                item.ApplyPermission(featureId, requiredPermission);
+                control.Enabled = hasPermission;
+            }
+
+            foreach (Control childControl in control.Controls)
+            {
+                ApplyPermissionsByTagRecursively(childControl, tag, hasPermission);
             }
         }
 
         /// <summary>
-        /// 指定したタグを持つコントロールにのみ権限を適用します
+        /// Enum値を整数のパーミッションIDに変換します。
         /// </summary>
-        /// <param name="controls">対象コントロールのコレクション</param>
-        /// <param name="tag">適用対象のタグ</param>
-        /// <param name="featureId">機能ID</param>
-        /// <param name="requiredPermission">必要な権限</param>
-        public static void ApplyPermissionByTag(this Control.ControlCollection controls, object tag, string featureId, IPermission requiredPermission)
+        /// <typeparam name="TEnum">変換するEnum型</typeparam>
+        /// <param name="enumValue">Enum値</param>
+        /// <returns>整数化されたパーミッションID</returns>
+        public static int ToPermissionId<TEnum>(this TEnum enumValue) where TEnum : Enum
         {
-            foreach (Control control in controls)
-            {
-                if (control.Tag != null && control.Tag.Equals(tag))
-                {
-                    control.ApplyPermission(featureId, requiredPermission);
-                }
+            return Convert.ToInt32(enumValue);
+        }
 
-                // 子コントロールも処理する
-                if (control.Controls.Count > 0)
-                {
-                    control.Controls.ApplyPermissionByTag(tag, featureId, requiredPermission);
-                }
+        /// <summary>
+        /// 複数のEnum値をビットマスクとしてOR演算で結合し、一つの整数値に変換します。
+        /// </summary>
+        /// <typeparam name="TEnum">変換するEnum型</typeparam>
+        /// <param name="enumValues">Enum値の配列</param>
+        /// <returns>ビット演算でOR結合された整数値</returns>
+        public static int CombinePermissions<TEnum>(params TEnum[] enumValues) where TEnum : Enum
+        {
+            int result = 0;
+            foreach (var value in enumValues)
+            {
+                result |= Convert.ToInt32(value);
             }
+            return result;
         }
 
         /// <summary>
-        /// フォーム上のコントロールに権限設定を自動適用します
-        /// コントロールのTagプロパティに "FeatureID:Permission" の形式で設定しておく必要があります
+        /// ビットフラグとしてタグに設定されている権限をチェックします。
         /// </summary>
-        /// <param name="form">対象フォーム</param>
-        /// <param name="permissionResolver">権限文字列をIPermissionオブジェクトに解決する関数</param>
-        public static void AutoApplyPermissions(this Form form, Func<string, IPermission> permissionResolver)
+        /// <param name="control">対象となるコントロール</param>
+        /// <param name="requiredPermission">必要な権限のビットフラグ</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <returns>変更されたコントロール</returns>
+        public static T ApplyBitPermission<T>(this T control, int requiredPermission, string userId) where T : Control
         {
-            if (permissionResolver == null)
-                throw new ArgumentNullException(nameof(permissionResolver));
+            var userPermissions = PermissionHelper.GetUserPermissions(userId);
+            int userPermissionFlags = 0;
 
-            ApplyPermissionsByTag(form.Controls, permissionResolver);
-        }
-
-        /// <summary>
-        /// 再帰的にコントロールのTagから権限設定を適用します
-        /// </summary>
-        /// <param name="controls">対象コントロールのコレクション</param>
-        /// <param name="permissionResolver">権限文字列をIPermissionオブジェクトに解決する関数</param>
-        private static void ApplyPermissionsByTag(Control.ControlCollection controls, Func<string, IPermission> permissionResolver)
-        {
-            foreach (Control control in controls)
+            // ユーザーの持つ全権限をOR演算で結合
+            foreach (var permission in userPermissions)
             {
-                // TagからFeatureIDと権限情報を抽出
-                if (control.Tag is string tagString)
-                {
-                    var parts = tagString.Split(':');
-                    if (parts.Length == 2)
-                    {
-                        string featureId = parts[0].Trim();
-                        IPermission permission = permissionResolver(parts[1].Trim());
+                userPermissionFlags |= permission.Id;
+            }
 
-                        if (permission != null)
-                        {
-                            control.ApplyPermission(featureId, permission);
-                        }
-                    }
+            // ビット演算でパーミッションをチェック（必要な権限がすべて含まれているか）
+            bool hasPermission = (userPermissionFlags & requiredPermission) == requiredPermission;
+            control.Enabled = hasPermission;
+
+            return control;
+        }
+
+        /// <summary>
+        /// コントロールのタグに設定されたビットフラグ権限をチェックします。
+        /// タグには整数型のビットフラグが設定されていることを前提とします。
+        /// </summary>
+        /// <param name="control">対象となるコントロール</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <returns>変更されたコントロール</returns>
+        public static T ApplyTagBitPermission<T>(this T control, string userId) where T : Control
+        {
+            if (control.Tag is int permissionBitFlag)
+            {
+                var userPermissions = PermissionHelper.GetUserPermissions(userId);
+                int userPermissionFlags = 0;
+
+                // ユーザーの持つ全権限をOR演算で結合
+                foreach (var permission in userPermissions)
+                {
+                    userPermissionFlags |= permission.Id;
                 }
 
-                // 子コントロールにも再帰的に適用
-                if (control.Controls.Count > 0)
-                {
-                    ApplyPermissionsByTag(control.Controls, permissionResolver);
-                }
+                // ビット演算でパーミッションをチェック
+                bool hasPermission = (userPermissionFlags & permissionBitFlag) == permissionBitFlag;
+                control.Enabled = hasPermission;
+            }
 
-                // ToolStrip型なら内部アイテムにも適用
-                if (control is ToolStrip toolStrip)
-                {
-                    foreach (ToolStripItem item in toolStrip.Items)
-                    {
-                        if (item.Tag is string itemTagString)
-                        {
-                            var parts = itemTagString.Split(':');
-                            if (parts.Length == 2)
-                            {
-                                string featureId = parts[0].Trim();
-                                IPermission permission = permissionResolver(parts[1].Trim());
+            return control;
+        }
 
-                                if (permission != null)
-                                {
-                                    item.ApplyPermission(featureId, permission);
-                                }
-                            }
-                        }
-                    }
-                }
+        /// <summary>
+        /// コンテナ内のすべてのコントロールに対し、タグに設定されたビットフラグ権限をチェックします。
+        /// </summary>
+        /// <param name="container">権限を適用するコンテナ</param>
+        /// <param name="userId">ユーザーID</param>
+        public static void AutoApplyBitPermissions(this Control container, string userId)
+        {
+            var userPermissions = PermissionHelper.GetUserPermissions(userId);
+            int userPermissionFlags = 0;
+
+            // ユーザーの持つ全権限をOR演算で結合
+            foreach (var permission in userPermissions)
+            {
+                userPermissionFlags |= permission.Id;
+            }
+
+            ApplyBitPermissionsRecursively(container, userPermissionFlags);
+        }
+
+        // 再帰的にビット権限を適用するヘルパーメソッド
+        private static void ApplyBitPermissionsRecursively(Control control, int userPermissionFlags)
+        {
+            if (control.Tag is int permissionBitFlag)
+            {
+                // ビット演算でパーミッションをチェック
+                control.Enabled = (userPermissionFlags & permissionBitFlag) == permissionBitFlag;
+            }
+
+            foreach (Control childControl in control.Controls)
+            {
+                ApplyBitPermissionsRecursively(childControl, userPermissionFlags);
             }
         }
     }
-
 }
