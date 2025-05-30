@@ -1,3 +1,923 @@
+現在の日時 (UTC): 2025-05-30 09:23:16
+ユーザー: aoton0029
+
+`PermissionManager`クラスに、Permissionの名前から検索・取得するためのメソッドを追加します。名前が一意であることを保証し、効率的に検索できるようにします。以下に更新したコードを示します：
+
+```csharp
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+
+// 権限を表すクラス
+public class Permission
+{
+    // 権限のID（これはBitArrayの位置としても使う）
+    public int Id { get; private set; }
+    
+    // 権限の名前
+    public string Name { get; private set; }
+    
+    // 権限の組み合わせを表すビット配列
+    public BitArray Permissions { get; private set; }
+    
+    public Permission(int id, string name, int initialCapacity = 32)
+    {
+        Id = id;
+        Name = name;
+        Permissions = new BitArray(initialCapacity);
+    }
+    
+    // 静的な管理者権限生成メソッド
+    public static Permission Admin(int maxPermissionId = 100, string name = "Administrator")
+    {
+        Permission adminPermission = new Permission(-1, name, maxPermissionId);
+        adminPermission.GrantAll(maxPermissionId);
+        return adminPermission;
+    }
+    
+    // 特定の権限を付与する
+    public void Grant(int permissionId)
+    {
+        if (permissionId >= 0 && permissionId < Permissions.Length)
+        {
+            Permissions[permissionId] = true;
+        }
+    }
+    
+    // 特定の権限を削除する
+    public void Revoke(int permissionId)
+    {
+        if (permissionId >= 0 && permissionId < Permissions.Length)
+        {
+            Permissions[permissionId] = false;
+        }
+    }
+    
+    // 特定の権限を持っているかチェックする
+    public bool HasPermission(int permissionId)
+    {
+        return permissionId >= 0 && permissionId < Permissions.Length && Permissions[permissionId];
+    }
+    
+    // 権限セットを他の権限セットと組み合わせる
+    public void CombineWith(Permission other)
+    {
+        // BitArrayをORで結合
+        Permissions.Or(other.Permissions);
+    }
+    
+    // すべての権限を付与する（管理者権限）
+    public void GrantAll(int maxPermissionId)
+    {
+        for (int i = 0; i < maxPermissionId; i++)
+        {
+            Grant(i);
+        }
+    }
+}
+
+// ユーザー権限を管理するクラス
+public class PermissionManager
+{
+    // 利用可能な権限のリスト
+    private List<Permission> availablePermissions;
+    
+    // 権限名をキーとした権限の辞書
+    private Dictionary<string, Permission> permissionsByName;
+    
+    // ユーザーIDと対応する権限のマッピング
+    private Dictionary<string, Permission> userPermissions;
+    
+    // 最大の権限ID
+    private int maxPermissionId = 0;
+    
+    public PermissionManager()
+    {
+        availablePermissions = new List<Permission>();
+        permissionsByName = new Dictionary<string, Permission>(StringComparer.OrdinalIgnoreCase); // 大文字小文字を区別しない
+        userPermissions = new Dictionary<string, Permission>();
+    }
+    
+    // 利用可能な権限を追加
+    public void RegisterPermission(Permission permission)
+    {
+        // 名前の一意性をチェック
+        if (permissionsByName.ContainsKey(permission.Name))
+        {
+            throw new ArgumentException($"権限名 '{permission.Name}' はすでに登録されています。");
+        }
+        
+        availablePermissions.Add(permission);
+        permissionsByName[permission.Name] = permission;
+        
+        // 最大の権限IDを更新
+        if (permission.Id > maxPermissionId)
+        {
+            maxPermissionId = permission.Id;
+        }
+    }
+    
+    // 名前で権限を取得（完全一致・大文字小文字区別なし）
+    public Permission GetPermissionByName(string name)
+    {
+        if (permissionsByName.TryGetValue(name, out Permission permission))
+        {
+            return permission;
+        }
+        return null;
+    }
+    
+    // 名前に指定したキーワードを含む権限をすべて取得
+    public List<Permission> FindPermissionsByPartialName(string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return new List<Permission>(availablePermissions);
+        }
+        
+        return availablePermissions
+            .Where(p => p.Name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+            .ToList();
+    }
+    
+    // IDで権限を取得
+    public Permission GetPermissionById(int id)
+    {
+        return availablePermissions.FirstOrDefault(p => p.Id == id);
+    }
+    
+    // すべての権限を取得
+    public List<Permission> GetAllPermissions()
+    {
+        return new List<Permission>(availablePermissions);
+    }
+    
+    // 権限名が存在するかどうかを確認
+    public bool ExistsPermissionName(string name)
+    {
+        return permissionsByName.ContainsKey(name);
+    }
+    
+    // 権限IDが存在するかどうかを確認
+    public bool ExistsPermissionId(int id)
+    {
+        return availablePermissions.Any(p => p.Id == id);
+    }
+    
+    // 現在の最大権限IDに基づいた管理者権限を取得
+    public Permission GetAdminPermission()
+    {
+        return Permission.Admin(maxPermissionId + 1);
+    }
+    
+    // ユーザーに権限を割り当てる
+    public void AssignPermissionToUser(string userId, Permission permission)
+    {
+        if (!userPermissions.ContainsKey(userId))
+        {
+            userPermissions[userId] = new Permission(0, "UserPermissions", permission.Permissions.Length);
+        }
+        
+        userPermissions[userId].CombineWith(permission);
+    }
+    
+    // 権限名を指定してユーザーに権限を割り当てる
+    public void AssignPermissionToUserByName(string userId, string permissionName)
+    {
+        Permission permission = GetPermissionByName(permissionName);
+        if (permission == null)
+        {
+            throw new ArgumentException($"権限名 '{permissionName}' は見つかりませんでした。");
+        }
+        
+        AssignPermissionToUser(userId, permission);
+    }
+    
+    // ユーザーに管理者権限を割り当てる
+    public void AssignAdminPermissionToUser(string userId)
+    {
+        AssignPermissionToUser(userId, GetAdminPermission());
+    }
+    
+    // ユーザーに特定のIDの権限を付与する
+    public void GrantPermissionToUser(string userId, int permissionId)
+    {
+        if (userPermissions.ContainsKey(userId))
+        {
+            userPermissions[userId].Grant(permissionId);
+        }
+        else
+        {
+            var newPermission = new Permission(0, "UserPermissions");
+            newPermission.Grant(permissionId);
+            userPermissions[userId] = newPermission;
+        }
+    }
+    
+    // 権限名を指定してユーザーに権限を付与する
+    public void GrantPermissionToUserByName(string userId, string permissionName)
+    {
+        Permission permission = GetPermissionByName(permissionName);
+        if (permission == null)
+        {
+            throw new ArgumentException($"権限名 '{permissionName}' は見つかりませんでした。");
+        }
+        
+        GrantPermissionToUser(userId, permission.Id);
+    }
+    
+    // ユーザーから特定のIDの権限を削除する
+    public void RevokePermissionFromUser(string userId, int permissionId)
+    {
+        if (userPermissions.ContainsKey(userId))
+        {
+            userPermissions[userId].Revoke(permissionId);
+        }
+    }
+    
+    // 権限名を指定してユーザーから権限を削除する
+    public void RevokePermissionFromUserByName(string userId, string permissionName)
+    {
+        Permission permission = GetPermissionByName(permissionName);
+        if (permission == null)
+        {
+            throw new ArgumentException($"権限名 '{permissionName}' は見つかりませんでした。");
+        }
+        
+        RevokePermissionFromUser(userId, permission.Id);
+    }
+    
+    // ユーザーが特定の権限IDを持っているかチェックする
+    public bool UserHasPermission(string userId, int permissionId)
+    {
+        return userPermissions.ContainsKey(userId) && userPermissions[userId].HasPermission(permissionId);
+    }
+    
+    // ユーザーが特定の名前の権限を持っているかチェックする
+    public bool UserHasPermissionByName(string userId, string permissionName)
+    {
+        Permission permission = GetPermissionByName(permissionName);
+        if (permission == null)
+        {
+            throw new ArgumentException($"権限名 '{permissionName}' は見つかりませんでした。");
+        }
+        
+        return UserHasPermission(userId, permission.Id);
+    }
+    
+    // ユーザーの権限を取得
+    public Permission GetUserPermission(string userId)
+    {
+        if (userPermissions.ContainsKey(userId))
+        {
+            return userPermissions[userId];
+        }
+        
+        return null;
+    }
+}
+```
+
+### 追加した名前関連のメソッド
+
+1. **`GetPermissionByName(string name)`**:
+   - 名前で権限を検索する（完全一致）
+   - 大文字小文字を区別せずに検索（`StringComparer.OrdinalIgnoreCase`を使用）
+
+2. **`FindPermissionsByPartialName(string keyword)`**:
+   - キーワードを含む名前の権限をすべて検索
+   - 部分一致検索が可能
+
+3. **`ExistsPermissionName(string name)`**:
+   - 指定した名前の権限が存在するかを確認
+
+4. **`AssignPermissionToUserByName(string userId, string permissionName)`**:
+   - 名前で指定した権限をユーザーに割り当てる
+
+5. **`GrantPermissionToUserByName(string userId, string permissionName)`**:
+   - 名前で指定した権限をユーザーに付与する
+
+6. **`RevokePermissionFromUserByName(string userId, string permissionName)`**:
+   - 名前で指定した権限をユーザーから削除する
+
+7. **`UserHasPermissionByName(string userId, string permissionName)`**:
+   - ユーザーが特定の名前の権限を持っているかをチェック
+
+### 名前の一意性保証の仕組み
+
+`RegisterPermission`メソッド内で、新しい権限を登録する前に名前の一意性をチェックしています：
+
+```csharp
+// 名前の一意性をチェック
+if (permissionsByName.ContainsKey(permission.Name))
+{
+    throw new ArgumentException($"権限名 '{permission.Name}' はすでに登録されています。");
+}
+```
+
+これにより、同じ名前の権限が登録されることを防ぎ、名前の一意性を保証しています。
+
+### 大文字小文字を区別しない名前の比較
+
+名前で権限を検索する際に大文字小文字を区別しないようにするため、`permissionsByName`ディクショナリを初期化する際に`StringComparer.OrdinalIgnoreCase`を使用しています：
+
+```csharp
+permissionsByName = new Dictionary<string, Permission>(StringComparer.OrdinalIgnoreCase);
+```
+
+これにより、"Admin"と"admin"は同じ権限として扱われます。
+
+### 使用例
+
+```csharp
+// システムの初期化
+PermissionManager manager = new PermissionManager();
+
+// 権限定義を作成
+Permission viewPermission = new Permission(0, "View");
+Permission editPermission = new Permission(1, "Edit");
+Permission deletePermission = new Permission(2, "Delete");
+Permission adminViewPermission = new Permission(3, "AdminView");
+
+// 権限をシステムに登録
+manager.RegisterPermission(viewPermission);
+manager.RegisterPermission(editPermission);
+manager.RegisterPermission(deletePermission);
+manager.RegisterPermission(adminViewPermission);
+
+// 名前で権限を検索
+Permission permission = manager.GetPermissionByName("Edit");
+Console.WriteLine($"権限ID: {permission.Id}, 名前: {permission.Name}");
+
+// 部分一致で権限を検索
+List<Permission> viewPermissions = manager.FindPermissionsByPartialName("View");
+foreach (var p in viewPermissions)
+{
+    Console.WriteLine($"権限ID: {p.Id}, 名前: {p.Name}");
+}
+
+// ユーザーに名前で指定した権限を割り当てる
+string userId = "user1";
+manager.AssignPermissionToUserByName(userId, "Edit");
+
+// ユーザーが権限を持っているか名前でチェック
+bool hasPermission = manager.UserHasPermissionByName(userId, "Edit");
+Console.WriteLine($"ユーザーは編集権限を持っています: {hasPermission}");
+```
+
+
+---
+
+
+現在の日時 (UTC): 2025-05-30 11:33:14
+ユーザー: aoton0029
+
+# Winformsで権限登録フォームの画面設計
+
+PermissionManagerを使った権限登録・管理のためのWinformsフォームの画面設計を提案します。
+
+## メイン画面（権限一覧・管理画面）
+
+```
++--------------------------------------------------------------+
+| 権限管理                                          [_][□][×] |
++--------------------------------------------------------------+
+| [新規登録] [編集] [削除]                         [検索]: |_| |
++--------------------------------------------------------------+
+| 権限一覧:                                                   |
+| +--------------------------------------------------------+ |
+| | ID | 名前           | 説明                 | 作成日時   | |
+| |----+----------------+----------------------+------------| |
+| | 1  | ViewUser       | ユーザー閲覧権限     | 2025/05/.. | |
+| | 2  | EditUser       | ユーザー編集権限     | 2025/05/.. | |
+| | 3  | AdminUser      | 管理者権限           | 2025/05/.. | |
+| | .. | ..             | ..                   | ..         | |
+| +--------------------------------------------------------+ |
+|                                                            |
+| 詳細情報:                                                  |
+| +--------------------------------------------------------+ |
+| | ID: |_1_|  名前: |_ViewUser______|                     | |
+| |                                                        | |
+| | 説明:                                                 | |
+| | |_ユーザー情報の閲覧のみを許可する権限です___|        | |
+| |                                                        | |
+| | 権限ビット:                                            | |
+| | |_00000001___________________________________|         | |
+| |                                                        | |
+| +--------------------------------------------------------+ |
+|                                                            |
+| [権限をユーザーに割り当て] [ユーザー権限一覧] [閉じる]     |
++--------------------------------------------------------------+
+```
+
+## 権限新規登録・編集画面
+
+```
++--------------------------------------------------------------+
+| 権限の登録・編集                                  [_][□][×] |
++--------------------------------------------------------------+
+| 基本情報                                                    |
+| +--------------------------------------------------------+ |
+| | 権限ID:   |_自動採番__|                                 | |
+| | 権限名:   |_________________________________|           | |
+| |           (重複不可・必須項目)                          | |
+| |                                                        | |
+| | 説明:                                                 | |
+| | |_________________________________________|           | |
+| |                                                        | |
+| +--------------------------------------------------------+ |
+|                                                            |
+| 権限設定                                                   |
+| +--------------------------------------------------------+ |
+| | 個別権限:                                              | |
+| | [ ] ユーザー閲覧   [ ] ユーザー編集   [ ] ユーザー削除 | |
+| | [ ] コンテンツ閲覧 [ ] コンテンツ編集 [ ] コンテンツ削除| |
+| | [ ] ログ閲覧      [ ] システム設定                     | |
+| |                                                        | |
+| | ビット表現: |_00000000___|                             | |
+| |                                                        | |
+| +--------------------------------------------------------+ |
+|                                                            |
+|                                   [保存] [キャンセル]       |
++--------------------------------------------------------------+
+```
+
+## ユーザー権限割り当て画面
+
+```
++--------------------------------------------------------------+
+| ユーザー権限の割り当て                            [_][□][×] |
++--------------------------------------------------------------+
+| ユーザー選択: |_ドロップダウン_________|  [検索]            |
++--------------------------------------------------------------+
+| 割り当て可能な権限:              | 割り当て済み権限:        |
+| +------------------------+       | +------------------------+ |
+| | □ ViewUser (閲覧)     |       | | ☑ EditUser (編集)     | |
+| | □ DeleteUser (削除)   |       | | ☑ ViewContent (閲覧)  | |
+| | □ AdminUser (管理者)  |       | |                        | |
+| | □ ...                 |       | |                        | |
+| +------------------------+       | +------------------------+ |
+|                                                               |
+| [>>] 選択した権限を追加          [<<] 選択した権限を削除     |
+|                                                               |
+|                                     [保存] [キャンセル]       |
++--------------------------------------------------------------+
+```
+
+## C#コードの実装例
+
+### メインフォーム (PermissionManagerForm.cs)
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Windows.Forms;
+using System.Drawing;
+
+namespace PermissionManagementApp
+{
+    public partial class PermissionManagerForm : Form
+    {
+        private PermissionManager permissionManager;
+        
+        public PermissionManagerForm()
+        {
+            InitializeComponent();
+            
+            // PermissionManagerの初期化
+            permissionManager = new PermissionManager();
+            
+            // サンプルデータの登録
+            InitializeSampleData();
+            
+            // 権限一覧の表示
+            LoadPermissionList();
+        }
+        
+        private void InitializeComponent()
+        {
+            // フォームのサイズと基本設定
+            this.Text = "権限管理";
+            this.Size = new Size(800, 600);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            
+            // コントロールの配置
+            CreateControls();
+        }
+        
+        private void CreateControls()
+        {
+            // ボタン配置（新規登録、編集、削除）
+            Button btnNew = new Button
+            {
+                Text = "新規登録",
+                Location = new Point(20, 20),
+                Size = new Size(100, 30)
+            };
+            btnNew.Click += BtnNew_Click;
+            
+            Button btnEdit = new Button
+            {
+                Text = "編集",
+                Location = new Point(130, 20),
+                Size = new Size(100, 30)
+            };
+            btnEdit.Click += BtnEdit_Click;
+            
+            Button btnDelete = new Button
+            {
+                Text = "削除",
+                Location = new Point(240, 20),
+                Size = new Size(100, 30)
+            };
+            btnDelete.Click += BtnDelete_Click;
+            
+            // 検索ボックス
+            Label lblSearch = new Label
+            {
+                Text = "検索:",
+                Location = new Point(500, 25),
+                Size = new Size(50, 20)
+            };
+            
+            TextBox txtSearch = new TextBox
+            {
+                Location = new Point(550, 20),
+                Size = new Size(200, 25),
+                Name = "txtSearch"
+            };
+            txtSearch.TextChanged += TxtSearch_TextChanged;
+            
+            // 権限一覧DataGridView
+            Label lblPermissionList = new Label
+            {
+                Text = "権限一覧:",
+                Location = new Point(20, 60),
+                Size = new Size(100, 20)
+            };
+            
+            DataGridView dgvPermissions = new DataGridView
+            {
+                Location = new Point(20, 85),
+                Size = new Size(750, 200),
+                Name = "dgvPermissions",
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+            dgvPermissions.SelectionChanged += DgvPermissions_SelectionChanged;
+            
+            // DataGridViewの列設定
+            dgvPermissions.Columns.Add("colId", "ID");
+            dgvPermissions.Columns.Add("colName", "名前");
+            dgvPermissions.Columns.Add("colDescription", "説明");
+            dgvPermissions.Columns.Add("colCreationDate", "作成日時");
+            
+            // 詳細情報グループボックス
+            GroupBox gbDetails = new GroupBox
+            {
+                Text = "詳細情報",
+                Location = new Point(20, 300),
+                Size = new Size(750, 180)
+            };
+            
+            // 詳細情報コントロール
+            Label lblDetailId = new Label
+            {
+                Text = "ID:",
+                Location = new Point(20, 30),
+                Size = new Size(30, 20)
+            };
+            
+            TextBox txtDetailId = new TextBox
+            {
+                Location = new Point(55, 30),
+                Size = new Size(50, 25),
+                Name = "txtDetailId",
+                ReadOnly = true
+            };
+            
+            Label lblDetailName = new Label
+            {
+                Text = "名前:",
+                Location = new Point(120, 30),
+                Size = new Size(40, 20)
+            };
+            
+            TextBox txtDetailName = new TextBox
+            {
+                Location = new Point(165, 30),
+                Size = new Size(200, 25),
+                Name = "txtDetailName",
+                ReadOnly = true
+            };
+            
+            Label lblDetailDescription = new Label
+            {
+                Text = "説明:",
+                Location = new Point(20, 65),
+                Size = new Size(40, 20)
+            };
+            
+            TextBox txtDetailDescription = new TextBox
+            {
+                Location = new Point(20, 90),
+                Size = new Size(700, 25),
+                Name = "txtDetailDescription",
+                ReadOnly = true
+            };
+            
+            Label lblDetailBits = new Label
+            {
+                Text = "権限ビット:",
+                Location = new Point(20, 125),
+                Size = new Size(80, 20)
+            };
+            
+            TextBox txtDetailBits = new TextBox
+            {
+                Location = new Point(20, 150),
+                Size = new Size(700, 25),
+                Name = "txtDetailBits",
+                ReadOnly = true
+            };
+            
+            gbDetails.Controls.Add(lblDetailId);
+            gbDetails.Controls.Add(txtDetailId);
+            gbDetails.Controls.Add(lblDetailName);
+            gbDetails.Controls.Add(txtDetailName);
+            gbDetails.Controls.Add(lblDetailDescription);
+            gbDetails.Controls.Add(txtDetailDescription);
+            gbDetails.Controls.Add(lblDetailBits);
+            gbDetails.Controls.Add(txtDetailBits);
+            
+            // 機能ボタン
+            Button btnAssign = new Button
+            {
+                Text = "権限をユーザーに割り当て",
+                Location = new Point(20, 500),
+                Size = new Size(200, 30)
+            };
+            btnAssign.Click += BtnAssign_Click;
+            
+            Button btnUserPermissions = new Button
+            {
+                Text = "ユーザー権限一覧",
+                Location = new Point(240, 500),
+                Size = new Size(150, 30)
+            };
+            btnUserPermissions.Click += BtnUserPermissions_Click;
+            
+            Button btnClose = new Button
+            {
+                Text = "閉じる",
+                Location = new Point(670, 500),
+                Size = new Size(100, 30)
+            };
+            btnClose.Click += (s, e) => this.Close();
+            
+            // コントロールの追加
+            this.Controls.Add(btnNew);
+            this.Controls.Add(btnEdit);
+            this.Controls.Add(btnDelete);
+            this.Controls.Add(lblSearch);
+            this.Controls.Add(txtSearch);
+            this.Controls.Add(lblPermissionList);
+            this.Controls.Add(dgvPermissions);
+            this.Controls.Add(gbDetails);
+            this.Controls.Add(btnAssign);
+            this.Controls.Add(btnUserPermissions);
+            this.Controls.Add(btnClose);
+        }
+        
+        private void InitializeSampleData()
+        {
+            try
+            {
+                // サンプル権限の作成と登録
+                Permission viewUser = new Permission(1, "ViewUser", 32);
+                viewUser.Grant(0); // 最初のビットを許可
+                
+                Permission editUser = new Permission(2, "EditUser", 32);
+                editUser.Grant(1); // 2番目のビットを許可
+                
+                Permission adminUser = new Permission(3, "AdminUser", 32);
+                adminUser.Grant(0);
+                adminUser.Grant(1);
+                adminUser.Grant(2);
+                
+                // 権限マネージャーに登録
+                permissionManager.RegisterPermission(viewUser);
+                permissionManager.RegisterPermission(editUser);
+                permissionManager.RegisterPermission(adminUser);
+            }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show($"サンプルデータの初期化中にエラーが発生しました: {ex.Message}", 
+                    "初期化エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void LoadPermissionList()
+        {
+            DataGridView dgvPermissions = (DataGridView)this.Controls["dgvPermissions"];
+            
+            // DataGridViewをクリア
+            dgvPermissions.Rows.Clear();
+            
+            // すべての権限を取得
+            List<Permission> permissions = permissionManager.GetAllPermissions();
+            
+            // DataGridViewに表示
+            foreach (Permission permission in permissions)
+            {
+                string bitString = GetBitString(permission);
+                string description = $"{permission.Name}の説明";
+                string creationDate = DateTime.Now.ToString("yyyy/MM/dd HH:mm");
+                
+                dgvPermissions.Rows.Add(permission.Id, permission.Name, description, creationDate);
+            }
+        }
+        
+        private string GetBitString(Permission permission)
+        {
+            // BitArrayの内容を文字列として表現
+            string result = "";
+            for (int i = 0; i < 8; i++) // 最初の8ビットのみ表示
+            {
+                result = (permission.HasPermission(i) ? "1" : "0") + result;
+            }
+            return result;
+        }
+        
+        private void DisplayPermissionDetails(Permission permission)
+        {
+            if (permission == null) return;
+            
+            TextBox txtDetailId = (TextBox)Controls.Find("txtDetailId", true)[0];
+            TextBox txtDetailName = (TextBox)Controls.Find("txtDetailName", true)[0];
+            TextBox txtDetailDescription = (TextBox)Controls.Find("txtDetailDescription", true)[0];
+            TextBox txtDetailBits = (TextBox)Controls.Find("txtDetailBits", true)[0];
+            
+            txtDetailId.Text = permission.Id.ToString();
+            txtDetailName.Text = permission.Name;
+            txtDetailDescription.Text = $"{permission.Name}の説明";
+            txtDetailBits.Text = GetBitString(permission);
+        }
+        
+        // イベントハンドラ
+        private void BtnNew_Click(object sender, EventArgs e)
+        {
+            using (EditPermissionForm form = new EditPermissionForm(permissionManager))
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    LoadPermissionList();
+                }
+            }
+        }
+        
+        private void BtnEdit_Click(object sender, EventArgs e)
+        {
+            DataGridView dgvPermissions = (DataGridView)Controls["dgvPermissions"];
+            
+            if (dgvPermissions.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("編集する権限を選択してください", "選択エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            int permissionId = Convert.ToInt32(dgvPermissions.SelectedRows[0].Cells["colId"].Value);
+            Permission selectedPermission = permissionManager.GetPermissionById(permissionId);
+            
+            using (EditPermissionForm form = new EditPermissionForm(permissionManager, selectedPermission))
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    LoadPermissionList();
+                }
+            }
+        }
+        
+        private void BtnDelete_Click(object sender, EventArgs e)
+        {
+            DataGridView dgvPermissions = (DataGridView)Controls["dgvPermissions"];
+            
+            if (dgvPermissions.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("削除する権限を選択してください", "選択エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            int permissionId = Convert.ToInt32(dgvPermissions.SelectedRows[0].Cells["colId"].Value);
+            string permissionName = dgvPermissions.SelectedRows[0].Cells["colName"].Value.ToString();
+            
+            DialogResult result = MessageBox.Show(
+                $"権限 '{permissionName}' を削除してもよろしいですか？", 
+                "削除の確認",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+                
+            if (result == DialogResult.Yes)
+            {
+                // 権限の削除処理（PermissionManagerに削除メソッドを追加する必要あり）
+                // permissionManager.DeletePermission(permissionId);
+                
+                MessageBox.Show("権限が削除されました", "削除完了",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                LoadPermissionList();
+            }
+        }
+        
+        private void BtnAssign_Click(object sender, EventArgs e)
+        {
+            using (AssignPermissionForm form = new AssignPermissionForm(permissionManager))
+            {
+                form.ShowDialog();
+            }
+        }
+        
+        private void BtnUserPermissions_Click(object sender, EventArgs e)
+        {
+            using (UserPermissionsForm form = new UserPermissionsForm(permissionManager))
+            {
+                form.ShowDialog();
+            }
+        }
+        
+        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        {
+            TextBox txtSearch = (TextBox)sender;
+            DataGridView dgvPermissions = (DataGridView)Controls["dgvPermissions"];
+            
+            string searchText = txtSearch.Text.Trim().ToLower();
+            
+            dgvPermissions.Rows.Clear();
+            
+            foreach (Permission permission in permissionManager.GetAllPermissions())
+            {
+                if (string.IsNullOrEmpty(searchText) ||
+                    permission.Name.ToLower().Contains(searchText))
+                {
+                    string description = $"{permission.Name}の説明";
+                    string creationDate = DateTime.Now.ToString("yyyy/MM/dd HH:mm");
+                    
+                    dgvPermissions.Rows.Add(
+                        permission.Id,
+                        permission.Name,
+                        description,
+                        creationDate);
+                }
+            }
+        }
+        
+        private void DgvPermissions_SelectionChanged(object sender, EventArgs e)
+        {
+            DataGridView dgvPermissions = (DataGridView)sender;
+            
+            if (dgvPermissions.SelectedRows.Count > 0)
+            {
+                int permissionId = Convert.ToInt32(dgvPermissions.SelectedRows[0].Cells["colId"].Value);
+                Permission selectedPermission = permissionManager.GetPermissionById(permissionId);
+                
+                DisplayPermissionDetails(selectedPermission);
+            }
+        }
+    }
+}
+```
+
+### 権限編集フォーム (EditPermissionForm.cs)
+
+```csharp
+using System;
+using System.Windows.Forms;
+using System.Drawing;
+
+namespace PermissionManagementApp
+{
+    public class EditPermissionForm : Form
+    {
+        private PermissionManager permissionManager;
+        private Permission editingPermission;
+        private bool isNewMode;
+        
+        // チェックボックス配列
+        private CheckBox[] permissionCheckboxes;
+        
+        public EditPermissionForm(Permission
+
+---
+
+
+
 I'll help you create a desktop application in C# with a user permission structure that stores data in files instead of a database. I'll create the necessary classes: Permission, Role, PermissionManager, and PermissionHelper.
 
 Let me define these classes for you:
