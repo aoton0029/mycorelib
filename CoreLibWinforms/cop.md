@@ -1,3 +1,337 @@
+C#でユーザー権限構造を設計する。Permission、Role、PermissionManagerを作る。PermissionはId、Nameを持ち、単一権限を表す。RoleはPermissionの組み合わせ
+
+# C# RBAC システム設計
+
+C#でRole-Based Access Control（RBAC）システムを設計します。BitArrayを使用して権限の組み合わせを効率的に管理する設計案を以下に示します。
+
+## Permission クラス
+
+```csharp
+using System;
+
+public class Permission
+{
+    public int Id { get; private set; }
+    public string Name { get; private set; }
+
+    public Permission(int id, string name)
+    {
+        if (id < 0)
+            throw new ArgumentException("Permission ID must be non-negative", nameof(id));
+        
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Permission name cannot be empty", nameof(name));
+            
+        Id = id;
+        Name = name;
+    }
+    
+    public override string ToString()
+    {
+        return $"Permission({Id}: {Name})";
+    }
+}
+```
+
+## Role クラス
+
+```csharp
+using System;
+using System.Collections;
+using System.Text;
+
+public class Role
+{
+    public int Id { get; private set; }
+    public string Name { get; private set; }
+    public BitArray Permissions { get; private set; }
+    
+    public Role(int id, string name, int initialCapacity = 32)
+    {
+        if (id < 0)
+            throw new ArgumentException("Role ID must be non-negative", nameof(id));
+            
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Role name cannot be empty", nameof(name));
+            
+        Id = id;
+        Name = name;
+        Permissions = new BitArray(initialCapacity);
+    }
+    
+    public void GrantPermission(Permission permission)
+    {
+        EnsureCapacity(permission.Id + 1);
+        Permissions[permission.Id] = true;
+    }
+    
+    public void RevokePermission(Permission permission)
+    {
+        if (permission.Id < Permissions.Length)
+        {
+            Permissions[permission.Id] = false;
+        }
+    }
+    
+    public bool HasPermission(Permission permission)
+    {
+        return permission.Id < Permissions.Length && Permissions[permission.Id];
+    }
+    
+    private void EnsureCapacity(int requiredLength)
+    {
+        if (requiredLength > Permissions.Length)
+        {
+            // 必要なサイズの2倍のサイズに拡張
+            int newSize = Math.Max(requiredLength, Permissions.Length * 2);
+            var newPermissions = new BitArray(newSize);
+            
+            // 既存の権限をコピー
+            for (int i = 0; i < Permissions.Length; i++)
+            {
+                newPermissions[i] = Permissions[i];
+            }
+            
+            Permissions = newPermissions;
+        }
+    }
+    
+    public override string ToString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine($"Role({Id}: {Name})");
+        sb.Append("Permissions: [");
+        
+        bool isFirst = true;
+        for (int i = 0; i < Permissions.Length; i++)
+        {
+            if (Permissions[i])
+            {
+                if (!isFirst)
+                {
+                    sb.Append(", ");
+                }
+                sb.Append(i);
+                isFirst = false;
+            }
+        }
+        
+        sb.Append("]");
+        return sb.ToString();
+    }
+}
+```
+
+## Operation クラス
+
+```csharp
+using System;
+
+public class Operation
+{
+    public int Id { get; private set; }
+    public string Name { get; private set; }
+    public Permission RequiredPermission { get; private set; }
+    
+    public Operation(int id, string name, Permission requiredPermission)
+    {
+        if (id < 0)
+            throw new ArgumentException("Operation ID must be non-negative", nameof(id));
+            
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Operation name cannot be empty", nameof(name));
+            
+        Id = id;
+        Name = name;
+        RequiredPermission = requiredPermission ?? 
+            throw new ArgumentNullException(nameof(requiredPermission));
+    }
+    
+    public bool CanExecute(Role role)
+    {
+        return role != null && role.HasPermission(RequiredPermission);
+    }
+    
+    public override string ToString()
+    {
+        return $"Operation({Id}: {Name}, Requires: {RequiredPermission.Name})";
+    }
+}
+```
+
+## PermissionManager クラス
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public class PermissionManager
+{
+    private readonly Dictionary<int, Permission> _permissions = new Dictionary<int, Permission>();
+    private readonly Dictionary<int, Role> _roles = new Dictionary<int, Role>();
+    private readonly Dictionary<int, Operation> _operations = new Dictionary<int, Operation>();
+    
+    // Permission 管理
+    public Permission CreatePermission(int id, string name)
+    {
+        if (_permissions.ContainsKey(id))
+            throw new InvalidOperationException($"Permission with ID {id} already exists");
+            
+        var permission = new Permission(id, name);
+        _permissions.Add(id, permission);
+        return permission;
+    }
+    
+    public Permission GetPermission(int id)
+    {
+        if (!_permissions.TryGetValue(id, out var permission))
+            throw new KeyNotFoundException($"Permission with ID {id} not found");
+            
+        return permission;
+    }
+    
+    public IEnumerable<Permission> GetAllPermissions()
+    {
+        return _permissions.Values;
+    }
+    
+    // Role 管理
+    public Role CreateRole(int id, string name)
+    {
+        if (_roles.ContainsKey(id))
+            throw new InvalidOperationException($"Role with ID {id} already exists");
+            
+        var role = new Role(id, name);
+        _roles.Add(id, role);
+        return role;
+    }
+    
+    public Role GetRole(int id)
+    {
+        if (!_roles.TryGetValue(id, out var role))
+            throw new KeyNotFoundException($"Role with ID {id} not found");
+            
+        return role;
+    }
+    
+    public IEnumerable<Role> GetAllRoles()
+    {
+        return _roles.Values;
+    }
+    
+    // Operation 管理
+    public Operation CreateOperation(int id, string name, Permission requiredPermission)
+    {
+        if (_operations.ContainsKey(id))
+            throw new InvalidOperationException($"Operation with ID {id} already exists");
+            
+        var operation = new Operation(id, name, requiredPermission);
+        _operations.Add(id, operation);
+        return operation;
+    }
+    
+    public Operation GetOperation(int id)
+    {
+        if (!_operations.TryGetValue(id, out var operation))
+            throw new KeyNotFoundException($"Operation with ID {id} not found");
+            
+        return operation;
+    }
+    
+    public IEnumerable<Operation> GetAllOperations()
+    {
+        return _operations.Values;
+    }
+    
+    // Role-Permission 関係の管理
+    public void GrantPermissionToRole(int roleId, int permissionId)
+    {
+        var role = GetRole(roleId);
+        var permission = GetPermission(permissionId);
+        role.GrantPermission(permission);
+    }
+    
+    public void RevokePermissionFromRole(int roleId, int permissionId)
+    {
+        var role = GetRole(roleId);
+        var permission = GetPermission(permissionId);
+        role.RevokePermission(permission);
+    }
+    
+    public bool HasPermission(int roleId, int permissionId)
+    {
+        var role = GetRole(roleId);
+        var permission = GetPermission(permissionId);
+        return role.HasPermission(permission);
+    }
+    
+    // 操作の実行チェック
+    public bool CanExecuteOperation(int roleId, int operationId)
+    {
+        var role = GetRole(roleId);
+        var operation = GetOperation(operationId);
+        return operation.CanExecute(role);
+    }
+}
+```
+
+## 使用例
+
+```csharp
+public class Program
+{
+    public static void Main()
+    {
+        var manager = new PermissionManager();
+        
+        // 権限の定義
+        var readPermission = manager.CreatePermission(0, "Read");
+        var writePermission = manager.CreatePermission(1, "Write");
+        var deletePermission = manager.CreatePermission(2, "Delete");
+        var adminPermission = manager.CreatePermission(3, "Admin");
+        
+        // ロールの定義
+        var userRole = manager.CreateRole(1, "User");
+        var editorRole = manager.CreateRole(2, "Editor");
+        var adminRole = manager.CreateRole(3, "Administrator");
+        
+        // 権限をロールに割り当てる
+        manager.GrantPermissionToRole(userRole.Id, readPermission.Id);
+        
+        manager.GrantPermissionToRole(editorRole.Id, readPermission.Id);
+        manager.GrantPermissionToRole(editorRole.Id, writePermission.Id);
+        
+        manager.GrantPermissionToRole(adminRole.Id, readPermission.Id);
+        manager.GrantPermissionToRole(adminRole.Id, writePermission.Id);
+        manager.GrantPermissionToRole(adminRole.Id, deletePermission.Id);
+        manager.GrantPermissionToRole(adminRole.Id, adminPermission.Id);
+        
+        // 操作の定義
+        var viewOperation = manager.CreateOperation(1, "View Content", readPermission);
+        var editOperation = manager.CreateOperation(2, "Edit Content", writePermission);
+        var deleteOperation = manager.CreateOperation(3, "Delete Content", deletePermission);
+        var configureOperation = manager.CreateOperation(4, "Configure System", adminPermission);
+        
+        // 権限チェック
+        Console.WriteLine($"User can view: {manager.CanExecuteOperation(userRole.Id, viewOperation.Id)}");
+        Console.WriteLine($"User can edit: {manager.CanExecuteOperation(userRole.Id, editOperation.Id)}");
+        
+        Console.WriteLine($"Editor can view: {manager.CanExecuteOperation(editorRole.Id, viewOperation.Id)}");
+        Console.WriteLine($"Editor can edit: {manager.CanExecuteOperation(editorRole.Id, editOperation.Id)}");
+        Console.WriteLine($"Editor can delete: {manager.CanExecuteOperation(editorRole.Id, deleteOperation.Id)}");
+        
+        Console.WriteLine($"Admin can view: {manager.CanExecuteOperation(adminRole.Id, viewOperation.Id)}");
+        Console.WriteLine($"Admin can edit: {manager.CanExecuteOperation(adminRole.Id, editOperation.Id)}");
+        Console.WriteLine($"Admin can delete: {manager.CanExecuteOperation(adminRole.Id, deleteOperation.Id)}");
+        Console.WriteLine($"Admin can configure: {manager.CanExecuteOperation(adminRole.Id, configureOperation.Id)}");
+    }
+}
+```
+
+この設計では、BitArrayを使用して効率的に権限の組み合わせを管理しています。PermissionのIdをBitArrayのインデックスとして使用することで、各Roleが持つ権限を簡潔に表現できます。また、RoleクラスにはEnsureCapacityメソッドを追加して、BitArrayのサイズを動的に調整できるようにしています。
+---
+
 現在の日時 (UTC): 2025-05-30 09:23:16
 ユーザー: aoton0029
 
