@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CoreLibWinforms.Permissions
 {
-    public class Permission
+    public class Permission : ICloneable
     {
         // 権限のID（これはBitArrayの位置としても使う）
         public int Id { get; private set; }
@@ -33,6 +33,7 @@ namespace CoreLibWinforms.Permissions
             Name = name;
             Permissions = new BitArray(PermissionManager.MaxPermissionId);
             IsCombined = false; // 権限が結合されていないことを示すフラグ
+            Grant(id); // 自分自身の権限を付与
         }
 
         /// <summary>
@@ -57,9 +58,9 @@ namespace CoreLibWinforms.Permissions
         }
 
         // 静的な管理者権限生成メソッド
-        public static Permission Admin()
+        public static Permission Admin(int id)
         {
-            Permission adminPermission = new Permission(-1, "admin", 100);
+            Permission adminPermission = new Permission(id, "admin");
             for (int i = 0; i < adminPermission.Permissions.Count; i++)
             {
                 adminPermission.Grant(i);
@@ -118,79 +119,289 @@ namespace CoreLibWinforms.Permissions
             // BitArrayをORで結合
             Permissions.Or(other.Permissions);
         }
+
+        public object Clone()
+        {
+            // 新しいPermissionオブジェクトを作成し、現在の状態をコピーする
+            var clonedPermission = new Permission(Id, Name);
+            clonedPermission.Permissions = new BitArray(Permissions);
+            clonedPermission.IsCombined = IsCombined;
+            return clonedPermission;
+        }
     }
 
     // ユーザー権限を管理するクラス
     public class PermissionManager
     {
-        public static int MaxPermissionId = 100;
+        public static int MaxPermissionId = 32;
         public static string PermissionsFilePath = "permissions.json";
         public static string UserRoleFilePath = "user_roles.json";
 
-        // 利用可能な権限のリスト
-        private List<Permission> _availablePermissions;
 
+        private Dictionary<string, Permission> _availablePermissions;
         // ユーザーIDと対応する権限のマッピング
         private Dictionary<string, Permission> _userPermissions;
 
         public PermissionManager()
         {
-            _availablePermissions = new List<Permission>();
+            _availablePermissions = new Dictionary<string, Permission>();
             _userPermissions = new Dictionary<string, Permission>();
-            _availablePermissions.Add(Permission.Admin()); // デフォルトで管理者権限を追加
+
+            // 管理者ロールを初期化
+            var adminRole = Permission.Admin(_availablePermissions.Count);
+            _availablePermissions.Add(adminRole.Name, adminRole);
         }
 
         // 利用可能な権限を追加
-        public void RegisterPermission(Permission permission)
+        public Permission RegisterPermission(Permission permission)
         {
-            if (permission != null && !_availablePermissions.Any(p => p.Id == permission.Id))
+            if (permission == null)
+                throw new ArgumentNullException(nameof(permission));
+
+            if (_availablePermissions.ContainsKey(permission.Name))
+                throw new ArgumentException($"Permission with name '{permission.Name}' already exists");
+
+            _availablePermissions.Add(permission.Name, permission);
+            return permission;
+        }
+
+        // 新しい権限を登録するメソッド（名前のみで新規作成、ID自動採番）
+        public Permission RegisterNewPermission(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("Permission name cannot be null or empty");
+
+            if (_availablePermissions.ContainsKey(name))
+                throw new ArgumentException($"Permission with name '{name}' already exists");
+
+            // 新しいIDを割り当て
+            int newId = _availablePermissions.Count;
+            var permission = new Permission(newId, name);
+
+            _availablePermissions.Add(name, permission);
+            return permission;
+        }
+
+        // 新しい権限を登録するメソッド（特定のIDを持つ権限を作成、ID自動採番）
+        public Permission RegisterNewPermission(string name, IEnumerable<int> permissionIds)
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("Permission name cannot be null or empty");
+
+            if (permissionIds == null)
+                throw new ArgumentNullException(nameof(permissionIds));
+
+            if (_availablePermissions.ContainsKey(name))
+                throw new ArgumentException($"Permission with name '{name}' already exists");
+
+            // 新しいIDを割り当て
+            int newId = _availablePermissions.Count;
+            var permission = new Permission(newId, name, permissionIds);
+
+            _availablePermissions.Add(name, permission);
+            return permission;
+        }
+
+        // ユーザーに権限を割り当てる
+        public void AssignPermissionToUser(string userId, Permission permission)
+        {
+            if (string.IsNullOrEmpty(userId) || permission == null)
+                throw new ArgumentException("Invalid user ID or permission");
+            if (_userPermissions.ContainsKey(userId))
             {
-                _availablePermissions.Add(permission);
+                _userPermissions[userId].CombineWith(permission);
+            }
+            else
+            {
+                _userPermissions[userId] = permission;
             }
         }
 
-        public void RegisterNewPermission(string name, )
-
-        // IDで権限を取得
-        public Permission GetPermissionById(int id)
+        // ユーザーに管理者権限を割り当てる(権限が存在する場合のみ)
+        public void AssignAdminToUser(string userId)
         {
-            return _availablePermissions.FirstOrDefault(p => p.Id == id);
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
+
+            if (_availablePermissions.TryGetValue("admin", out Permission adminPermission))
+            {
+                AssignPermissionToUser(userId, adminPermission);
+            }
+            else
+            {
+                throw new InvalidOperationException("Admin permission is not available");
+            }
         }
 
-        // すべての権限を取得
-        public List<Permission> GetAllPermissions()
+        // ユーザーに既存の特定のIDの権限を付与する(権限が存在する場合のみ。ユーザーが存在しない場合既存の権限を割り当てる)
+        public void AssignPermissionToUserById(string userId, int permissionId)
         {
-            return new List<Permission>(_availablePermissions);
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
+
+            // 特定の権限IDを持つPermissionオブジェクトを検索
+            Permission foundPermission = null;
+            foreach (var permission in _availablePermissions.Values)
+            {
+                if (permission.Id == permissionId)
+                {
+                    foundPermission = permission;
+                    break;
+                }
+            }
+
+            if (foundPermission == null)
+                throw new ArgumentException($"Permission with ID {permissionId} does not exist");
+
+            // 見つかった権限をユーザーに割り当て
+            AssignPermissionToUser(userId, (Permission)foundPermission.Clone());
         }
 
-        public 
+        // ユーザーに既存の特定の権限を権限名から付与する(権限が存在する場合のみ。ユーザーが存在しない場合既存の権限を割り当てる)
+        public void AssignPermissionToUserByName(string userId, string permissionName)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
 
-        // 権限IDが存在するかどうかを確認
+            if (string.IsNullOrEmpty(permissionName))
+                throw new ArgumentException("Permission name cannot be null or empty");
 
+            if (!_availablePermissions.TryGetValue(permissionName, out Permission permission))
+                throw new ArgumentException($"Permission with name '{permissionName}' does not exist");
 
-        // ユーザーに権限を割り当てる
+            // 見つかった権限をユーザーに割り当て
+            AssignPermissionToUser(userId, (Permission)permission.Clone());
+        }
 
+        // ユーザーから特定の権限を削除する
+        public void RevokePermissionFromUser(string userId, Permission permission)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
 
-        // ユーザーに管理者権限を割り当てる
+            if (permission == null)
+                throw new ArgumentNullException(nameof(permission));
 
-
-        // ユーザーに特定のIDの権限を付与する
-
+            if (_userPermissions.TryGetValue(userId, out Permission userPermission))
+            {
+                userPermission.Revoke(permission);
+            }
+        }
 
         // ユーザーから特定のIDの権限を削除する
+        public void RevokePermissionFromUserById(string userId, int permissionId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
 
+            if (_userPermissions.TryGetValue(userId, out Permission userPermission))
+            {
+                userPermission.Revoke(permissionId);
+            }
+        }
+
+
+        // ユーザーから特定の権限を権限名から削除する
+        public void RevokePermissionFromUserByName(string userId, string permissionName)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
+
+            if (string.IsNullOrEmpty(permissionName))
+                throw new ArgumentException("Permission name cannot be null or empty");
+
+            if (!_availablePermissions.TryGetValue(permissionName, out Permission permission))
+                throw new ArgumentException($"Permission with name '{permissionName}' does not exist");
+
+            if (_userPermissions.TryGetValue(userId, out Permission userPermission))
+            {
+                userPermission.Revoke(permission);
+            }
+        }
 
         // ユーザーが特定の権限IDを持っているかチェックする
+        public bool UserHasPermissionId(string userId, int permissionId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
 
+            if (_userPermissions.TryGetValue(userId, out Permission userPermission))
+            {
+                return userPermission.HasPermission(permissionId);
+            }
+            return false;
+        }
+
+        // ユーザーが特定の権限を持っているかチェックする
+        public bool UserHasPermission(string userId, Permission permission)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
+
+            if (permission == null)
+                throw new ArgumentNullException(nameof(permission));
+
+            if (_userPermissions.TryGetValue(userId, out Permission userPermission))
+            {
+                return permission.Permissions.SequenceEqual(userPermission.Permissions);
+            }
+            return false;
+        }
+
+        // ユーザーが特定の権限を持っているか権限名からチェックする
+        public bool UserHasPermissionByName(string userId, string permissionName)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
+
+            if (string.IsNullOrEmpty(permissionName))
+                throw new ArgumentException("Permission name cannot be null or empty");
+
+            if (!_availablePermissions.TryGetValue(permissionName, out Permission permission))
+                throw new ArgumentException($"Permission with name '{permissionName}' does not exist");
+
+            return UserHasPermission(userId, permission);
+        }
 
         // ユーザーの権限を取得
+        public Permission GetUserPermission(string userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty");
 
+            if (_userPermissions.TryGetValue(userId, out Permission permission))
+            {
+                return permission;
+            }
+            return null;
+        }
 
-        // 権限名を指定してユーザーに権限を付与する
+        // 登録済みの全権限を取得
+        public List<Permission> GetAllPermissions()
+        {
+            return _availablePermissions.Values.ToList();
+        }
 
+        // IDから権限名を取得
+        public string GetPermissionNameById(int id)
+        {
+            foreach (var permission in _availablePermissions.Values)
+            {
+                if (permission.Id == id)
+                    return permission.Name;
+            }
+            return null;
+        }
 
-        // 権限名を指定してユーザーに権限を削除する
+        // 権限の削除
+        public bool RemovePermission(string name)
+        {
+            if (string.IsNullOrEmpty(name) || !_availablePermissions.ContainsKey(name))
+                return false;
 
+            _availablePermissions.Remove(name);
+            return true;
+        }
     }
 
     /// <summary>
@@ -266,6 +477,31 @@ namespace CoreLibWinforms.Permissions
             for (int i = 0; i < bitArray.Length; i++)
             {
                 if (bitArray[i])
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 2つのBitArrayが等しいかどうかを比較します。
+        /// </summary>
+        /// <param name="bitArray">比較元のBitArray</param>
+        /// <param name="other">比較対象のBitArray</param>
+        /// <returns>等しい場合はtrue、そうでなければfalse</returns>
+        public static bool SequenceEqual(this BitArray bitArray, BitArray other)
+        {
+            if (bitArray == null)
+                throw new ArgumentNullException(nameof(bitArray));
+
+            if (other == null)
+                throw new ArgumentNullException(nameof(other));
+
+            if (bitArray.Length != other.Length)
+                return false;
+
+            for (int i = 0; i < bitArray.Length; i++)
+            {
+                if (bitArray[i] != other[i])
                     return false;
             }
             return true;

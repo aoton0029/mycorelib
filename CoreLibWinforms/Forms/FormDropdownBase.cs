@@ -259,7 +259,7 @@ namespace CoreLibWinforms.Forms
         /// </summary>
         protected virtual void OnClosing(CancelEventArgs e)
         {
-            Closing?.Invoke(this, e);
+            //Closing?.Invoke(this, e);
         }
 
         #endregion

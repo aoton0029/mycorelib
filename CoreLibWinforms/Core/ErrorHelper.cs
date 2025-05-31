@@ -71,10 +71,10 @@ namespace CoreLibWinforms.Core
             if (errorInfo == null)
                 throw new ArgumentNullException(nameof(errorInfo));
 
-            using (var form = new DeveloperErrorMessageBox(errorInfo))
-            {
-                form.ShowDialog();
-            }
+            //using (var form = new DeveloperErrorMessageBox(errorInfo))
+            //{
+            //    form.ShowDialog();
+            //}
         }
 
         /// <summary>
