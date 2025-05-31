@@ -34,7 +34,15 @@
             userPermissionsTab = new TabPage();
             btnCancel = new Button();
             btnSave = new Button();
+            button1 = new Button();
+            dataGridView1 = new DataGridView();
+            dataGridViewTextBoxColumn1 = new DataGridViewTextBoxColumn();
+            dataGridViewButtonColumn1 = new DataGridViewButtonColumn();
+            label1 = new Label();
+            textBox1 = new TextBox();
             tabControl.SuspendLayout();
+            combinedPermissionsTab.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             SuspendLayout();
             // 
             // tabControl
@@ -60,17 +68,21 @@
             // 
             // combinedPermissionsTab
             // 
-            combinedPermissionsTab.Location = new Point(4, 24);
+            combinedPermissionsTab.Controls.Add(button1);
+            combinedPermissionsTab.Controls.Add(dataGridView1);
+            combinedPermissionsTab.Controls.Add(label1);
+            combinedPermissionsTab.Controls.Add(textBox1);
+            combinedPermissionsTab.Location = new Point(4, 33);
             combinedPermissionsTab.Name = "combinedPermissionsTab";
-            combinedPermissionsTab.Size = new Size(776, 510);
+            combinedPermissionsTab.Size = new Size(886, 556);
             combinedPermissionsTab.TabIndex = 1;
-            combinedPermissionsTab.Text = "結合権限";
+            combinedPermissionsTab.Text = "役割権限";
             // 
             // userPermissionsTab
             // 
-            userPermissionsTab.Location = new Point(4, 24);
+            userPermissionsTab.Location = new Point(4, 33);
             userPermissionsTab.Name = "userPermissionsTab";
-            userPermissionsTab.Size = new Size(776, 510);
+            userPermissionsTab.Size = new Size(886, 556);
             userPermissionsTab.TabIndex = 2;
             userPermissionsTab.Text = "ユーザー権限";
             // 
@@ -96,6 +108,54 @@
             btnSave.Text = "保存";
             btnSave.UseVisualStyleBackColor = true;
             // 
+            // button1
+            // 
+            button1.Location = new Point(336, 16);
+            button1.Name = "button1";
+            button1.Size = new Size(89, 33);
+            button1.TabIndex = 7;
+            button1.Text = "追加";
+            button1.UseVisualStyleBackColor = true;
+            // 
+            // dataGridView1
+            // 
+            dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridView1.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn1, dataGridViewButtonColumn1 });
+            dataGridView1.Location = new Point(17, 63);
+            dataGridView1.Name = "dataGridView1";
+            dataGridView1.Size = new Size(408, 470);
+            dataGridView1.TabIndex = 6;
+            // 
+            // dataGridViewTextBoxColumn1
+            // 
+            dataGridViewTextBoxColumn1.HeaderText = "Name";
+            dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
+            dataGridViewTextBoxColumn1.Width = 200;
+            // 
+            // dataGridViewButtonColumn1
+            // 
+            dataGridViewButtonColumn1.HeaderText = "";
+            dataGridViewButtonColumn1.Name = "dataGridViewButtonColumn1";
+            dataGridViewButtonColumn1.Text = "Delete";
+            dataGridViewButtonColumn1.UseColumnTextForButtonValue = true;
+            dataGridViewButtonColumn1.Width = 80;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(17, 21);
+            label1.Name = "label1";
+            label1.Size = new Size(58, 24);
+            label1.TabIndex = 5;
+            label1.Text = "権限名";
+            // 
+            // textBox1
+            // 
+            textBox1.Location = new Point(81, 18);
+            textBox1.Name = "textBox1";
+            textBox1.Size = new Size(249, 31);
+            textBox1.TabIndex = 4;
+            // 
             // FormPermission
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -107,6 +167,9 @@
             Name = "FormPermission";
             Text = "FormPermission";
             tabControl.ResumeLayout(false);
+            combinedPermissionsTab.ResumeLayout(false);
+            combinedPermissionsTab.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
             ResumeLayout(false);
         }
 
@@ -118,5 +181,11 @@
         private TabPage userPermissionsTab;
         private Button btnCancel;
         private Button btnSave;
+        private Button button1;
+        private DataGridView dataGridView1;
+        private DataGridViewTextBoxColumn dataGridViewTextBoxColumn1;
+        private DataGridViewButtonColumn dataGridViewButtonColumn1;
+        private Label label1;
+        private TextBox textBox1;
     }
 }
