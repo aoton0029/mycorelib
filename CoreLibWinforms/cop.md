@@ -330,6 +330,486 @@ public class Program
 ```
 
 この設計では、BitArrayを使用して効率的に権限の組み合わせを管理しています。PermissionのIdをBitArrayのインデックスとして使用することで、各Roleが持つ権限を簡潔に表現できます。また、RoleクラスにはEnsureCapacityメソッドを追加して、BitArrayのサイズを動的に調整できるようにしています。
+
+
+
+# ユーザーIDをキーにした権限管理システムの拡張
+
+既存のRBACシステムを拡張して、ユーザーIDをキーにした権限管理を追加します。これにより、ユーザー単位で詳細な権限制御が可能になります。
+
+## User クラス
+
+```csharp
+using System;
+using System.Collections.Generic;
+
+public class User
+{
+    public string UserId { get; private set; }
+    public string Username { get; set; }
+    
+    // ユーザーに直接割り当てられたロールのリスト
+    private readonly List<int> _assignedRoleIds = new List<int>();
+    
+    // ユーザー固有の追加権限（ロールに含まれない権限）
+    private readonly HashSet<int> _additionalPermissionIds = new HashSet<int>();
+    
+    // ユーザー固有の拒否権限（ロールに含まれていても無効にする）
+    private readonly HashSet<int> _deniedPermissionIds = new HashSet<int>();
+    
+    public User(string userId, string username)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ArgumentException("User ID cannot be empty", nameof(userId));
+            
+        if (string.IsNullOrWhiteSpace(username))
+            throw new ArgumentException("Username cannot be empty", nameof(username));
+            
+        UserId = userId;
+        Username = username;
+    }
+    
+    public IReadOnlyList<int> AssignedRoleIds => _assignedRoleIds.AsReadOnly();
+    public IReadOnlyCollection<int> AdditionalPermissionIds => _additionalPermissionIds;
+    public IReadOnlyCollection<int> DeniedPermissionIds => _deniedPermissionIds;
+    
+    public void AssignRole(int roleId)
+    {
+        if (!_assignedRoleIds.Contains(roleId))
+        {
+            _assignedRoleIds.Add(roleId);
+        }
+    }
+    
+    public void UnassignRole(int roleId)
+    {
+        _assignedRoleIds.Remove(roleId);
+    }
+    
+    public void GrantAdditionalPermission(int permissionId)
+    {
+        _additionalPermissionIds.Add(permissionId);
+        _deniedPermissionIds.Remove(permissionId); // 同時に拒否リストから削除
+    }
+    
+    public void RevokeAdditionalPermission(int permissionId)
+    {
+        _additionalPermissionIds.Remove(permissionId);
+    }
+    
+    public void DenyPermission(int permissionId)
+    {
+        _deniedPermissionIds.Add(permissionId);
+        _additionalPermissionIds.Remove(permissionId); // 同時に追加リストから削除
+    }
+    
+    public void RemoveDeniedPermission(int permissionId)
+    {
+        _deniedPermissionIds.Remove(permissionId);
+    }
+    
+    public override string ToString()
+    {
+        return $"User(ID: {UserId}, Name: {Username})";
+    }
+}
+```
+
+## UserManager クラス
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public class UserManager
+{
+    private readonly Dictionary<string, User> _users = new Dictionary<string, User>();
+    private readonly PermissionManager _permissionManager;
+    
+    public UserManager(PermissionManager permissionManager)
+    {
+        _permissionManager = permissionManager ?? throw new ArgumentNullException(nameof(permissionManager));
+    }
+    
+    // ユーザー管理
+    public User CreateUser(string userId, string username)
+    {
+        if (_users.ContainsKey(userId))
+            throw new InvalidOperationException($"User with ID {userId} already exists");
+            
+        var user = new User(userId, username);
+        _users.Add(userId, user);
+        return user;
+    }
+    
+    public User GetUser(string userId)
+    {
+        if (!_users.TryGetValue(userId, out var user))
+            throw new KeyNotFoundException($"User with ID {userId} not found");
+            
+        return user;
+    }
+    
+    public IEnumerable<User> GetAllUsers()
+    {
+        return _users.Values;
+    }
+    
+    public bool UserExists(string userId)
+    {
+        return _users.ContainsKey(userId);
+    }
+    
+    // ユーザー-ロール関連の管理
+    public void AssignRoleToUser(string userId, int roleId)
+    {
+        var user = GetUser(userId);
+        // ロールの存在確認
+        _permissionManager.GetRole(roleId);
+        user.AssignRole(roleId);
+    }
+    
+    public void UnassignRoleFromUser(string userId, int roleId)
+    {
+        var user = GetUser(userId);
+        user.UnassignRole(roleId);
+    }
+    
+    // ユーザー-権限関連の管理
+    public void GrantAdditionalPermissionToUser(string userId, int permissionId)
+    {
+        var user = GetUser(userId);
+        // 権限の存在確認
+        _permissionManager.GetPermission(permissionId);
+        user.GrantAdditionalPermission(permissionId);
+    }
+    
+    public void RevokeAdditionalPermissionFromUser(string userId, int permissionId)
+    {
+        var user = GetUser(userId);
+        user.RevokeAdditionalPermission(permissionId);
+    }
+    
+    public void DenyPermissionForUser(string userId, int permissionId)
+    {
+        var user = GetUser(userId);
+        // 権限の存在確認
+        _permissionManager.GetPermission(permissionId);
+        user.DenyPermission(permissionId);
+    }
+    
+    public void RemoveDeniedPermissionForUser(string userId, int permissionId)
+    {
+        var user = GetUser(userId);
+        user.RemoveDeniedPermission(permissionId);
+    }
+    
+    // ユーザーの権限チェック
+    public bool HasPermission(string userId, int permissionId)
+    {
+        var user = GetUser(userId);
+        
+        // 拒否リストに含まれている場合は常にfalse
+        if (user.DeniedPermissionIds.Contains(permissionId))
+            return false;
+            
+        // 追加権限リストに含まれている場合はtrue
+        if (user.AdditionalPermissionIds.Contains(permissionId))
+            return true;
+            
+        // ユーザーに割り当てられたロールをチェック
+        foreach (var roleId in user.AssignedRoleIds)
+        {
+            if (_permissionManager.HasPermission(roleId, permissionId))
+                return true;
+        }
+        
+        return false;
+    }
+    
+    public bool CanExecuteOperation(string userId, int operationId)
+    {
+        var operation = _permissionManager.GetOperation(operationId);
+        return HasPermission(userId, operation.RequiredPermission.Id);
+    }
+    
+    // ユーザーに割り当てられている全権限を取得
+    public IEnumerable<Permission> GetUserPermissions(string userId)
+    {
+        var user = GetUser(userId);
+        var allPermissions = new HashSet<Permission>();
+        
+        // ロールから取得できる権限を追加
+        foreach (var roleId in user.AssignedRoleIds)
+        {
+            var role = _permissionManager.GetRole(roleId);
+            foreach (var permission in _permissionManager.GetAllPermissions())
+            {
+                if (role.HasPermission(permission) && !user.DeniedPermissionIds.Contains(permission.Id))
+                {
+                    allPermissions.Add(permission);
+                }
+            }
+        }
+        
+        // 追加権限を追加
+        foreach (var permissionId in user.AdditionalPermissionIds)
+        {
+            if (!user.DeniedPermissionIds.Contains(permissionId))
+            {
+                allPermissions.Add(_permissionManager.GetPermission(permissionId));
+            }
+        }
+        
+        return allPermissions;
+    }
+}
+```
+
+## 拡張されたPermissionManager クラス
+
+```csharp
+// PermissionManager クラスに追加するメソッド
+
+public class PermissionManager
+{
+    // 既存のコードはそのまま...
+    
+    // 権限定義の追加メソッド
+    public bool TryGetPermission(int id, out Permission permission)
+    {
+        return _permissions.TryGetValue(id, out permission);
+    }
+    
+    public bool TryGetRole(int id, out Role role)
+    {
+        return _roles.TryGetValue(id, out role);
+    }
+    
+    public bool TryGetOperation(int id, out Operation operation)
+    {
+        return _operations.TryGetValue(id, out operation);
+    }
+    
+    // ロールに割り当てられたすべての権限を取得
+    public IEnumerable<Permission> GetRolePermissions(int roleId)
+    {
+        var role = GetRole(roleId);
+        return _permissions.Values.Where(p => role.HasPermission(p));
+    }
+}
+```
+
+## AuthorizationService クラス
+
+```csharp
+using System;
+
+public class AuthorizationService
+{
+    private readonly UserManager _userManager;
+    private readonly PermissionManager _permissionManager;
+    
+    public AuthorizationService(UserManager userManager, PermissionManager permissionManager)
+    {
+        _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+        _permissionManager = permissionManager ?? throw new ArgumentNullException(nameof(permissionManager));
+    }
+    
+    // 特定のユーザーが特定の権限を持っているかをチェック
+    public bool HasPermission(string userId, string permissionName)
+    {
+        if (!_userManager.UserExists(userId))
+            return false;
+            
+        // 権限名から権限IDを検索
+        foreach (var permission in _permissionManager.GetAllPermissions())
+        {
+            if (permission.Name.Equals(permissionName, StringComparison.OrdinalIgnoreCase))
+            {
+                return _userManager.HasPermission(userId, permission.Id);
+            }
+        }
+        
+        return false;
+    }
+    
+    // 特定のユーザーが特定の操作を実行できるかをチェック
+    public bool CanExecuteOperation(string userId, string operationName)
+    {
+        if (!_userManager.UserExists(userId))
+            return false;
+            
+        // 操作名から操作IDを検索
+        foreach (var operation in _permissionManager.GetAllOperations())
+        {
+            if (operation.Name.Equals(operationName, StringComparison.OrdinalIgnoreCase))
+            {
+                return _userManager.CanExecuteOperation(userId, operation.Id);
+            }
+        }
+        
+        return false;
+    }
+    
+    // ユーザーに特定のロールがあるかをチェック
+    public bool HasRole(string userId, string roleName)
+    {
+        if (!_userManager.UserExists(userId))
+            return false;
+            
+        var user = _userManager.GetUser(userId);
+        
+        foreach (var role in _permissionManager.GetAllRoles())
+        {
+            if (role.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase) && 
+                user.AssignedRoleIds.Contains(role.Id))
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+}
+```
+
+## 使用例
+
+```csharp
+public class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine("Current Date and Time (UTC): 2025-05-31 11:25:26");
+        Console.WriteLine("Current User's Login: aoton0029");
+        Console.WriteLine();
+        
+        // システム初期化
+        var permissionManager = new PermissionManager();
+        var userManager = new UserManager(permissionManager);
+        var authService = new AuthorizationService(userManager, permissionManager);
+        
+        // 権限を定義
+        var readPermission = permissionManager.CreatePermission(0, "Read");
+        var writePermission = permissionManager.CreatePermission(1, "Write");
+        var deletePermission = permissionManager.CreatePermission(2, "Delete");
+        var adminPermission = permissionManager.CreatePermission(3, "Admin");
+        
+        // ロールを定義
+        var userRole = permissionManager.CreateRole(1, "User");
+        var editorRole = permissionManager.CreateRole(2, "Editor");
+        var adminRole = permissionManager.CreateRole(3, "Administrator");
+        
+        // ロールに権限を割り当て
+        permissionManager.GrantPermissionToRole(userRole.Id, readPermission.Id);
+        
+        permissionManager.GrantPermissionToRole(editorRole.Id, readPermission.Id);
+        permissionManager.GrantPermissionToRole(editorRole.Id, writePermission.Id);
+        
+        permissionManager.GrantPermissionToRole(adminRole.Id, readPermission.Id);
+        permissionManager.GrantPermissionToRole(adminRole.Id, writePermission.Id);
+        permissionManager.GrantPermissionToRole(adminRole.Id, deletePermission.Id);
+        permissionManager.GrantPermissionToRole(adminRole.Id, adminPermission.Id);
+        
+        // 操作を定義
+        var viewOperation = permissionManager.CreateOperation(1, "View Content", readPermission);
+        var editOperation = permissionManager.CreateOperation(2, "Edit Content", writePermission);
+        var deleteOperation = permissionManager.CreateOperation(3, "Delete Content", deletePermission);
+        var configureOperation = permissionManager.CreateOperation(4, "Configure System", adminPermission);
+        
+        // ユーザーを作成
+        var normalUser = userManager.CreateUser("user001", "Normal User");
+        var specialUser = userManager.CreateUser("aoton0029", "Aoton User");
+        var adminUser = userManager.CreateUser("admin001", "Admin User");
+        
+        // ユーザーにロールを割り当て
+        userManager.AssignRoleToUser(normalUser.UserId, userRole.Id);
+        
+        userManager.AssignRoleToUser(specialUser.UserId, userRole.Id);
+        userManager.AssignRoleToUser(specialUser.UserId, editorRole.Id);
+        // 特別なユーザー権限を追加
+        userManager.GrantAdditionalPermissionToUser(specialUser.UserId, deletePermission.Id);
+        
+        userManager.AssignRoleToUser(adminUser.UserId, adminRole.Id);
+        
+        // aoton0029ユーザーの権限を確認
+        Console.WriteLine("=== ユーザー aoton0029 の権限情報 ===");
+        Console.WriteLine($"ユーザー名: {specialUser.Username}");
+        Console.WriteLine("割り当てられたロール:");
+        foreach (var roleId in specialUser.AssignedRoleIds)
+        {
+            var role = permissionManager.GetRole(roleId);
+            Console.WriteLine($"- {role.Name}");
+        }
+        
+        Console.WriteLine("\n保有している権限:");
+        foreach (var permission in userManager.GetUserPermissions(specialUser.UserId))
+        {
+            Console.WriteLine($"- {permission.Name}");
+        }
+        
+        Console.WriteLine("\n実行可能な操作:");
+        foreach (var operation in permissionManager.GetAllOperations())
+        {
+            bool canExecute = userManager.CanExecuteOperation(specialUser.UserId, operation.Id);
+            Console.WriteLine($"- {operation.Name}: {(canExecute ? "可能" : "不可")}");
+        }
+        
+        // 権限変更のデモ
+        Console.WriteLine("\n=== 権限変更のデモ ===");
+        Console.WriteLine("「Configure System」権限を拒否します。");
+        userManager.DenyPermissionForUser(specialUser.UserId, adminPermission.Id);
+        
+        Console.WriteLine("\n変更後の実行可能な操作:");
+        foreach (var operation in permissionManager.GetAllOperations())
+        {
+            bool canExecute = userManager.CanExecuteOperation(specialUser.UserId, operation.Id);
+            Console.WriteLine($"- {operation.Name}: {(canExecute ? "可能" : "不可")}");
+        }
+    }
+}
+```
+
+## 期待される出力例
+
+```
+Current Date and Time (UTC): 2025-05-31 11:25:26
+Current User's Login: aoton0029
+
+=== ユーザー aoton0029 の権限情報 ===
+ユーザー名: Aoton User
+割り当てられたロール:
+- User
+- Editor
+
+保有している権限:
+- Read
+- Write
+- Delete
+
+実行可能な操作:
+- View Content: 可能
+- Edit Content: 可能
+- Delete Content: 可能
+- Configure System: 不可
+
+=== 権限変更のデモ ===
+「Configure System」権限を拒否します。
+
+変更後の実行可能な操作:
+- View Content: 可能
+- Edit Content: 可能
+- Delete Content: 可能
+- Configure System: 不可
+```
+
+このシステムでは、ユーザーIDをキーにして各ユーザーの権限を管理できます。ユーザーはロールを通じた権限と、ユーザー固有の追加権限を持つことができます。また、特定の権限をユーザーレベルで拒否する機能も実装されています。これにより、ロールベースの権限管理に加えて、ユーザーごとの細かな権限制御が可能になります。
+
+
+
+
 ---
 
 現在の日時 (UTC): 2025-05-30 09:23:16
