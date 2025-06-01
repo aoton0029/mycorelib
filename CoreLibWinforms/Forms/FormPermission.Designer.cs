@@ -32,62 +32,62 @@
             basicPermissionsTab = new TabPage();
             btnRegistPerm = new Button();
             gridPerm = new DataGridView();
-            lblTitlePerm = new Label();
-            txtPerm = new TextBox();
-            combinedPermissionsTab = new TabPage();
-            userPermissionsTab = new TabPage();
-            btnCancel = new Button();
-            btnSave = new Button();
             ColumnPermId = new DataGridViewTextBoxColumn();
             ColumnPermName = new DataGridViewTextBoxColumn();
             ColumnPermDeleteButton = new DataGridViewButtonColumn();
+            lblTitlePerm = new Label();
+            txtPerm = new TextBox();
+            combinedPermissionsTab = new TabPage();
+            btnRolePermAvailable = new Button();
+            btnRolePermSelected = new Button();
+            gridRolePermAvailable = new DataGridView();
+            gridRolePermSelected = new DataGridView();
+            lblTItleSelectedRole = new Label();
             btnRegistRole = new Button();
             gridRole = new DataGridView();
-            lblTitleRole = new Label();
-            txtRoleName = new TextBox();
             ColumnRoleId = new DataGridViewTextBoxColumn();
             ColumnRoleName = new DataGridViewTextBoxColumn();
             ColumnRoleEditButton = new DataGridViewButtonColumn();
             ColumnRoleDeleteButton = new DataGridViewButtonColumn();
-            label3 = new Label();
-            gridRolePermSelected = new DataGridView();
-            dataGridViewTextBoxColumn1 = new DataGridViewTextBoxColumn();
-            dataGridViewTextBoxColumn2 = new DataGridViewTextBoxColumn();
-            gridRolePermAvailable = new DataGridView();
-            dataGridViewTextBoxColumn3 = new DataGridViewTextBoxColumn();
-            dataGridViewTextBoxColumn4 = new DataGridViewTextBoxColumn();
-            btnRolePermSelected = new Button();
-            btnRolePermAvailable = new Button();
-            button1 = new Button();
-            button2 = new Button();
-            dataGridView1 = new DataGridView();
+            lblTitleRole = new Label();
+            txtRoleName = new TextBox();
+            userPermissionsTab = new TabPage();
+            btnAssignUserRole = new Button();
+            lblTItleUserRole = new Label();
+            cmbUserRole = new ComboBox();
+            btnUserPermAvailable = new Button();
+            btnUserPremSelected = new Button();
+            gridUserPermAvailable = new DataGridView();
             dataGridViewTextBoxColumn5 = new DataGridViewTextBoxColumn();
             dataGridViewTextBoxColumn6 = new DataGridViewTextBoxColumn();
-            dataGridView2 = new DataGridView();
+            gridUserPermSelected = new DataGridView();
             dataGridViewTextBoxColumn7 = new DataGridViewTextBoxColumn();
             dataGridViewTextBoxColumn8 = new DataGridViewTextBoxColumn();
-            label1 = new Label();
+            lblTitleSelectedUserId = new Label();
             btnRegistUser = new Button();
             gridUser = new DataGridView();
-            dataGridViewTextBoxColumn9 = new DataGridViewTextBoxColumn();
-            dataGridViewTextBoxColumn10 = new DataGridViewTextBoxColumn();
-            dataGridViewButtonColumn1 = new DataGridViewButtonColumn();
-            dataGridViewButtonColumn2 = new DataGridViewButtonColumn();
-            label2 = new Label();
+            lblTitleUserId = new Label();
             txtUserId = new TextBox();
-            comboBox1 = new ComboBox();
-            label4 = new Label();
-            button3 = new Button();
+            btnCancel = new Button();
+            btnSave = new Button();
+            ColumnUserId = new DataGridViewTextBoxColumn();
+            ColumnUserName = new DataGridViewTextBoxColumn();
+            ColumnUserEdit = new DataGridViewButtonColumn();
+            ColumnUserDelete = new DataGridViewButtonColumn();
+            ColumnRoleAvailableId = new DataGridViewTextBoxColumn();
+            ColumnRoleAvailableName = new DataGridViewTextBoxColumn();
+            ColumnRoleSelectedId = new DataGridViewTextBoxColumn();
+            ColumnRoleSelectedName = new DataGridViewTextBoxColumn();
             tabControl.SuspendLayout();
             basicPermissionsTab.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)gridPerm).BeginInit();
             combinedPermissionsTab.SuspendLayout();
-            userPermissionsTab.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)gridRole).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)gridRolePermSelected).BeginInit();
             ((System.ComponentModel.ISupportInitialize)gridRolePermAvailable).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)dataGridView2).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)gridRolePermSelected).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)gridRole).BeginInit();
+            userPermissionsTab.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)gridUserPermAvailable).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)gridUserPermSelected).BeginInit();
             ((System.ComponentModel.ISupportInitialize)gridUser).BeginInit();
             SuspendLayout();
             // 
@@ -112,7 +112,7 @@
             basicPermissionsTab.Controls.Add(txtPerm);
             basicPermissionsTab.Location = new Point(4, 33);
             basicPermissionsTab.Name = "basicPermissionsTab";
-            basicPermissionsTab.Size = new Size(886, 568);
+            basicPermissionsTab.Size = new Size(886, 635);
             basicPermissionsTab.TabIndex = 0;
             basicPermissionsTab.Text = "基本権限";
             // 
@@ -127,12 +127,35 @@
             // 
             // gridPerm
             // 
+            gridPerm.AllowUserToAddRows = false;
+            gridPerm.AllowUserToDeleteRows = false;
+            gridPerm.AllowUserToResizeRows = false;
             gridPerm.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             gridPerm.Columns.AddRange(new DataGridViewColumn[] { ColumnPermId, ColumnPermName, ColumnPermDeleteButton });
             gridPerm.Location = new Point(13, 58);
             gridPerm.Name = "gridPerm";
-            gridPerm.Size = new Size(493, 500);
+            gridPerm.Size = new Size(493, 559);
             gridPerm.TabIndex = 10;
+            // 
+            // ColumnPermId
+            // 
+            ColumnPermId.HeaderText = "ID";
+            ColumnPermId.Name = "ColumnPermId";
+            ColumnPermId.Width = 80;
+            // 
+            // ColumnPermName
+            // 
+            ColumnPermName.HeaderText = "Name";
+            ColumnPermName.Name = "ColumnPermName";
+            ColumnPermName.Width = 250;
+            // 
+            // ColumnPermDeleteButton
+            // 
+            ColumnPermDeleteButton.HeaderText = "";
+            ColumnPermDeleteButton.Name = "ColumnPermDeleteButton";
+            ColumnPermDeleteButton.Text = "Delete";
+            ColumnPermDeleteButton.UseColumnTextForButtonValue = true;
+            ColumnPermDeleteButton.Width = 80;
             // 
             // lblTitlePerm
             // 
@@ -156,7 +179,7 @@
             combinedPermissionsTab.Controls.Add(btnRolePermSelected);
             combinedPermissionsTab.Controls.Add(gridRolePermAvailable);
             combinedPermissionsTab.Controls.Add(gridRolePermSelected);
-            combinedPermissionsTab.Controls.Add(label3);
+            combinedPermissionsTab.Controls.Add(lblTItleSelectedRole);
             combinedPermissionsTab.Controls.Add(btnRegistRole);
             combinedPermissionsTab.Controls.Add(gridRole);
             combinedPermissionsTab.Controls.Add(lblTitleRole);
@@ -167,67 +190,58 @@
             combinedPermissionsTab.TabIndex = 1;
             combinedPermissionsTab.Text = "役割権限";
             // 
-            // userPermissionsTab
+            // btnRolePermAvailable
             // 
-            userPermissionsTab.Controls.Add(button3);
-            userPermissionsTab.Controls.Add(label4);
-            userPermissionsTab.Controls.Add(comboBox1);
-            userPermissionsTab.Controls.Add(button1);
-            userPermissionsTab.Controls.Add(button2);
-            userPermissionsTab.Controls.Add(dataGridView1);
-            userPermissionsTab.Controls.Add(dataGridView2);
-            userPermissionsTab.Controls.Add(label1);
-            userPermissionsTab.Controls.Add(btnRegistUser);
-            userPermissionsTab.Controls.Add(gridUser);
-            userPermissionsTab.Controls.Add(label2);
-            userPermissionsTab.Controls.Add(txtUserId);
-            userPermissionsTab.Location = new Point(4, 33);
-            userPermissionsTab.Name = "userPermissionsTab";
-            userPermissionsTab.Size = new Size(886, 635);
-            userPermissionsTab.TabIndex = 2;
-            userPermissionsTab.Text = "ユーザー権限";
+            btnRolePermAvailable.Location = new Point(400, 449);
+            btnRolePermAvailable.Name = "btnRolePermAvailable";
+            btnRolePermAvailable.Size = new Size(84, 72);
+            btnRolePermAvailable.TabIndex = 20;
+            btnRolePermAvailable.Text = "＞＞";
+            btnRolePermAvailable.UseVisualStyleBackColor = true;
             // 
-            // btnCancel
+            // btnRolePermSelected
             // 
-            btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnCancel.Font = new Font("メイリオ", 14.25F);
-            btnCancel.Location = new Point(4, 676);
-            btnCancel.Name = "btnCancel";
-            btnCancel.Size = new Size(158, 49);
-            btnCancel.TabIndex = 2;
-            btnCancel.Text = "キャンセル";
-            btnCancel.UseVisualStyleBackColor = true;
+            btnRolePermSelected.Location = new Point(400, 371);
+            btnRolePermSelected.Name = "btnRolePermSelected";
+            btnRolePermSelected.Size = new Size(84, 72);
+            btnRolePermSelected.TabIndex = 19;
+            btnRolePermSelected.Text = "＜＜";
+            btnRolePermSelected.UseVisualStyleBackColor = true;
             // 
-            // btnSave
+            // gridRolePermAvailable
             // 
-            btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnSave.Font = new Font("メイリオ", 14.25F);
-            btnSave.Location = new Point(740, 676);
-            btnSave.Name = "btnSave";
-            btnSave.Size = new Size(158, 49);
-            btnSave.TabIndex = 3;
-            btnSave.Text = "保存";
-            btnSave.UseVisualStyleBackColor = true;
+            gridRolePermAvailable.AllowUserToAddRows = false;
+            gridRolePermAvailable.AllowUserToDeleteRows = false;
+            gridRolePermAvailable.AllowUserToResizeRows = false;
+            gridRolePermAvailable.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            gridRolePermAvailable.Columns.AddRange(new DataGridViewColumn[] { ColumnRoleAvailableId, ColumnRoleAvailableName });
+            gridRolePermAvailable.Location = new Point(492, 246);
+            gridRolePermAvailable.Name = "gridRolePermAvailable";
+            gridRolePermAvailable.RowHeadersWidth = 20;
+            gridRolePermAvailable.Size = new Size(383, 375);
+            gridRolePermAvailable.TabIndex = 18;
             // 
-            // ColumnPermId
+            // gridRolePermSelected
             // 
-            ColumnPermId.HeaderText = "ID";
-            ColumnPermId.Name = "ColumnPermId";
-            ColumnPermId.Width = 80;
+            gridRolePermSelected.AllowUserToAddRows = false;
+            gridRolePermSelected.AllowUserToDeleteRows = false;
+            gridRolePermSelected.AllowUserToResizeRows = false;
+            gridRolePermSelected.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            gridRolePermSelected.Columns.AddRange(new DataGridViewColumn[] { ColumnRoleSelectedId, ColumnRoleSelectedName });
+            gridRolePermSelected.Location = new Point(11, 246);
+            gridRolePermSelected.Name = "gridRolePermSelected";
+            gridRolePermSelected.RowHeadersWidth = 20;
+            gridRolePermSelected.Size = new Size(383, 375);
+            gridRolePermSelected.TabIndex = 17;
             // 
-            // ColumnPermName
+            // lblTItleSelectedRole
             // 
-            ColumnPermName.HeaderText = "Name";
-            ColumnPermName.Name = "ColumnPermName";
-            ColumnPermName.Width = 250;
-            // 
-            // ColumnPermDeleteButton
-            // 
-            ColumnPermDeleteButton.HeaderText = "";
-            ColumnPermDeleteButton.Name = "ColumnPermDeleteButton";
-            ColumnPermDeleteButton.Text = "Delete";
-            ColumnPermDeleteButton.UseColumnTextForButtonValue = true;
-            ColumnPermDeleteButton.Width = 80;
+            lblTItleSelectedRole.AutoSize = true;
+            lblTItleSelectedRole.Location = new Point(11, 215);
+            lblTItleSelectedRole.Name = "lblTItleSelectedRole";
+            lblTItleSelectedRole.Size = new Size(138, 24);
+            lblTItleSelectedRole.TabIndex = 16;
+            lblTItleSelectedRole.Text = "選択中のロール：";
             // 
             // btnRegistRole
             // 
@@ -240,6 +254,9 @@
             // 
             // gridRole
             // 
+            gridRole.AllowUserToAddRows = false;
+            gridRole.AllowUserToDeleteRows = false;
+            gridRole.AllowUserToResizeRows = false;
             gridRole.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             gridRole.Columns.AddRange(new DataGridViewColumn[] { ColumnRoleId, ColumnRoleName, ColumnRoleEditButton, ColumnRoleDeleteButton });
             gridRole.Location = new Point(11, 50);
@@ -247,22 +264,6 @@
             gridRole.RowHeadersWidth = 20;
             gridRole.Size = new Size(864, 149);
             gridRole.TabIndex = 14;
-            // 
-            // lblTitleRole
-            // 
-            lblTitleRole.AutoSize = true;
-            lblTitleRole.Location = new Point(11, 16);
-            lblTitleRole.Name = "lblTitleRole";
-            lblTitleRole.Size = new Size(90, 24);
-            lblTitleRole.TabIndex = 13;
-            lblTitleRole.Text = "ロール名：";
-            // 
-            // txtRoleName
-            // 
-            txtRoleName.Location = new Point(117, 13);
-            txtRoleName.Name = "txtRoleName";
-            txtRoleName.Size = new Size(256, 31);
-            txtRoleName.TabIndex = 12;
             // 
             // ColumnRoleId
             // 
@@ -292,104 +293,100 @@
             ColumnRoleDeleteButton.UseColumnTextForButtonValue = true;
             ColumnRoleDeleteButton.Width = 80;
             // 
-            // label3
+            // lblTitleRole
             // 
-            label3.AutoSize = true;
-            label3.Location = new Point(11, 215);
-            label3.Name = "label3";
-            label3.Size = new Size(138, 24);
-            label3.TabIndex = 16;
-            label3.Text = "選択中のロール：";
+            lblTitleRole.AutoSize = true;
+            lblTitleRole.Location = new Point(11, 16);
+            lblTitleRole.Name = "lblTitleRole";
+            lblTitleRole.Size = new Size(90, 24);
+            lblTitleRole.TabIndex = 13;
+            lblTitleRole.Text = "ロール名：";
             // 
-            // gridRolePermSelected
+            // txtRoleName
             // 
-            gridRolePermSelected.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            gridRolePermSelected.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn1, dataGridViewTextBoxColumn2 });
-            gridRolePermSelected.Location = new Point(11, 246);
-            gridRolePermSelected.Name = "gridRolePermSelected";
-            gridRolePermSelected.RowHeadersWidth = 20;
-            gridRolePermSelected.Size = new Size(383, 312);
-            gridRolePermSelected.TabIndex = 17;
+            txtRoleName.Location = new Point(117, 13);
+            txtRoleName.Name = "txtRoleName";
+            txtRoleName.Size = new Size(256, 31);
+            txtRoleName.TabIndex = 12;
             // 
-            // dataGridViewTextBoxColumn1
+            // userPermissionsTab
             // 
-            dataGridViewTextBoxColumn1.HeaderText = "ID";
-            dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
-            dataGridViewTextBoxColumn1.Width = 80;
+            userPermissionsTab.Controls.Add(btnAssignUserRole);
+            userPermissionsTab.Controls.Add(lblTItleUserRole);
+            userPermissionsTab.Controls.Add(this.cmbUserRole);
+            userPermissionsTab.Controls.Add(btnUserPermAvailable);
+            userPermissionsTab.Controls.Add(btnUserPremSelected);
+            userPermissionsTab.Controls.Add(gridUserPermAvailable);
+            userPermissionsTab.Controls.Add(gridUserPermSelected);
+            userPermissionsTab.Controls.Add(lblTitleSelectedUserId);
+            userPermissionsTab.Controls.Add(btnRegistUser);
+            userPermissionsTab.Controls.Add(gridUser);
+            userPermissionsTab.Controls.Add(lblTitleUserId);
+            userPermissionsTab.Controls.Add(txtUserId);
+            userPermissionsTab.Location = new Point(4, 33);
+            userPermissionsTab.Name = "userPermissionsTab";
+            userPermissionsTab.Size = new Size(886, 635);
+            userPermissionsTab.TabIndex = 2;
+            userPermissionsTab.Text = "ユーザー権限";
             // 
-            // dataGridViewTextBoxColumn2
+            // btnAssignUserRole
             // 
-            dataGridViewTextBoxColumn2.HeaderText = "Name";
-            dataGridViewTextBoxColumn2.Name = "dataGridViewTextBoxColumn2";
-            dataGridViewTextBoxColumn2.Width = 250;
+            btnAssignUserRole.Location = new Point(322, 248);
+            btnAssignUserRole.Name = "btnAssignUserRole";
+            btnAssignUserRole.Size = new Size(120, 33);
+            btnAssignUserRole.TabIndex = 32;
+            btnAssignUserRole.Text = "適用";
+            btnAssignUserRole.UseVisualStyleBackColor = true;
             // 
-            // gridRolePermAvailable
+            // lblTItleUserRole
             // 
-            gridRolePermAvailable.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            gridRolePermAvailable.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn3, dataGridViewTextBoxColumn4 });
-            gridRolePermAvailable.Location = new Point(492, 246);
-            gridRolePermAvailable.Name = "gridRolePermAvailable";
-            gridRolePermAvailable.RowHeadersWidth = 20;
-            gridRolePermAvailable.Size = new Size(383, 312);
-            gridRolePermAvailable.TabIndex = 18;
+            lblTItleUserRole.AutoSize = true;
+            lblTItleUserRole.Location = new Point(11, 251);
+            lblTItleUserRole.Name = "lblTItleUserRole";
+            lblTItleUserRole.Size = new Size(58, 24);
+            lblTItleUserRole.TabIndex = 31;
+            lblTItleUserRole.Text = "役割：";
             // 
-            // dataGridViewTextBoxColumn3
+            // cmbUserRole
             // 
-            dataGridViewTextBoxColumn3.HeaderText = "ID";
-            dataGridViewTextBoxColumn3.Name = "dataGridViewTextBoxColumn3";
-            dataGridViewTextBoxColumn3.Width = 80;
+            this.cmbUserRole.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbUserRole.FlatStyle = FlatStyle.Flat;
+            this.cmbUserRole.FormattingEnabled = true;
+            this.cmbUserRole.Location = new Point(75, 248);
+            this.cmbUserRole.Name = "cmbUserRole";
+            this.cmbUserRole.Size = new Size(241, 32);
+            this.cmbUserRole.TabIndex = 30;
             // 
-            // dataGridViewTextBoxColumn4
+            // btnUserPermAvailable
             // 
-            dataGridViewTextBoxColumn4.HeaderText = "Name";
-            dataGridViewTextBoxColumn4.Name = "dataGridViewTextBoxColumn4";
-            dataGridViewTextBoxColumn4.Width = 250;
+            btnUserPermAvailable.Location = new Point(400, 459);
+            btnUserPermAvailable.Name = "btnUserPermAvailable";
+            btnUserPermAvailable.Size = new Size(84, 72);
+            btnUserPermAvailable.TabIndex = 29;
+            btnUserPermAvailable.Text = "＞＞";
+            btnUserPermAvailable.UseVisualStyleBackColor = true;
             // 
-            // btnRolePermSelected
+            // btnUserPremSelected
             // 
-            btnRolePermSelected.Location = new Point(402, 307);
-            btnRolePermSelected.Name = "btnRolePermSelected";
-            btnRolePermSelected.Size = new Size(84, 72);
-            btnRolePermSelected.TabIndex = 19;
-            btnRolePermSelected.Text = "＜＜";
-            btnRolePermSelected.UseVisualStyleBackColor = true;
+            btnUserPremSelected.Location = new Point(400, 381);
+            btnUserPremSelected.Name = "btnUserPremSelected";
+            btnUserPremSelected.Size = new Size(84, 72);
+            btnUserPremSelected.TabIndex = 28;
+            btnUserPremSelected.Text = "＜＜";
+            btnUserPremSelected.UseVisualStyleBackColor = true;
             // 
-            // btnRolePermAvailable
+            // gridUserPermAvailable
             // 
-            btnRolePermAvailable.Location = new Point(402, 385);
-            btnRolePermAvailable.Name = "btnRolePermAvailable";
-            btnRolePermAvailable.Size = new Size(84, 72);
-            btnRolePermAvailable.TabIndex = 20;
-            btnRolePermAvailable.Text = "＞＞";
-            btnRolePermAvailable.UseVisualStyleBackColor = true;
-            // 
-            // button1
-            // 
-            button1.Location = new Point(400, 459);
-            button1.Name = "button1";
-            button1.Size = new Size(84, 72);
-            button1.TabIndex = 29;
-            button1.Text = "＞＞";
-            button1.UseVisualStyleBackColor = true;
-            // 
-            // button2
-            // 
-            button2.Location = new Point(400, 381);
-            button2.Name = "button2";
-            button2.Size = new Size(84, 72);
-            button2.TabIndex = 28;
-            button2.Text = "＜＜";
-            button2.UseVisualStyleBackColor = true;
-            // 
-            // dataGridView1
-            // 
-            dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridView1.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn5, dataGridViewTextBoxColumn6 });
-            dataGridView1.Location = new Point(492, 289);
-            dataGridView1.Name = "dataGridView1";
-            dataGridView1.RowHeadersWidth = 20;
-            dataGridView1.Size = new Size(383, 338);
-            dataGridView1.TabIndex = 27;
+            gridUserPermAvailable.AllowUserToAddRows = false;
+            gridUserPermAvailable.AllowUserToDeleteRows = false;
+            gridUserPermAvailable.AllowUserToResizeRows = false;
+            gridUserPermAvailable.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            gridUserPermAvailable.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn5, dataGridViewTextBoxColumn6 });
+            gridUserPermAvailable.Location = new Point(492, 289);
+            gridUserPermAvailable.Name = "gridUserPermAvailable";
+            gridUserPermAvailable.RowHeadersWidth = 20;
+            gridUserPermAvailable.Size = new Size(383, 338);
+            gridUserPermAvailable.TabIndex = 27;
             // 
             // dataGridViewTextBoxColumn5
             // 
@@ -403,15 +400,18 @@
             dataGridViewTextBoxColumn6.Name = "dataGridViewTextBoxColumn6";
             dataGridViewTextBoxColumn6.Width = 250;
             // 
-            // dataGridView2
+            // gridUserPermSelected
             // 
-            dataGridView2.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridView2.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn7, dataGridViewTextBoxColumn8 });
-            dataGridView2.Location = new Point(11, 289);
-            dataGridView2.Name = "dataGridView2";
-            dataGridView2.RowHeadersWidth = 20;
-            dataGridView2.Size = new Size(383, 338);
-            dataGridView2.TabIndex = 26;
+            gridUserPermSelected.AllowUserToAddRows = false;
+            gridUserPermSelected.AllowUserToDeleteRows = false;
+            gridUserPermSelected.AllowUserToResizeRows = false;
+            gridUserPermSelected.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            gridUserPermSelected.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn7, dataGridViewTextBoxColumn8 });
+            gridUserPermSelected.Location = new Point(11, 289);
+            gridUserPermSelected.Name = "gridUserPermSelected";
+            gridUserPermSelected.RowHeadersWidth = 20;
+            gridUserPermSelected.Size = new Size(383, 338);
+            gridUserPermSelected.TabIndex = 26;
             // 
             // dataGridViewTextBoxColumn7
             // 
@@ -425,14 +425,14 @@
             dataGridViewTextBoxColumn8.Name = "dataGridViewTextBoxColumn8";
             dataGridViewTextBoxColumn8.Width = 250;
             // 
-            // label1
+            // lblTitleSelectedUserId
             // 
-            label1.AutoSize = true;
-            label1.Location = new Point(11, 214);
-            label1.Name = "label1";
-            label1.Size = new Size(154, 24);
-            label1.TabIndex = 25;
-            label1.Text = "選択中のユーザー：";
+            lblTitleSelectedUserId.AutoSize = true;
+            lblTitleSelectedUserId.Location = new Point(11, 214);
+            lblTitleSelectedUserId.Name = "lblTitleSelectedUserId";
+            lblTitleSelectedUserId.Size = new Size(154, 24);
+            lblTitleSelectedUserId.TabIndex = 25;
+            lblTitleSelectedUserId.Text = "選択中のユーザー：";
             // 
             // btnRegistUser
             // 
@@ -445,50 +445,25 @@
             // 
             // gridUser
             // 
+            gridUser.AllowUserToAddRows = false;
+            gridUser.AllowUserToDeleteRows = false;
+            gridUser.AllowUserToResizeRows = false;
             gridUser.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            gridUser.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn9, dataGridViewTextBoxColumn10, dataGridViewButtonColumn1, dataGridViewButtonColumn2 });
+            gridUser.Columns.AddRange(new DataGridViewColumn[] { ColumnUserId, ColumnUserName, ColumnUserEdit, ColumnUserDelete });
             gridUser.Location = new Point(11, 49);
             gridUser.Name = "gridUser";
             gridUser.RowHeadersWidth = 20;
             gridUser.Size = new Size(864, 149);
             gridUser.TabIndex = 23;
             // 
-            // dataGridViewTextBoxColumn9
+            // lblTitleUserId
             // 
-            dataGridViewTextBoxColumn9.HeaderText = "ID";
-            dataGridViewTextBoxColumn9.Name = "dataGridViewTextBoxColumn9";
-            dataGridViewTextBoxColumn9.Width = 80;
-            // 
-            // dataGridViewTextBoxColumn10
-            // 
-            dataGridViewTextBoxColumn10.HeaderText = "Name";
-            dataGridViewTextBoxColumn10.Name = "dataGridViewTextBoxColumn10";
-            dataGridViewTextBoxColumn10.Width = 250;
-            // 
-            // dataGridViewButtonColumn1
-            // 
-            dataGridViewButtonColumn1.HeaderText = "";
-            dataGridViewButtonColumn1.Name = "dataGridViewButtonColumn1";
-            dataGridViewButtonColumn1.Text = "Edit";
-            dataGridViewButtonColumn1.UseColumnTextForButtonValue = true;
-            dataGridViewButtonColumn1.Width = 80;
-            // 
-            // dataGridViewButtonColumn2
-            // 
-            dataGridViewButtonColumn2.HeaderText = "";
-            dataGridViewButtonColumn2.Name = "dataGridViewButtonColumn2";
-            dataGridViewButtonColumn2.Text = "Delete";
-            dataGridViewButtonColumn2.UseColumnTextForButtonValue = true;
-            dataGridViewButtonColumn2.Width = 80;
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(11, 15);
-            label2.Name = "label2";
-            label2.Size = new Size(108, 24);
-            label2.TabIndex = 22;
-            label2.Text = "ユーザーID：";
+            lblTitleUserId.AutoSize = true;
+            lblTitleUserId.Location = new Point(11, 15);
+            lblTitleUserId.Name = "lblTitleUserId";
+            lblTitleUserId.Size = new Size(108, 24);
+            lblTitleUserId.TabIndex = 22;
+            lblTitleUserId.Text = "ユーザーID：";
             // 
             // txtUserId
             // 
@@ -497,33 +472,79 @@
             txtUserId.Size = new Size(256, 31);
             txtUserId.TabIndex = 21;
             // 
-            // comboBox1
+            // btnCancel
             // 
-            comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
-            comboBox1.FlatStyle = FlatStyle.Flat;
-            comboBox1.FormattingEnabled = true;
-            comboBox1.Location = new Point(75, 246);
-            comboBox1.Name = "comboBox1";
-            comboBox1.Size = new Size(241, 32);
-            comboBox1.TabIndex = 30;
+            btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnCancel.Font = new Font("メイリオ", 14.25F);
+            btnCancel.Location = new Point(4, 676);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(158, 49);
+            btnCancel.TabIndex = 2;
+            btnCancel.Text = "キャンセル";
+            btnCancel.UseVisualStyleBackColor = true;
             // 
-            // label4
+            // btnSave
             // 
-            label4.AutoSize = true;
-            label4.Location = new Point(11, 250);
-            label4.Name = "label4";
-            label4.Size = new Size(58, 24);
-            label4.TabIndex = 31;
-            label4.Text = "役割：";
+            btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnSave.Font = new Font("メイリオ", 14.25F);
+            btnSave.Location = new Point(740, 676);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(158, 49);
+            btnSave.TabIndex = 3;
+            btnSave.Text = "保存";
+            btnSave.UseVisualStyleBackColor = true;
             // 
-            // button3
+            // ColumnUserId
             // 
-            button3.Location = new Point(322, 245);
-            button3.Name = "button3";
-            button3.Size = new Size(120, 33);
-            button3.TabIndex = 32;
-            button3.Text = "適用";
-            button3.UseVisualStyleBackColor = true;
+            ColumnUserId.HeaderText = "ID";
+            ColumnUserId.Name = "ColumnUserId";
+            ColumnUserId.Width = 80;
+            // 
+            // ColumnUserName
+            // 
+            ColumnUserName.HeaderText = "Name";
+            ColumnUserName.Name = "ColumnUserName";
+            ColumnUserName.Width = 250;
+            // 
+            // ColumnUserEdit
+            // 
+            ColumnUserEdit.HeaderText = "";
+            ColumnUserEdit.Name = "ColumnUserEdit";
+            ColumnUserEdit.Text = "Edit";
+            ColumnUserEdit.UseColumnTextForButtonValue = true;
+            ColumnUserEdit.Width = 80;
+            // 
+            // ColumnUserDelete
+            // 
+            ColumnUserDelete.HeaderText = "";
+            ColumnUserDelete.Name = "ColumnUserDelete";
+            ColumnUserDelete.Text = "Delete";
+            ColumnUserDelete.UseColumnTextForButtonValue = true;
+            ColumnUserDelete.Width = 80;
+            // 
+            // ColumnRoleAvailableId
+            // 
+            ColumnRoleAvailableId.HeaderText = "ID";
+            ColumnRoleAvailableId.Name = "ColumnRoleAvailableId";
+            ColumnRoleAvailableId.Width = 80;
+            // 
+            // ColumnRoleAvailableName
+            // 
+            ColumnRoleAvailableName.HeaderText = "Name";
+            ColumnRoleAvailableName.Name = "ColumnRoleAvailableName";
+            ColumnRoleAvailableName.Width = 250;
+            // 
+            // ColumnRoleSelectedId
+            // 
+            ColumnRoleSelectedId.HeaderText = "ID";
+            ColumnRoleSelectedId.Name = "ColumnRoleSelectedId";
+            ColumnRoleSelectedId.Width = 80;
+            // 
+            // ColumnRoleSelectedName
+            // 
+            ColumnRoleSelectedName.HeaderText = "Name";
+            ColumnRoleSelectedName.Name = "ColumnRoleSelectedName";
+            ColumnRoleSelectedName.Width = 250;
             // 
             // FormPermission
             // 
@@ -541,13 +562,13 @@
             ((System.ComponentModel.ISupportInitialize)gridPerm).EndInit();
             combinedPermissionsTab.ResumeLayout(false);
             combinedPermissionsTab.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)gridRolePermAvailable).EndInit();
+            ((System.ComponentModel.ISupportInitialize)gridRolePermSelected).EndInit();
+            ((System.ComponentModel.ISupportInitialize)gridRole).EndInit();
             userPermissionsTab.ResumeLayout(false);
             userPermissionsTab.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)gridRole).EndInit();
-            ((System.ComponentModel.ISupportInitialize)gridRolePermSelected).EndInit();
-            ((System.ComponentModel.ISupportInitialize)gridRolePermAvailable).EndInit();
-            ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
-            ((System.ComponentModel.ISupportInitialize)dataGridView2).EndInit();
+            ((System.ComponentModel.ISupportInitialize)gridUserPermAvailable).EndInit();
+            ((System.ComponentModel.ISupportInitialize)gridUserPermSelected).EndInit();
             ((System.ComponentModel.ISupportInitialize)gridUser).EndInit();
             ResumeLayout(false);
         }
@@ -575,34 +596,38 @@
         private DataGridViewTextBoxColumn ColumnRoleName;
         private DataGridViewButtonColumn ColumnRoleEditButton;
         private DataGridViewButtonColumn ColumnRoleDeleteButton;
-        private Label label3;
+        private Label lblTItleSelectedRole;
         private DataGridView gridRolePermSelected;
-        private DataGridViewTextBoxColumn dataGridViewTextBoxColumn1;
-        private DataGridViewTextBoxColumn dataGridViewTextBoxColumn2;
         private DataGridView gridRolePermAvailable;
-        private DataGridViewTextBoxColumn dataGridViewTextBoxColumn3;
-        private DataGridViewTextBoxColumn dataGridViewTextBoxColumn4;
         private Button btnRolePermAvailable;
         private Button btnRolePermSelected;
-        private Button button1;
-        private Button button2;
-        private DataGridView dataGridView1;
+        private Button btnUserPermAvailable;
+        private Button btnUserPremSelected;
+        private DataGridView gridUserPermAvailable;
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn5;
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn6;
-        private DataGridView dataGridView2;
+        private DataGridView gridUserPermSelected;
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn7;
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn8;
-        private Label label1;
+        private Label lblTitleSelectedUserId;
         private Button btnRegistUser;
         private DataGridView gridUser;
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn9;
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn10;
         private DataGridViewButtonColumn dataGridViewButtonColumn1;
         private DataGridViewButtonColumn dataGridViewButtonColumn2;
-        private Label label2;
+        private Label lblTitleUserId;
         private TextBox txtUserId;
-        private ComboBox comboBox1;
-        private Label label4;
-        private Button button3;
+        private ComboBox cmbUserRole;
+        private Label lblTItleUserRole;
+        private Button btnAssignUserRole;
+        private DataGridViewTextBoxColumn ColumnUserId;
+        private DataGridViewTextBoxColumn ColumnUserName;
+        private DataGridViewButtonColumn ColumnUserEdit;
+        private DataGridViewButtonColumn ColumnUserDelete;
+        private DataGridViewTextBoxColumn ColumnRoleAvailableId;
+        private DataGridViewTextBoxColumn ColumnRoleAvailableName;
+        private DataGridViewTextBoxColumn ColumnRoleSelectedId;
+        private DataGridViewTextBoxColumn ColumnRoleSelectedName;
     }
 }
