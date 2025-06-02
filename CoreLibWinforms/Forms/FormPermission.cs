@@ -1,4 +1,5 @@
-﻿using CoreLibWinforms.Permissions;
+﻿using CoreLibWinforms.Core;
+using CoreLibWinforms.Permissions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,70 +16,93 @@ namespace CoreLibWinforms.Forms
     public partial class FormPermission : Form
     {
         private PermissionManager _permissionManager;
-        private int _selectedRoleId = -1;
-        private string _selectedUserId = null;
+        private DualListManager _rolePermissionManager;
+        private DualListManager _userRoleManager;
+        private DualListManager _userPermissionManager;
 
-        public FormPermission(PermissionManager permissionManager)
+        // 選択中の項目を追跡
+        private string _selectedRoleName = string.Empty;
+        private string _selectedUserId = string.Empty;
+
+        public FormPermission()
         {
             InitializeComponent();
-            _permissionManager = permissionManager ?? throw new ArgumentNullException(nameof(permissionManager));
+            _permissionManager = new PermissionManager();
 
-            // イベントハンドラの登録
+            // イベントハンドラの設定
             btnSave.Click += BtnSave_Click;
             btnCancel.Click += BtnCancel_Click;
 
-            // 基本権限タブの初期化
-            InitializePermissionTab();
-
-            // 役割権限タブの初期化
-            InitializeRoleTab();
-
-            // ユーザー権限タブの初期化
-            InitializeUserTab();
+            // 各タブの初期化
+            InitializeBasicPermissionsTab();
+            InitializeRolePermissionsTab();
+            InitializeUserPermissionsTab();
         }
 
-        #region 権限画面
-        private void InitializePermissionTab()
+        private void FormPermission_Shown(object sender, EventArgs e)
         {
-            // イベントハンドラの登録
-            btnRegistPerm.Click += BtnRegistPerm_Click;
-            gridPerm.CellClick += GridPerm_CellClick;
-
-            // データグリッドビューの設定
-            RefreshPermissionGrid();
+            // フォーム表示時の初期化処理
+            RefreshAllData();
         }
 
-        private void RefreshPermissionGrid()
+        private void RefreshAllData()
         {
-            gridPerm.Rows.Clear();
+            RefreshPermissionList();
+            RefreshRoleList();
+            RefreshUserList();
+        }
 
-            // 権限一覧の取得
-            var permissions = _permissionManager.GetAllPermissions();
+        #region 基本権限タブ
+        private void InitializeBasicPermissionsTab()
+        {
+            // 権限追加ボタンのイベント設定
+            btnAddPermission.Click += BtnAddPermission_Click;
 
-            foreach (var permission in permissions)
+            // 権限リストの設定
+            lstPermissions.FullRowSelect = true;
+            lstPermissions.MultiSelect = false;
+            lstPermissions.View = View.Details;
+            lstPermissions.Columns.Add("ID", 50);
+            lstPermissions.Columns.Add("権限名", 250);
+
+            // コンテキストメニューの設定
+            var permContextMenu = new ContextMenuStrip();
+            var editItem = permContextMenu.Items.Add("編集");
+            var deleteItem = permContextMenu.Items.Add("削除");
+            editItem.Click += PermissionEdit_Click;
+            deleteItem.Click += PermissionDelete_Click;
+            lstPermissions.ContextMenuStrip = permContextMenu;
+
+            // ダブルクリックで編集
+            lstPermissions.DoubleClick += (s, e) => EditSelectedPermission();
+        }
+
+        private void RefreshPermissionList()
+        {
+            lstPermissions.Items.Clear();
+            foreach (var permission in _permissionManager.GetAllPermissions())
             {
-                gridPerm.Rows.Add(permission.Id, permission.Name);
+                var item = new ListViewItem(permission.Id.ToString());
+                item.SubItems.Add(permission.Name);
+                item.Tag = permission;
+                lstPermissions.Items.Add(item);
             }
         }
 
-        private void BtnRegistPerm_Click(object sender, EventArgs e)
+        private void BtnAddPermission_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtPerm.Text))
+            if (string.IsNullOrWhiteSpace(txtPermissionName.Text))
             {
-                MessageBox.Show("権限名を入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("権限名を入力してください", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             try
             {
-                // 新しい権限を作成
-                _permissionManager.CreatePermission(txtPerm.Text);
-
-                // テキストボックスをクリア
-                txtPerm.Clear();
-
-                // グリッドを更新
-                RefreshPermissionGrid();
+                var permission = _permissionManager.CreatePermission(txtPermissionName.Text);
+                txtPermissionName.Clear();
+                RefreshPermissionList();
+                MessageBox.Show("権限を追加しました", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -86,71 +110,118 @@ namespace CoreLibWinforms.Forms
             }
         }
 
-        private void GridPerm_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void PermissionEdit_Click(object sender, EventArgs e)
         {
-            // 削除ボタンクリック時の処理
-            if (e.RowIndex >= 0 && e.ColumnIndex == ColumnPermDeleteButton.Index)
-            {
-                var permId = int.Parse(gridPerm.Rows[e.RowIndex].Cells[ColumnPermId.Index].Value.ToString());
-                var permName = gridPerm.Rows[e.RowIndex].Cells[ColumnPermName.Index].Value.ToString();
+            EditSelectedPermission();
+        }
 
-                if (MessageBox.Show($"権限「{permName}」を削除してもよろしいですか？", "確認",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    // 権限の削除処理
-                    // 注: PermissionManagerに削除メソッドがないため、ここではグリッドの行のみを削除
-                    // 実際には削除メソッドを追加するか、他の方法で削除を処理する必要がある
-                    gridPerm.Rows.RemoveAt(e.RowIndex);
-                    MessageBox.Show("権限を削除しました。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+        private void EditSelectedPermission()
+        {
+            if (lstPermissions.SelectedItems.Count == 0) return;
+
+            var permission = (Permission)lstPermissions.SelectedItems[0].Tag;
+
+            // 編集用ダイアログを表示（実際の実装では入力ダイアログなど）
+            var newName = Microsoft.VisualBasic.Interaction.InputBox(
+                "権限名を入力してください", "権限の編集", permission.Name);
+
+            if (string.IsNullOrWhiteSpace(newName)) return;
+
+            try
+            {
+                // 権限名の更新（Permissionクラスに更新メソッドを追加する必要あり）
+                // _permissionManager.UpdatePermission(permission.Id, newName);
+                // RefreshPermissionList();
+                MessageBox.Show("この機能は実装されていません。Permission クラスに更新メソッドを追加してください。",
+                    "未実装", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"権限の更新に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void PermissionDelete_Click(object sender, EventArgs e)
+        {
+            if (lstPermissions.SelectedItems.Count == 0) return;
+
+            var permission = (Permission)lstPermissions.SelectedItems[0].Tag;
+
+            if (MessageBox.Show($"権限「{permission.Name}」を削除してもよろしいですか？",
+                "削除の確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            try
+            {
+                // 権限の削除（Permissionクラスに削除メソッドを追加する必要あり）
+                // _permissionManager.DeletePermission(permission.Id);
+                // RefreshPermissionList();
+                MessageBox.Show("この機能は実装されていません。Permission クラスに削除メソッドを追加してください。",
+                    "未実装", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"権限の削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
 
-        #region ロール画面
-        private void InitializeRoleTab()
+        #region ロール権限タブ
+        private void InitializeRolePermissionsTab()
         {
-            // イベントハンドラの登録
-            btnRegistRole.Click += BtnRegistRole_Click;
-            gridRole.CellClick += GridRole_CellClick;
-            btnRolePermSelected.Click += BtnRolePermSelected_Click;
-            btnRolePermAvailable.Click += BtnRolePermAvailable_Click;
+            // ロール追加ボタンの設定
+            btnAddRole.Click += BtnAddRole_Click;
 
-            // データグリッドビューの設定
-            RefreshRoleGrid();
+            // ロールリストの設定
+            lstRoles.FullRowSelect = true;
+            lstRoles.MultiSelect = false;
+            lstRoles.View = View.Details;
+            lstRoles.Columns.Add("ロール名", 200);
+
+            // コンテキストメニューの設定
+            var roleContextMenu = new ContextMenuStrip();
+            var editRoleItem = roleContextMenu.Items.Add("編集");
+            var deleteRoleItem = roleContextMenu.Items.Add("削除");
+            editRoleItem.Click += RoleEdit_Click;
+            deleteRoleItem.Click += RoleDelete_Click;
+            lstRoles.ContextMenuStrip = roleContextMenu;
+
+            // ロール選択時のイベント
+            lstRoles.SelectedIndexChanged += LstRoles_SelectedIndexChanged;
+
+            // 権限移動ボタンの設定
+            btnAddPermToRole.Click += BtnAddPermToRole_Click;
+            btnRemovePermFromRole.Click += BtnRemovePermFromRole_Click;
+
+            // 検索フィルタの設定
+            txtRolePermFilter.TextChanged += TxtRolePermFilter_TextChanged;
         }
 
-        private void RefreshRoleGrid()
+        private void RefreshRoleList()
         {
-            gridRole.Rows.Clear();
-
-            // ロール一覧の取得
-            var roles = _permissionManager.GetAllRoles();
-
-            foreach (var role in roles)
+            lstRoles.Items.Clear();
+            foreach (var role in _permissionManager.GetAllRoles())
             {
-                gridRole.Rows.Add(role.Id, role.Name);
+                var item = new ListViewItem(role.Name);
+                item.Tag = role;
+                lstRoles.Items.Add(item);
             }
         }
 
-        private void BtnRegistRole_Click(object sender, EventArgs e)
+        private void BtnAddRole_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtRoleName.Text))
             {
-                MessageBox.Show("ロール名を入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("ロール名を入力してください", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             try
             {
-                // 新しいロールを作成
-                _permissionManager.CreateRole(txtRoleName.Text);
-
-                // テキストボックスをクリア
+                var role = _permissionManager.CreateRole(txtRoleName.Text);
                 txtRoleName.Clear();
-
-                // グリッドを更新
-                RefreshRoleGrid();
+                RefreshRoleList();
+                MessageBox.Show("ロールを追加しました", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -158,350 +229,156 @@ namespace CoreLibWinforms.Forms
             }
         }
 
-        private void GridRole_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void RoleEdit_Click(object sender, EventArgs e)
         {
-            if (e.RowIndex < 0) return;
+            if (lstRoles.SelectedItems.Count == 0) return;
 
-            var roleId = int.Parse(gridRole.Rows[e.RowIndex].Cells[ColumnRoleId.Index].Value.ToString());
-            var roleName = gridRole.Rows[e.RowIndex].Cells[ColumnRoleName.Index].Value.ToString();
+            var role = (Role)lstRoles.SelectedItems[0].Tag;
 
-            // 編集ボタンクリック時の処理
-            if (e.ColumnIndex == ColumnRoleEditButton.Index)
-            {
-                _selectedRoleId = roleId;
-                lblTItleSelectedRole.Text = $"選択中のロール：{roleName}";
+            // 編集用ダイアログを表示
+            var newName = Microsoft.VisualBasic.Interaction.InputBox(
+                "ロール名を入力してください", "ロールの編集", role.Name);
 
-                // 選択されたロールの権限を表示
-                RefreshRolePermissionGrids();
-            }
-            // 削除ボタンクリック時の処理
-            else if (e.ColumnIndex == ColumnRoleDeleteButton.Index)
-            {
-                if (MessageBox.Show($"ロール「{roleName}」を削除してもよろしいですか？", "確認",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    // ロールの削除処理
-                    // 注: PermissionManagerに削除メソッドがないため、ここではグリッドの行のみを削除
-                    // 実際には削除メソッドを追加するか、他の方法で削除を処理する必要がある
-                    gridRole.Rows.RemoveAt(e.RowIndex);
-
-                    if (_selectedRoleId == roleId)
-                    {
-                        _selectedRoleId = -1;
-                        lblTItleSelectedRole.Text = "選択中のロール：";
-                        ClearRolePermissionGrids();
-                    }
-
-                    MessageBox.Show("ロールを削除しました。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-        }
-
-        private void RefreshRolePermissionGrids()
-        {
-            if (_selectedRoleId < 0) return;
-
-            gridRolePermSelected.Rows.Clear();
-            gridRolePermAvailable.Rows.Clear();
+            if (string.IsNullOrWhiteSpace(newName) || newName == role.Name) return;
 
             try
             {
-                var role = _permissionManager.GetRole(_selectedRoleId);
-                var allPermissions = _permissionManager.GetAllPermissions().ToList();
-
-                foreach (var permission in allPermissions)
-                {
-                    if (role.HasPermission(permission))
-                    {
-                        // 割り当て済み権限
-                        gridRolePermSelected.Rows.Add(permission.Id, permission.Name);
-                    }
-                    else
-                    {
-                        // 利用可能な権限
-                        gridRolePermAvailable.Rows.Add(permission.Id, permission.Name);
-                    }
-                }
+                _permissionManager.RenameRole(role.Name, newName);
+                RefreshRoleList();
+                MessageBox.Show("ロール名を更新しました", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"権限情報の取得に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"ロールの更新に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void ClearRolePermissionGrids()
+        private void RoleDelete_Click(object sender, EventArgs e)
         {
-            gridRolePermSelected.Rows.Clear();
-            gridRolePermAvailable.Rows.Clear();
-        }
+            if (lstRoles.SelectedItems.Count == 0) return;
 
-        private void BtnRolePermSelected_Click(object sender, EventArgs e)
-        {
-            // 「<<」ボタン：権限を解除する
-            if (_selectedRoleId < 0 || gridRolePermSelected.SelectedRows.Count == 0) return;
+            var role = (Role)lstRoles.SelectedItems[0].Tag;
+
+            if (MessageBox.Show($"ロール「{role.Name}」を削除してもよろしいですか？\nこのロールを持つユーザーからも削除されます。",
+                "削除の確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
 
             try
             {
-                foreach (DataGridViewRow row in gridRolePermSelected.SelectedRows)
-                {
-                    var permId = int.Parse(row.Cells[ColumnRoleSelectedId.Index].Value.ToString());
+                _permissionManager.DeleteRole(role.Name);
+                RefreshRoleList();
 
-                    // 権限を解除
-                    _permissionManager.RevokePermissionFromRole(_selectedRoleId, permId);
+                // 選択中のロールが削除された場合は選択をクリア
+                if (_selectedRoleName == role.Name)
+                {
+                    _selectedRoleName = string.Empty;
+                    ClearRolePermissionLists();
                 }
 
-                // グリッドを更新
-                RefreshRolePermissionGrids();
+                MessageBox.Show("ロールを削除しました", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"権限の解除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"ロールの削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void BtnRolePermAvailable_Click(object sender, EventArgs e)
+        private void LstRoles_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // 「>>」ボタン：権限を付与する
-            if (_selectedRoleId < 0 || gridRolePermAvailable.SelectedRows.Count == 0) return;
-
-            try
+            if (lstRoles.SelectedItems.Count == 0)
             {
-                foreach (DataGridViewRow row in gridRolePermAvailable.SelectedRows)
-                {
-                    var permId = int.Parse(row.Cells[ColumnRoleAvailableId.Index].Value.ToString());
-
-                    // 権限を付与
-                    _permissionManager.GrantPermissionToRole(_selectedRoleId, permId);
-                }
-
-                // グリッドを更新
-                RefreshRolePermissionGrids();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"権限の付与に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-        #endregion
-
-        #region ユーザー権限画面
-        private void InitializeUserTab()
-        {
-            // イベントハンドラの登録
-            btnRegistUser.Click += BtnRegistUser_Click;
-            gridUser.CellClick += GridUser_CellClick;
-            btnAssignUserRole.Click += BtnAssignUserRole_Click;
-            btnUserPremSelected.Click += BtnUserPermSelected_Click;
-            btnUserPermAvailable.Click += BtnUserPermAvailable_Click;
-
-            // ロール選択コンボボックスの設定
-            RefreshRoleComboBox();
-
-            // データグリッドビューの設定
-            RefreshUserGrid();
-        }
-
-        private void RefreshRoleComboBox()
-        {
-            cmbUserRole.Items.Clear();
-
-            foreach (var role in _permissionManager.GetAllRoles())
-            {
-                cmbUserRole.Items.Add(new RoleItem(role));
-            }
-
-            if (cmbUserRole.Items.Count > 0)
-                cmbUserRole.SelectedIndex = 0;
-        }
-
-        private void RefreshUserGrid()
-        {
-            gridUser.Rows.Clear();
-
-            // ユーザー一覧の取得
-            var users = _permissionManager.GetAllUsers();
-
-            foreach (var user in users)
-            {
-                gridUser.Rows.Add(user.UserId, user.UserId);
-            }
-        }
-
-        private void BtnRegistUser_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtUserId.Text))
-            {
-                MessageBox.Show("ユーザーIDを入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ClearRolePermissionLists();
                 return;
             }
 
-            try
-            {
-                // デフォルトロールを取得
-                Role defaultRole = null;
-                if (cmbUserRole.SelectedItem != null)
-                {
-                    defaultRole = ((RoleItem)cmbUserRole.SelectedItem).Role;
-                }
+            var role = (Role)lstRoles.SelectedItems[0].Tag;
+            _selectedRoleName = role.Name;
+            lblSelectedRole.Text = $"選択中のロール: {_selectedRoleName}";
 
-                // 新しいユーザーを作成
-                _permissionManager.CreateUser(txtUserId.Text, defaultRole);
-
-                // テキストボックスをクリア
-                txtUserId.Clear();
-
-                // グリッドを更新
-                RefreshUserGrid();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ユーザーの追加に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            // 選択したロールの権限リストを更新
+            RefreshRolePermissionLists();
         }
 
-        private void GridUser_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void RefreshRolePermissionLists()
         {
-            if (e.RowIndex < 0) return;
-
-            var userId = gridUser.Rows[e.RowIndex].Cells[ColumnUserId.Index].Value.ToString();
-
-            // 編集ボタンクリック時の処理
-            if (e.ColumnIndex == ColumnUserEdit.Index)
+            if (string.IsNullOrEmpty(_selectedRoleName))
             {
-                _selectedUserId = userId;
-                lblTitleSelectedUserId.Text = $"選択中のユーザー：{userId}";
-
-                // 選択されたユーザーの権限を表示
-                RefreshUserPermissionGrids();
+                ClearRolePermissionLists();
+                return;
             }
-            // 削除ボタンクリック時の処理
-            else if (e.ColumnIndex == ColumnUserDelete.Index)
+
+            var role = _permissionManager.GetRole(_selectedRoleName);
+            var allPermissions = _permissionManager.GetAllPermissions().ToList();
+
+            // DataTableの準備
+            var dt = new DataTable();
+            dt.Columns.Add("Id", typeof(string));
+            dt.Columns.Add("Name", typeof(string));
+
+            // 全権限をDataTableに追加
+            foreach (var perm in allPermissions)
             {
-                if (MessageBox.Show($"ユーザー「{userId}」を削除してもよろしいですか？", "確認",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                var row = dt.NewRow();
+                row["Id"] = perm.Id.ToString();
+                row["Name"] = perm.Name;
+                dt.Rows.Add(row);
+            }
+
+            // 選択済みの権限IDリストを作成
+            var selectedPermIds = new List<string>();
+            foreach (var perm in allPermissions)
+            {
+                if (role.HasPermission(perm))
                 {
-                    // ユーザーの削除処理
-                    // 注: PermissionManagerに削除メソッドがないため、ここではグリッドの行のみを削除
-                    // 実際には削除メソッドを追加するか、他の方法で削除を処理する必要がある
-                    gridUser.Rows.RemoveAt(e.RowIndex);
-
-                    if (_selectedUserId == userId)
-                    {
-                        _selectedUserId = null;
-                        lblTitleSelectedUserId.Text = "選択中のユーザー：";
-                        ClearUserPermissionGrids();
-                    }
-
-                    MessageBox.Show("ユーザーを削除しました。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    selectedPermIds.Add(perm.Id.ToString());
                 }
             }
+
+            // DualListManagerの作成
+            _rolePermissionManager = new DualListManager(dt, "Id", "Name", selectedPermIds);
+
+            // リストの初期化
+            lstAvailablePermissions.Items.Clear();
+            lstAssignedPermissions.Items.Clear();
+
+            // 利用可能な権限を表示
+            foreach (DataRowView row in _rolePermissionManager.AvailableView)
+            {
+                var item = new ListViewItem(row["Id"].ToString());
+                item.SubItems.Add(row["Name"].ToString());
+                lstAvailablePermissions.Items.Add(item);
+            }
+
+            // 割り当て済みの権限を表示
+            foreach (DataRowView row in _rolePermissionManager.SelectedView)
+            {
+                var item = new ListViewItem(row["Id"].ToString());
+                item.SubItems.Add(row["Name"].ToString());
+                lstAssignedPermissions.Items.Add(item);
+            }
         }
 
-        private void BtnAssignUserRole_Click(object sender, EventArgs e)
+        private void ClearRolePermissionLists()
         {
-            if (_selectedUserId == null || cmbUserRole.SelectedItem == null) return;
-
-            try
-            {
-                var roleItem = (RoleItem)cmbUserRole.SelectedItem;
-
-                // ユーザーにロールを割り当て
-                _permissionManager.AssignRoleToUser(_selectedUserId, roleItem.Role.Id);
-
-                MessageBox.Show($"ユーザー「{_selectedUserId}」にロール「{roleItem.Role.Name}」を適用しました。",
-                    "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                // ユーザー権限グリッドを更新
-                RefreshUserPermissionGrids();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ロールの適用に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            lblSelectedRole.Text = "選択中のロール: なし";
+            lstAvailablePermissions.Items.Clear();
+            lstAssignedPermissions.Items.Clear();
         }
 
-        private void RefreshUserPermissionGrids()
+        private void BtnAddPermToRole_Click(object sender, EventArgs e)
         {
-            if (_selectedUserId == null) return;
-
-            gridUserPermSelected.Rows.Clear();
-            gridUserPermAvailable.Rows.Clear();
+            if (string.IsNullOrEmpty(_selectedRoleName) || lstAvailablePermissions.SelectedItems.Count == 0) return;
 
             try
             {
-                var user = _permissionManager.GetUser(_selectedUserId);
-                var userPermissions = _permissionManager.GetUserPermissions(_selectedUserId);
-                var allPermissions = _permissionManager.GetAllPermissions();
-
-                // ユーザーが持っている権限
-                foreach (var permission in userPermissions)
+                foreach (ListViewItem item in lstAvailablePermissions.SelectedItems)
                 {
-                    gridUserPermSelected.Rows.Add(permission.Id, permission.Name);
+                    int permId = int.Parse(item.Text);
+                    _permissionManager.GrantPermissionToRole(_selectedRoleName, permId);
+                    _rolePermissionManager.Select(permId.ToString());
                 }
 
-                // ユーザーが持っていない権限
-                var userPermissionIds = userPermissions.Select(p => p.Id).ToHashSet();
-                foreach (var permission in allPermissions)
-                {
-                    if (!userPermissionIds.Contains(permission.Id))
-                    {
-                        gridUserPermAvailable.Rows.Add(permission.Id, permission.Name);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ユーザー権限情報の取得に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void ClearUserPermissionGrids()
-        {
-            gridUserPermSelected.Rows.Clear();
-            gridUserPermAvailable.Rows.Clear();
-        }
-
-        private void BtnUserPermSelected_Click(object sender, EventArgs e)
-        {
-            // 「<<」ボタン：ユーザーから権限を削除（拒否権限に追加）
-            if (_selectedUserId == null || gridUserPermSelected.SelectedRows.Count == 0) return;
-
-            try
-            {
-                foreach (DataGridViewRow row in gridUserPermSelected.SelectedRows)
-                {
-                    var permId = int.Parse(row.Cells[0].Value.ToString());
-
-                    // ユーザーの権限を拒否（このアプローチが適切かどうかは要検討）
-                    _permissionManager.DenyPermissionForUser(_selectedUserId, permId);
-                }
-
-                // グリッドを更新
-                RefreshUserPermissionGrids();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"権限の削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void BtnUserPermAvailable_Click(object sender, EventArgs e)
-        {
-            // 「>>」ボタン：ユーザーに権限を追加
-            if (_selectedUserId == null || gridUserPermAvailable.SelectedRows.Count == 0) return;
-
-            try
-            {
-                foreach (DataGridViewRow row in gridUserPermAvailable.SelectedRows)
-                {
-                    var permId = int.Parse(row.Cells[0].Value.ToString());
-
-                    // ユーザーに追加権限を付与
-                    _permissionManager.GrantAdditionalPermissionToUser(_selectedUserId, permId);
-                }
-
-                // グリッドを更新
-                RefreshUserPermissionGrids();
+                RefreshRolePermissionLists();
             }
             catch (Exception ex)
             {
@@ -509,19 +386,472 @@ namespace CoreLibWinforms.Forms
             }
         }
 
-        // ロール選択用のアイテムクラス
-        private class RoleItem
+        private void BtnRemovePermFromRole_Click(object sender, EventArgs e)
         {
-            public Role Role { get; }
+            if (string.IsNullOrEmpty(_selectedRoleName) || lstAssignedPermissions.SelectedItems.Count == 0) return;
 
-            public RoleItem(Role role)
+            try
             {
-                Role = role;
+                foreach (ListViewItem item in lstAssignedPermissions.SelectedItems)
+                {
+                    int permId = int.Parse(item.Text);
+                    _permissionManager.RevokePermissionFromRole(_selectedRoleName, permId);
+                    _rolePermissionManager.Deselect(permId.ToString());
+                }
+
+                RefreshRolePermissionLists();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"権限の削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void TxtRolePermFilter_TextChanged(object sender, EventArgs e)
+        {
+            if (_rolePermissionManager == null) return;
+
+            try
+            {
+                _rolePermissionManager.ApplyColumnFilter("Name", txtRolePermFilter.Text);
+
+                // 利用可能な権限リストを再表示
+                lstAvailablePermissions.Items.Clear();
+                foreach (DataRowView row in _rolePermissionManager.AvailableView)
+                {
+                    var item = new ListViewItem(row["Id"].ToString());
+                    item.SubItems.Add(row["Name"].ToString());
+                    lstAvailablePermissions.Items.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"フィルタの適用に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        #endregion
+
+        #region ユーザー権限タブ
+        private void InitializeUserPermissionsTab()
+        {
+            // ユーザー追加ボタンの設定
+            btnAddUser.Click += BtnAddUser_Click;
+
+            // ユーザーリストの設定
+            lstUsers.FullRowSelect = true;
+            lstUsers.MultiSelect = false;
+            lstUsers.View = View.Details;
+            lstUsers.Columns.Add("ユーザーID", 200);
+
+            // コンテキストメニューの設定
+            var userContextMenu = new ContextMenuStrip();
+            var deleteUserItem = userContextMenu.Items.Add("削除");
+            deleteUserItem.Click += UserDelete_Click;
+            lstUsers.ContextMenuStrip = userContextMenu;
+
+            // ユーザー選択時のイベント
+            lstUsers.SelectedIndexChanged += LstUsers_SelectedIndexChanged;
+
+            // ロール割り当てボタンの設定
+            btnAddRoleToUser.Click += BtnAddRoleToUser_Click;
+            btnRemoveRoleFromUser.Click += BtnRemoveRoleFromUser_Click;
+
+            // 追加権限ボタンの設定
+            btnAddPermToUser.Click += BtnAddPermToUser_Click;
+            btnRemovePermFromUser.Click += BtnRemovePermFromUser_Click;
+
+            // 拒否権限ボタンの設定
+            btnDenyPermForUser.Click += BtnDenyPermForUser_Click;
+            btnRemoveDeniedPerm.Click += BtnRemoveDeniedPerm_Click;
+
+            // 検索フィルタの設定
+            txtUserRoleFilter.TextChanged += TxtUserRoleFilter_TextChanged;
+            txtUserPermFilter.TextChanged += TxtUserPermFilter_TextChanged;
+        }
+
+        private void RefreshUserList()
+        {
+            lstUsers.Items.Clear();
+            foreach (var user in _permissionManager.GetAllUsers())
+            {
+                var item = new ListViewItem(user.UserId);
+                item.Tag = user;
+                lstUsers.Items.Add(item);
+            }
+        }
+
+        private void BtnAddUser_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtUserId.Text))
+            {
+                MessageBox.Show("ユーザーIDを入力してください", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
-            public override string ToString()
+            try
             {
-                return Role.Name;
+                // デフォルトロールの取得（コンボボックスから選択）
+                Role defaultRole = null;
+                if (cmbDefaultRole.SelectedItem != null)
+                {
+                    var roleName = cmbDefaultRole.SelectedItem.ToString();
+                    defaultRole = _permissionManager.GetRole(roleName);
+                }
+
+                var user = _permissionManager.CreateUser(txtUserId.Text, defaultRole);
+                txtUserId.Clear();
+                RefreshUserList();
+                MessageBox.Show("ユーザーを追加しました", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ユーザーの追加に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UserDelete_Click(object sender, EventArgs e)
+        {
+            if (lstUsers.SelectedItems.Count == 0) return;
+
+            var user = (UserRole)lstUsers.SelectedItems[0].Tag;
+
+            if (MessageBox.Show($"ユーザー「{user.UserId}」を削除してもよろしいですか？",
+                "削除の確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            try
+            {
+                // ユーザーの削除（UserRoleクラスに削除メソッドを追加する必要あり）
+                // _permissionManager.DeleteUser(user.UserId);
+                // RefreshUserList();
+
+                // 選択中のユーザーが削除された場合は選択をクリア
+                if (_selectedUserId == user.UserId)
+                {
+                    _selectedUserId = string.Empty;
+                    ClearUserTabs();
+                }
+
+                MessageBox.Show("この機能は実装されていません。UserRole クラスに削除メソッドを追加してください。",
+                    "未実装", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ユーザーの削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LstUsers_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (lstUsers.SelectedItems.Count == 0)
+            {
+                ClearUserTabs();
+                return;
+            }
+
+            var user = (UserRole)lstUsers.SelectedItems[0].Tag;
+            _selectedUserId = user.UserId;
+            lblSelectedUser.Text = $"選択中のユーザー: {_selectedUserId}";
+
+            // ユーザーのロールと権限リストを更新
+            RefreshUserRoleList();
+            RefreshUserPermissionList();
+        }
+
+        private void RefreshUserRoleList()
+        {
+            if (string.IsNullOrEmpty(_selectedUserId))
+            {
+                ClearUserRoleList();
+                return;
+            }
+
+            var user = _permissionManager.GetUser(_selectedUserId);
+            var allRoles = _permissionManager.GetAllRoles().ToList();
+
+            // DataTableの準備
+            var dt = new DataTable();
+            dt.Columns.Add("Name", typeof(string));
+
+            // 全ロールをDataTableに追加
+            foreach (var role in allRoles)
+            {
+                var row = dt.NewRow();
+                row["Name"] = role.Name;
+                dt.Rows.Add(row);
+            }
+
+            // 選択済みのロール名リストを作成
+            var selectedRoleNames = user.AssignedRoleNames.ToList();
+
+            // DualListManagerの作成
+            _userRoleManager = new DualListManager(dt, "Name", "Name", selectedRoleNames);
+
+            // リストの初期化
+            lstAvailableRoles.Items.Clear();
+            lstAssignedRoles.Items.Clear();
+
+            // 利用可能なロールを表示
+            foreach (DataRowView row in _userRoleManager.AvailableView)
+            {
+                var item = new ListViewItem(row["Name"].ToString());
+                lstAvailableRoles.Items.Add(item);
+            }
+
+            // 割り当て済みのロールを表示
+            foreach (DataRowView row in _userRoleManager.SelectedView)
+            {
+                var item = new ListViewItem(row["Name"].ToString());
+                lstAssignedRoles.Items.Add(item);
+            }
+        }
+
+        private void RefreshUserPermissionList()
+        {
+            if (string.IsNullOrEmpty(_selectedUserId))
+            {
+                ClearUserPermissionLists();
+                return;
+            }
+
+            var user = _permissionManager.GetUser(_selectedUserId);
+            var allPermissions = _permissionManager.GetAllPermissions().ToList();
+            var userPermissions = _permissionManager.GetUserPermissions(_selectedUserId).ToList();
+
+            // 追加権限と拒否権限のリストを取得
+            var additionalPermIds = user.AdditionalPermissionIds;
+            var deniedPermIds = user.DeniedPermissionIds;
+
+            // 各リストをクリア
+            lstEffectivePermissions.Items.Clear();
+            lstAdditionalPermissions.Items.Clear();
+            lstDeniedPermissions.Items.Clear();
+            lstAvailableUserPerms.Items.Clear();
+
+            // 効果的な権限（ロールから取得 + 追加権限 - 拒否権限）
+            foreach (var perm in userPermissions)
+            {
+                var item = new ListViewItem(perm.Id.ToString());
+                item.SubItems.Add(perm.Name);
+
+                // 追加権限なら色を変える
+                if (additionalPermIds.Contains(perm.Id))
+                {
+                    item.BackColor = Color.LightGreen;
+                }
+
+                lstEffectivePermissions.Items.Add(item);
+            }
+
+            // 追加権限
+            foreach (var permId in additionalPermIds)
+            {
+                var permission = _permissionManager.GetPermission(permId);
+                var item = new ListViewItem(permission.Id.ToString());
+                item.SubItems.Add(permission.Name);
+                lstAdditionalPermissions.Items.Add(item);
+            }
+
+            // 拒否権限
+            foreach (var permId in deniedPermIds)
+            {
+                var permission = _permissionManager.GetPermission(permId);
+                var item = new ListViewItem(permission.Id.ToString());
+                item.SubItems.Add(permission.Name);
+                lstDeniedPermissions.Items.Add(item);
+            }
+
+            // 利用可能な権限（効果的な権限でもなく、追加権限でもなく、拒否権限でもない）
+            foreach (var perm in allPermissions)
+            {
+                if (!userPermissions.Contains(perm) && !additionalPermIds.Contains(perm.Id) && !deniedPermIds.Contains(perm.Id))
+                {
+                    var item = new ListViewItem(perm.Id.ToString());
+                    item.SubItems.Add(perm.Name);
+                    lstAvailableUserPerms.Items.Add(item);
+                }
+            }
+        }
+
+        private void ClearUserTabs()
+        {
+            lblSelectedUser.Text = "選択中のユーザー: なし";
+            ClearUserRoleList();
+            ClearUserPermissionLists();
+        }
+
+        private void ClearUserRoleList()
+        {
+            lstAvailableRoles.Items.Clear();
+            lstAssignedRoles.Items.Clear();
+        }
+
+        private void ClearUserPermissionLists()
+        {
+            lstEffectivePermissions.Items.Clear();
+            lstAdditionalPermissions.Items.Clear();
+            lstDeniedPermissions.Items.Clear();
+            lstAvailableUserPerms.Items.Clear();
+        }
+
+        private void BtnAddRoleToUser_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedUserId) || lstAvailableRoles.SelectedItems.Count == 0) return;
+
+            try
+            {
+                foreach (ListViewItem item in lstAvailableRoles.SelectedItems)
+                {
+                    string roleName = item.Text;
+                    _permissionManager.AssignRoleToUser(_selectedUserId, roleName);
+                    _userRoleManager?.Select(roleName);
+                }
+
+                RefreshUserRoleList();
+                RefreshUserPermissionList(); // ロール変更で権限も変わる
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ロールの追加に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnRemoveRoleFromUser_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedUserId) || lstAssignedRoles.SelectedItems.Count == 0) return;
+
+            try
+            {
+                foreach (ListViewItem item in lstAssignedRoles.SelectedItems)
+                {
+                    string roleName = item.Text;
+                    _permissionManager.UnassignRoleFromUser(_selectedUserId, roleName);
+                    _userRoleManager?.Deselect(roleName);
+                }
+
+                RefreshUserRoleList();
+                RefreshUserPermissionList(); // ロール変更で権限も変わる
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ロールの削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnAddPermToUser_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedUserId) || lstAvailableUserPerms.SelectedItems.Count == 0) return;
+
+            try
+            {
+                foreach (ListViewItem item in lstAvailableUserPerms.SelectedItems)
+                {
+                    int permId = int.Parse(item.Text);
+                    _permissionManager.GrantAdditionalPermissionToUser(_selectedUserId, permId);
+                }
+
+                RefreshUserPermissionList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"権限の追加に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnRemovePermFromUser_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedUserId) || lstAdditionalPermissions.SelectedItems.Count == 0) return;
+
+            try
+            {
+                foreach (ListViewItem item in lstAdditionalPermissions.SelectedItems)
+                {
+                    int permId = int.Parse(item.Text);
+                    _permissionManager.RevokeAdditionalPermissionFromUser(_selectedUserId, permId);
+                }
+
+                RefreshUserPermissionList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"追加権限の削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnDenyPermForUser_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedUserId) || lstEffectivePermissions.SelectedItems.Count == 0) return;
+
+            try
+            {
+                foreach (ListViewItem item in lstEffectivePermissions.SelectedItems)
+                {
+                    int permId = int.Parse(item.Text);
+                    _permissionManager.DenyPermissionForUser(_selectedUserId, permId);
+                }
+
+                RefreshUserPermissionList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"権限の拒否設定に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnRemoveDeniedPerm_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedUserId) || lstDeniedPermissions.SelectedItems.Count == 0) return;
+
+            try
+            {
+                foreach (ListViewItem item in lstDeniedPermissions.SelectedItems)
+                {
+                    int permId = int.Parse(item.Text);
+                    _permissionManager.RemoveDeniedPermissionForUser(_selectedUserId, permId);
+                }
+
+                RefreshUserPermissionList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"拒否権限の削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void TxtUserRoleFilter_TextChanged(object sender, EventArgs e)
+        {
+            if (_userRoleManager == null) return;
+
+            try
+            {
+                _userRoleManager.ApplyColumnFilter("Name", txtUserRoleFilter.Text);
+
+                // 利用可能なロールリストを再表示
+                lstAvailableRoles.Items.Clear();
+                foreach (DataRowView row in _userRoleManager.AvailableView)
+                {
+                    var item = new ListViewItem(row["Name"].ToString());
+                    lstAvailableRoles.Items.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"フィルタの適用に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void TxtUserPermFilter_TextChanged(object sender, EventArgs e)
+        {
+            // 権限のフィルタリング（DualListManagerを使用していないため単純な文字列検索）
+            string filter = txtUserPermFilter.Text.ToLower();
+
+            foreach (ListViewItem item in lstAvailableUserPerms.Items)
+            {
+                bool visible = string.IsNullOrEmpty(filter) ||
+                               item.Text.ToLower().Contains(filter) ||
+                               item.SubItems[1].Text.ToLower().Contains(filter);
+
+                //item.Visible = visible;
             }
         }
         #endregion

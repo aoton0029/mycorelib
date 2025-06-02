@@ -31,19 +31,14 @@ namespace CoreLibWinforms.Permissions
 
     public class Role
     {
-        public int Id { get; private set; }
-        public string Name { get; private set; }
+        public string Name { get; set; }
         public BitArray Permissions { get; private set; }
 
-        public Role(int id, string name, int initialCapacity = 32)
+        public Role(string name, int initialCapacity = 32)
         {
-            if (id < 0)
-                throw new ArgumentException("Role ID must be non-negative", nameof(id));
-
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Role name cannot be empty", nameof(name));
 
-            Id = id;
             Name = name;
             Permissions = new BitArray(initialCapacity);
         }
@@ -94,7 +89,7 @@ namespace CoreLibWinforms.Permissions
         public static string UserRoleFilePath = "user_roles.json";
 
         private readonly Dictionary<int, Permission> _permissions = new Dictionary<int, Permission>();
-        private readonly Dictionary<int, Role> _roles = new Dictionary<int, Role>();
+        private readonly Dictionary<string, Role> _roles = new Dictionary<string, Role>();
         private readonly Dictionary<string, UserRole> _users = new Dictionary<string, UserRole>();
 
         #region Permission
@@ -123,22 +118,94 @@ namespace CoreLibWinforms.Permissions
         #endregion
 
         #region Role
+        // Role関連メソッドの修正
         public Role CreateRole(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Role name cannot be empty", nameof(name));
-            int newId = _roles.Count;
-            var role = new Role(newId, name);
-            _roles.Add(newId, role);
+
+            if (_roles.ContainsKey(name))
+                throw new ArgumentException($"Role with name '{name}' already exists", nameof(name));
+
+            var role = new Role(name);
+            _roles.Add(name, role);
             return role;
         }
 
-        public Role GetRole(int id)
+        public Role GetRole(string name)
         {
-            if (!_roles.TryGetValue(id, out var role))
-                throw new KeyNotFoundException($"Role with ID {id} not found");
+            if (!_roles.TryGetValue(name, out var role))
+                throw new KeyNotFoundException($"Role with name '{name}' not found");
 
             return role;
+        }
+
+        /// <summary>
+        /// 指定した名前のロールがあるか確認します
+        /// </summary>
+        /// <param name="name">ロール名</param>
+        /// <returns>存在する場合はtrue</returns>
+        public bool RoleExists(string name)
+        {
+            return _roles.ContainsKey(name);
+        }
+
+
+        /// <summary>
+        /// ロールの名前を変更します
+        /// </summary>
+        /// <param name="currentName">現在のロール名</param>
+        /// <param name="newName">新しいロール名</param>
+        /// <exception cref="KeyNotFoundException">指定されたロールが存在しない場合</exception>
+        /// <exception cref="ArgumentException">新しい名前が既に存在する場合</exception>
+        public void RenameRole(string currentName, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(newName))
+                throw new ArgumentException("New role name cannot be empty", nameof(newName));
+
+            if (!_roles.TryGetValue(currentName, out var role))
+                throw new KeyNotFoundException($"Role with name '{currentName}' not found");
+
+            if (_roles.ContainsKey(newName))
+                throw new ArgumentException($"Role with name '{newName}' already exists", nameof(newName));
+
+            // ロールを削除して新しい名前で追加
+            _roles.Remove(currentName);
+            role.Name = newName; // Nameプロパティはprivate setなので、実際には内部でsetterを公開するか、リフレクションを使う必要があるかも
+            _roles.Add(newName, role);
+
+            // ユーザーのロール参照を更新
+            foreach (var user in _users.Values)
+            {
+                if (user.AssignedRoleNames.Contains(currentName))
+                {
+                    user.UnassignRole(currentName);
+                    user.AssignRole(newName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// ロールを削除します
+        /// </summary>
+        /// <param name="name">削除するロール名</param>
+        /// <exception cref="KeyNotFoundException">指定されたロールが存在しない場合</exception>
+        public void DeleteRole(string name)
+        {
+            if (!_roles.TryGetValue(name, out var _))
+                throw new KeyNotFoundException($"Role with name '{name}' not found");
+
+            // ロールを削除
+            _roles.Remove(name);
+
+            // ユーザーからそのロールの参照を削除
+            foreach (var user in _users.Values)
+            {
+                if (user.AssignedRoleNames.Contains(name))
+                {
+                    user.UnassignRole(name);
+                }
+            }
         }
 
         public IEnumerable<Role> GetAllRoles()
@@ -148,23 +215,23 @@ namespace CoreLibWinforms.Permissions
         #endregion
 
         #region Role-Permission
-        public void GrantPermissionToRole(int roleId, int permissionId)
+        public void GrantPermissionToRole(string roleName, int permissionId)
         {
-            var role = GetRole(roleId);
+            var role = GetRole(roleName);
             var permission = GetPermission(permissionId);
             role.GrantPermission(permission);
         }
 
-        public void RevokePermissionFromRole(int roleId, int permissionId)
+        public void RevokePermissionFromRole(string roleName, int permissionId)
         {
-            var role = GetRole(roleId);
+            var role = GetRole(roleName);
             var permission = GetPermission(permissionId);
             role.RevokePermission(permission);
         }
 
-        public bool HasPermission(int roleId, int permissionId)
+        public bool HasPermissionRole(string roleName, int permissionId)
         {
-            var role = GetRole(roleId);
+            var role = GetRole(roleName);
             var permission = GetPermission(permissionId);
             return role.HasPermission(permission);
         }
@@ -178,6 +245,11 @@ namespace CoreLibWinforms.Permissions
 
             var user = new UserRole(userId);
             _users.Add(userId, user);
+
+            // もしroleが指定されていれば、そのロールをユーザーに割り当て
+            if (role != null)
+                user.AssignRole(role.Name);
+
             return user;
         }
 
@@ -189,23 +261,23 @@ namespace CoreLibWinforms.Permissions
             return user;
         }
 
-        public IEnumerable<UserRole> GetAllUsers()
-        {
-            return _users.Values;
-        }
-
-        public void AssignRoleToUser(string userId, int roleId)
+        public void AssignRoleToUser(string userId, string roleName)
         {
             var user = GetUser(userId);
             // ロールの存在確認
-            GetRole(roleId);
-            user.AssignRole(roleId);
+            GetRole(roleName);
+            user.AssignRole(roleName);
         }
 
-        public void UnassignRoleFromUser(string userId, int roleId)
+        public void UnassignRoleFromUser(string userId, string roleName)
         {
             var user = GetUser(userId);
-            user.UnassignRole(roleId);
+            user.UnassignRole(roleName);
+        }
+
+        public IEnumerable<UserRole> GetAllUsers()
+        {
+            return _users.Values;
         }
 
         public void GrantAdditionalPermissionToUser(string userId, int permissionId)
@@ -236,6 +308,30 @@ namespace CoreLibWinforms.Permissions
             user.RemoveDeniedPermission(permissionId);
         }
 
+        /// <summary>
+        /// ユーザーが特定のロールを持っているかチェックします
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="roleName">確認するロール名</param>
+        /// <returns>ロールを持っていればtrue</returns>
+        public bool UserHasRole(string userId, string roleName)
+        {
+            var user = GetUser(userId);
+            return user.AssignedRoleNames.Contains(roleName);
+        }
+
+        /// <summary>
+        /// ユーザーに割り当てられているすべてのロールを取得します
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <returns>ロールのコレクション</returns>
+        public IEnumerable<Role> GetUserRoles(string userId)
+        {
+            var user = GetUser(userId);
+            return user.AssignedRoleNames.Select(name => GetRole(name));
+        }
+
+        // ユーザー権限チェックの修正
         public bool HasPermission(string userId, int permissionId)
         {
             var user = GetUser(userId);
@@ -249,9 +345,9 @@ namespace CoreLibWinforms.Permissions
                 return true;
 
             // ユーザーに割り当てられたロールをチェック
-            foreach (var roleId in user.AssignedRoleIds)
+            foreach (var roleName in user.AssignedRoleNames)
             {
-                if (HasPermission(roleId, permissionId))
+                if (HasPermissionRole(roleName, permissionId))
                     return true;
             }
 
@@ -265,9 +361,9 @@ namespace CoreLibWinforms.Permissions
             var allPermissions = new HashSet<Permission>();
 
             // ロールから取得できる権限を追加
-            foreach (var roleId in user.AssignedRoleIds)
+            foreach (var roleName in user.AssignedRoleNames)
             {
-                var role = GetRole(roleId);
+                var role = GetRole(roleName);
                 foreach (var permission in GetAllPermissions())
                 {
                     if (role.HasPermission(permission) && !user.DeniedPermissionIds.Contains(permission.Id))
@@ -295,13 +391,11 @@ namespace CoreLibWinforms.Permissions
     {
         public string UserId { get; private set; }
 
-        // ユーザーに直接割り当てられたロールのリスト
-        private readonly List<int> _assignedRoleIds = new List<int>();
+        // ユーザーに直接割り当てられたロールのリスト（Int→String）
+        private readonly List<string> _assignedRoleNames = new List<string>();
 
-        // ユーザー固有の追加権限（ロールに含まれない権限）
+        // その他の既存プロパティはそのまま
         private readonly HashSet<int> _additionalPermissionIds = new HashSet<int>();
-
-        // ユーザー固有の拒否権限（ロールに含まれていても無効にする）
         private readonly HashSet<int> _deniedPermissionIds = new HashSet<int>();
 
         public UserRole(string userId)
@@ -309,27 +403,30 @@ namespace CoreLibWinforms.Permissions
             UserId = userId;
         }
 
-        public IReadOnlyList<int> AssignedRoleIds => _assignedRoleIds.AsReadOnly();
+        // プロパティ名の変更
+        public IReadOnlyList<string> AssignedRoleNames => _assignedRoleNames.AsReadOnly();
         public IReadOnlyCollection<int> AdditionalPermissionIds => _additionalPermissionIds;
         public IReadOnlyCollection<int> DeniedPermissionIds => _deniedPermissionIds;
 
-        public void AssignRole(int roleId)
+        // メソッド名の更新
+        public void AssignRole(string roleName)
         {
-            if (!_assignedRoleIds.Contains(roleId))
+            if (!_assignedRoleNames.Contains(roleName))
             {
-                _assignedRoleIds.Add(roleId);
+                _assignedRoleNames.Add(roleName);
             }
         }
 
-        public void UnassignRole(int roleId)
+        public void UnassignRole(string roleName)
         {
-            _assignedRoleIds.Remove(roleId);
+            _assignedRoleNames.Remove(roleName);
         }
 
+        // その他のメソッドは変更なし
         public void GrantAdditionalPermission(int permissionId)
         {
             _additionalPermissionIds.Add(permissionId);
-            _deniedPermissionIds.Remove(permissionId); // 同時に拒否リストから削除
+            _deniedPermissionIds.Remove(permissionId);
         }
 
         public void RevokeAdditionalPermission(int permissionId)
@@ -340,7 +437,7 @@ namespace CoreLibWinforms.Permissions
         public void DenyPermission(int permissionId)
         {
             _deniedPermissionIds.Add(permissionId);
-            _additionalPermissionIds.Remove(permissionId); // 同時に追加リストから削除
+            _additionalPermissionIds.Remove(permissionId);
         }
 
         public void RemoveDeniedPermission(int permissionId)
