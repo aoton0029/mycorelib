@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualBasic.ApplicationServices;
+﻿using CoreLibWinforms.Core.Permissions;
+using Microsoft.VisualBasic.ApplicationServices;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -31,8 +32,10 @@ namespace CoreLibWinforms.Permissions
 
     public class Role
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public BitArray Permissions { get; private set; }
+        public bool IsAdministratorRole { get; private set; }
 
         public Role(string name, int initialCapacity = 32)
         {
@@ -79,6 +82,12 @@ namespace CoreLibWinforms.Permissions
                 Permissions = newPermissions;
             }
         }
+
+        public static Role Admin() =>
+            new Role("Administrator", 32)
+            {
+                IsAdministratorRole = true
+            };
     }
 
     // ユーザー権限を管理するクラス
@@ -87,6 +96,9 @@ namespace CoreLibWinforms.Permissions
         public static int MaxPermissionId = 32;
         public static string PermissionsFilePath = "permissions.json";
         public static string UserRoleFilePath = "user_roles.json";
+
+        // 管理者ロールの名前を定義
+        public const string AdministratorRoleName = "Administrator";
 
         private readonly Dictionary<int, Permission> _permissions = new Dictionary<int, Permission>();
         private readonly Dictionary<string, Role> _roles = new Dictionary<string, Role>();
@@ -118,6 +130,25 @@ namespace CoreLibWinforms.Permissions
         #endregion
 
         #region Role
+        // 管理者ロールを作成
+        public Role CreateAdministratorRole()
+        {
+            if (_roles.ContainsKey(AdministratorRoleName))
+                return _roles[AdministratorRoleName];
+
+            // 管理者ロールを作成
+            var role = Role.Admin();
+
+            // すべての権限を付与
+            foreach (var permission in _permissions.Values)
+            {
+                role.GrantPermission(permission);
+            }
+
+            _roles.Add(AdministratorRoleName, role);
+            return role;
+        }
+
         // Role関連メソッドの修正
         public Role CreateRole(string name)
         {
@@ -238,6 +269,21 @@ namespace CoreLibWinforms.Permissions
         #endregion
 
         #region UserRole
+        /// <summary>
+        /// ユーザーに管理者権限を付与します
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        public void GrantAdministratorRights(string userId)
+        {
+            // 管理者ロールが存在しない場合は作成
+            if (!RoleExists(AdministratorRoleName))
+                CreateAdministratorRole();
+
+            // ユーザーに管理者ロールを割り当て
+            if (!UserHasRole(userId, AdministratorRoleName))
+                AssignRoleToUser(userId, AdministratorRoleName);
+        }
+
         public UserRole CreateUser(string userId, Role role)
         {
             if (_users.ContainsKey(userId))
@@ -331,6 +377,22 @@ namespace CoreLibWinforms.Permissions
             return user.AssignedRoleNames.Select(name => GetRole(name));
         }
 
+        /// <summary>
+        /// ユーザーに管理者ロールが割り当てられているかをチェックします
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <returns>管理者ロールを持っていればtrue</returns>
+        public bool UserIsAdministrator(string userId)
+        {
+            if (!UserHasRole(userId, AdministratorRoleName))
+            {
+                // 管理者ロールを持っていない場合は、他に管理者ロールとしてマークされたロールがあるかチェック
+                var userRoles = GetUserRoles(userId);
+                return userRoles.Any(r => r.IsAdministratorRole);
+            }
+            return true;
+        }
+
         // ユーザー権限チェックの修正
         public bool HasPermission(string userId, int permissionId)
         {
@@ -385,6 +447,72 @@ namespace CoreLibWinforms.Permissions
             return allPermissions;
         }
         #endregion
+
+        //#region Department
+        //// PermissionManagerクラス内に追加
+        //private readonly DepartmentManager _departmentManager = new DepartmentManager();
+
+        //// 部署マネージャーへのアクセスプロパティ
+        //public DepartmentManager Departments => _departmentManager;
+
+        ///// <summary>
+        ///// 部署内のすべてのユーザーに対してロールを割り当てる
+        ///// </summary>
+        ///// <param name="departmentId">部署ID</param>
+        ///// <param name="roleName">ロール名</param>
+        //public void AssignRoleToDepartment(string departmentId, string roleName)
+        //{
+        //    var department = _departmentManager.GetDepartment(departmentId);
+        //    var role = GetRole(roleName);
+
+        //    foreach (var userId in department.MemberUserIds)
+        //    {
+        //        // ユーザーが存在する場合のみロールを割り当て
+        //        if (_users.ContainsKey(userId))
+        //        {
+        //            AssignRoleToUser(userId, roleName);
+        //        }
+        //    }
+        //}
+
+        ///// <summary>
+        ///// 部署階層を上に遡り、ユーザーが所属するすべての部署の権限をチェック
+        ///// </summary>
+        ///// <param name="userId">ユーザーID</param>
+        ///// <param name="permissionId">権限ID</param>
+        ///// <returns>権限があればtrue</returns>
+        //public bool HasDepartmentalPermission(string userId, int permissionId)
+        //{
+        //    var userDepartments = _departmentManager.GetUserDepartments(userId);
+
+        //    foreach (var department in userDepartments)
+        //    {
+        //        // この部署に割り当てられた特殊な権限を確認する処理を追加
+        //        // （現状の実装では部署に直接権限は割り当てられないが、将来的に拡張可能）
+
+        //        // 親部署を遡って確認（組織階層を利用した権限チェック）
+        //        string? currentDeptId = department.Id;
+        //        while (!string.IsNullOrWhiteSpace(currentDeptId))
+        //        {
+        //            // 現在のところは何もしない
+        //            // （部署に直接権限を割り当てる機能を追加する場合はここにロジックを追加）
+
+        //            // 親部署を取得
+        //            if (_departmentManager.DepartmentExists(currentDeptId))
+        //            {
+        //                currentDeptId = _departmentManager.GetDepartment(currentDeptId).ParentDepartmentId;
+        //            }
+        //            else
+        //            {
+        //                break;
+        //            }
+        //        }
+        //    }
+
+        //    // 通常のユーザー権限チェックを実行
+        //    return HasPermission(userId, permissionId);
+        //}
+        //#endregion
     }
 
     public class UserRole
