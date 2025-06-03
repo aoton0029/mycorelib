@@ -187,7 +187,7 @@
             // lblPermissionName
             // 
             lblPermissionName.AutoSize = true;
-            lblPermissionName.Location = new Point(20, 20);
+            lblPermissionName.Location = new Point(20, 15);
             lblPermissionName.Name = "lblPermissionName";
             lblPermissionName.Size = new Size(65, 24);
             lblPermissionName.TabIndex = 0;
@@ -418,7 +418,7 @@
             // 
             splitContainer3.Panel2.Controls.Add(tabControlUser);
             splitContainer3.Size = new Size(886, 635);
-            splitContainer3.SplitterDistance = 275;
+            splitContainer3.SplitterDistance = 277;
             splitContainer3.TabIndex = 0;
             // 
             // panel5
@@ -432,7 +432,7 @@
             panel5.Dock = DockStyle.Fill;
             panel5.Location = new Point(0, 0);
             panel5.Name = "panel5";
-            panel5.Size = new Size(275, 635);
+            panel5.Size = new Size(277, 635);
             panel5.TabIndex = 0;
             // 
             // lstUsers
@@ -442,7 +442,7 @@
             lstUsers.FullRowSelect = true;
             lstUsers.Location = new Point(14, 152);
             lstUsers.Name = "lstUsers";
-            lstUsers.Size = new Size(247, 467);
+            lstUsers.Size = new Size(249, 467);
             lstUsers.TabIndex = 5;
             lstUsers.UseCompatibleStateImageBehavior = false;
             lstUsers.View = View.Details;
@@ -454,7 +454,7 @@
             cmbDefaultRole.FormattingEnabled = true;
             cmbDefaultRole.Location = new Point(14, 113);
             cmbDefaultRole.Name = "cmbDefaultRole";
-            cmbDefaultRole.Size = new Size(159, 32);
+            cmbDefaultRole.Size = new Size(161, 32);
             cmbDefaultRole.TabIndex = 3;
             // 
             // lblDefaultRole
@@ -469,7 +469,7 @@
             // btnAddUser
             // 
             btnAddUser.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnAddUser.Location = new Point(179, 113);
+            btnAddUser.Location = new Point(181, 113);
             btnAddUser.Name = "btnAddUser";
             btnAddUser.Size = new Size(82, 32);
             btnAddUser.TabIndex = 4;
@@ -490,7 +490,7 @@
             txtUserId.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtUserId.Location = new Point(14, 47);
             txtUserId.Name = "txtUserId";
-            txtUserId.Size = new Size(247, 31);
+            txtUserId.Size = new Size(249, 31);
             txtUserId.TabIndex = 1;
             // 
             // tabControlUser
@@ -501,7 +501,7 @@
             tabControlUser.Location = new Point(0, 0);
             tabControlUser.Name = "tabControlUser";
             tabControlUser.SelectedIndex = 0;
-            tabControlUser.Size = new Size(607, 635);
+            tabControlUser.Size = new Size(605, 635);
             tabControlUser.TabIndex = 0;
             // 
             // tabUserRoles
@@ -509,7 +509,7 @@
             tabUserRoles.Controls.Add(splitContainer4);
             tabUserRoles.Location = new Point(4, 33);
             tabUserRoles.Name = "tabUserRoles";
-            tabUserRoles.Size = new Size(599, 598);
+            tabUserRoles.Size = new Size(597, 598);
             tabUserRoles.TabIndex = 0;
             tabUserRoles.Text = "ロール";
             // 
@@ -527,8 +527,8 @@
             // 
             splitContainer4.Panel2.Controls.Add(panel7);
             splitContainer4.Panel2.Controls.Add(panel8);
-            splitContainer4.Size = new Size(599, 598);
-            splitContainer4.SplitterDistance = 298;
+            splitContainer4.Size = new Size(597, 598);
+            splitContainer4.SplitterDistance = 297;
             splitContainer4.TabIndex = 0;
             // 
             // panel6
@@ -540,7 +540,7 @@
             panel6.Dock = DockStyle.Fill;
             panel6.Location = new Point(0, 0);
             panel6.Name = "panel6";
-            panel6.Size = new Size(298, 598);
+            panel6.Size = new Size(297, 598);
             panel6.TabIndex = 0;
             // 
             // lstAvailableRoles
@@ -550,7 +550,7 @@
             lstAvailableRoles.FullRowSelect = true;
             lstAvailableRoles.Location = new Point(16, 90);
             lstAvailableRoles.Name = "lstAvailableRoles";
-            lstAvailableRoles.Size = new Size(269, 492);
+            lstAvailableRoles.Size = new Size(268, 492);
             lstAvailableRoles.TabIndex = 3;
             lstAvailableRoles.UseCompatibleStateImageBehavior = false;
             lstAvailableRoles.View = View.Details;
@@ -560,13 +560,13 @@
             txtUserRoleFilter.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtUserRoleFilter.Location = new Point(87, 53);
             txtUserRoleFilter.Name = "txtUserRoleFilter";
-            txtUserRoleFilter.Size = new Size(198, 31);
+            txtUserRoleFilter.Size = new Size(197, 31);
             txtUserRoleFilter.TabIndex = 2;
             // 
             // lblUserRoleFilter
             // 
             lblUserRoleFilter.AutoSize = true;
-            lblUserRoleFilter.Location = new Point(16, 56);
+            lblUserRoleFilter.Location = new Point(3, 56);
             lblUserRoleFilter.Name = "lblUserRoleFilter";
             lblUserRoleFilter.Size = new Size(81, 24);
             lblUserRoleFilter.TabIndex = 1;
@@ -587,7 +587,7 @@
             panel7.Dock = DockStyle.Fill;
             panel7.Location = new Point(0, 0);
             panel7.Name = "panel7";
-            panel7.Size = new Size(297, 598);
+            panel7.Size = new Size(296, 598);
             panel7.TabIndex = 1;
             // 
             // lstAssignedRoles
@@ -597,7 +597,7 @@
             lstAssignedRoles.FullRowSelect = true;
             lstAssignedRoles.Location = new Point(15, 90);
             lstAssignedRoles.Name = "lstAssignedRoles";
-            lstAssignedRoles.Size = new Size(269, 492);
+            lstAssignedRoles.Size = new Size(268, 492);
             lstAssignedRoles.TabIndex = 1;
             lstAssignedRoles.UseCompatibleStateImageBehavior = false;
             lstAssignedRoles.View = View.Details;
@@ -636,7 +636,7 @@
             tabUserPermissions.Controls.Add(splitContainer5);
             tabUserPermissions.Location = new Point(4, 33);
             tabUserPermissions.Name = "tabUserPermissions";
-            tabUserPermissions.Size = new Size(599, 598);
+            tabUserPermissions.Size = new Size(597, 598);
             tabUserPermissions.TabIndex = 1;
             tabUserPermissions.Text = "権限";
             // 
@@ -653,8 +653,8 @@
             // splitContainer5.Panel2
             // 
             splitContainer5.Panel2.Controls.Add(panel11);
-            splitContainer5.Size = new Size(599, 598);
-            splitContainer5.SplitterDistance = 298;
+            splitContainer5.Size = new Size(597, 598);
+            splitContainer5.SplitterDistance = 297;
             splitContainer5.TabIndex = 0;
             // 
             // tabControlUserPermissions
@@ -666,7 +666,7 @@
             tabControlUserPermissions.Location = new Point(0, 0);
             tabControlUserPermissions.Name = "tabControlUserPermissions";
             tabControlUserPermissions.SelectedIndex = 0;
-            tabControlUserPermissions.Size = new Size(298, 598);
+            tabControlUserPermissions.Size = new Size(297, 598);
             tabControlUserPermissions.TabIndex = 0;
             // 
             // tabEffectivePermissions
@@ -674,7 +674,7 @@
             tabEffectivePermissions.Controls.Add(lstEffectivePermissions);
             tabEffectivePermissions.Location = new Point(4, 33);
             tabEffectivePermissions.Name = "tabEffectivePermissions";
-            tabEffectivePermissions.Size = new Size(290, 561);
+            tabEffectivePermissions.Size = new Size(289, 561);
             tabEffectivePermissions.TabIndex = 0;
             tabEffectivePermissions.Text = "有効な権限";
             // 
@@ -685,7 +685,7 @@
             lstEffectivePermissions.FullRowSelect = true;
             lstEffectivePermissions.Location = new Point(0, 0);
             lstEffectivePermissions.Name = "lstEffectivePermissions";
-            lstEffectivePermissions.Size = new Size(290, 561);
+            lstEffectivePermissions.Size = new Size(289, 561);
             lstEffectivePermissions.TabIndex = 0;
             lstEffectivePermissions.UseCompatibleStateImageBehavior = false;
             lstEffectivePermissions.View = View.Details;
@@ -696,7 +696,7 @@
             tabAdditionalPermissions.Controls.Add(panel9);
             tabAdditionalPermissions.Location = new Point(4, 33);
             tabAdditionalPermissions.Name = "tabAdditionalPermissions";
-            tabAdditionalPermissions.Size = new Size(290, 561);
+            tabAdditionalPermissions.Size = new Size(289, 561);
             tabAdditionalPermissions.TabIndex = 1;
             tabAdditionalPermissions.Text = "追加権限";
             // 
@@ -707,7 +707,7 @@
             lstAdditionalPermissions.FullRowSelect = true;
             lstAdditionalPermissions.Location = new Point(0, 0);
             lstAdditionalPermissions.Name = "lstAdditionalPermissions";
-            lstAdditionalPermissions.Size = new Size(290, 526);
+            lstAdditionalPermissions.Size = new Size(289, 526);
             lstAdditionalPermissions.TabIndex = 1;
             lstAdditionalPermissions.UseCompatibleStateImageBehavior = false;
             lstAdditionalPermissions.View = View.Details;
@@ -718,14 +718,14 @@
             panel9.Dock = DockStyle.Bottom;
             panel9.Location = new Point(0, 526);
             panel9.Name = "panel9";
-            panel9.Size = new Size(290, 35);
+            panel9.Size = new Size(289, 35);
             panel9.TabIndex = 0;
             // 
             // btnRemovePermFromUser
             // 
             btnRemovePermFromUser.Anchor = AnchorStyles.None;
             btnRemovePermFromUser.Font = new Font("メイリオ", 9F, FontStyle.Regular, GraphicsUnit.Point, 128);
-            btnRemovePermFromUser.Location = new Point(105, 3);
+            btnRemovePermFromUser.Location = new Point(104, 3);
             btnRemovePermFromUser.Name = "btnRemovePermFromUser";
             btnRemovePermFromUser.Size = new Size(80, 29);
             btnRemovePermFromUser.TabIndex = 0;
@@ -738,7 +738,7 @@
             tabDeniedPermissions.Controls.Add(panel10);
             tabDeniedPermissions.Location = new Point(4, 33);
             tabDeniedPermissions.Name = "tabDeniedPermissions";
-            tabDeniedPermissions.Size = new Size(290, 561);
+            tabDeniedPermissions.Size = new Size(289, 561);
             tabDeniedPermissions.TabIndex = 2;
             tabDeniedPermissions.Text = "拒否権限";
             // 
@@ -749,7 +749,7 @@
             lstDeniedPermissions.FullRowSelect = true;
             lstDeniedPermissions.Location = new Point(0, 0);
             lstDeniedPermissions.Name = "lstDeniedPermissions";
-            lstDeniedPermissions.Size = new Size(290, 526);
+            lstDeniedPermissions.Size = new Size(289, 526);
             lstDeniedPermissions.TabIndex = 1;
             lstDeniedPermissions.UseCompatibleStateImageBehavior = false;
             lstDeniedPermissions.View = View.Details;
@@ -760,14 +760,14 @@
             panel10.Dock = DockStyle.Bottom;
             panel10.Location = new Point(0, 526);
             panel10.Name = "panel10";
-            panel10.Size = new Size(290, 35);
+            panel10.Size = new Size(289, 35);
             panel10.TabIndex = 0;
             // 
             // btnRemoveDeniedPerm
             // 
             btnRemoveDeniedPerm.Anchor = AnchorStyles.None;
             btnRemoveDeniedPerm.Font = new Font("メイリオ", 9F, FontStyle.Regular, GraphicsUnit.Point, 128);
-            btnRemoveDeniedPerm.Location = new Point(105, 3);
+            btnRemoveDeniedPerm.Location = new Point(104, 3);
             btnRemoveDeniedPerm.Name = "btnRemoveDeniedPerm";
             btnRemoveDeniedPerm.Size = new Size(80, 29);
             btnRemoveDeniedPerm.TabIndex = 0;
@@ -784,7 +784,7 @@
             panel11.Dock = DockStyle.Fill;
             panel11.Location = new Point(0, 0);
             panel11.Name = "panel11";
-            panel11.Size = new Size(297, 598);
+            panel11.Size = new Size(296, 598);
             panel11.TabIndex = 0;
             // 
             // lstAvailableUserPerms
@@ -794,7 +794,7 @@
             lstAvailableUserPerms.FullRowSelect = true;
             lstAvailableUserPerms.Location = new Point(15, 53);
             lstAvailableUserPerms.Name = "lstAvailableUserPerms";
-            lstAvailableUserPerms.Size = new Size(269, 492);
+            lstAvailableUserPerms.Size = new Size(268, 492);
             lstAvailableUserPerms.TabIndex = 4;
             lstAvailableUserPerms.UseCompatibleStateImageBehavior = false;
             lstAvailableUserPerms.View = View.Details;
@@ -804,7 +804,7 @@
             txtUserPermFilter.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtUserPermFilter.Location = new Point(86, 16);
             txtUserPermFilter.Name = "txtUserPermFilter";
-            txtUserPermFilter.Size = new Size(198, 31);
+            txtUserPermFilter.Size = new Size(197, 31);
             txtUserPermFilter.TabIndex = 1;
             // 
             // lblUserPermFilter
@@ -820,7 +820,7 @@
             // 
             btnDenyPermForUser.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             btnDenyPermForUser.Font = new Font("メイリオ", 9F, FontStyle.Regular, GraphicsUnit.Point, 128);
-            btnDenyPermForUser.Location = new Point(149, 551);
+            btnDenyPermForUser.Location = new Point(148, 551);
             btnDenyPermForUser.Name = "btnDenyPermForUser";
             btnDenyPermForUser.Size = new Size(135, 36);
             btnDenyPermForUser.TabIndex = 3;
