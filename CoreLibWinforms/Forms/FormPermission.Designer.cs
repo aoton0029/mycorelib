@@ -1,4 +1,6 @@
-﻿namespace CoreLibWinforms.Forms
+﻿using System.Windows.Forms;
+
+namespace CoreLibWinforms.Forms
 {
     partial class FormPermission
     {
@@ -92,8 +94,29 @@
             lblUserPermFilter = new Label();
             btnDenyPermForUser = new Button();
             btnAddPermToUser = new Button();
+            controlMappingTab = new TabPage();
             btnCancel = new Button();
             btnSave = new Button();
+            splitContainerMapping = new SplitContainer();
+            panelLeft = new Panel();
+            lblFormFilter = new Label();
+            txtFormFilter = new TextBox();
+            treeControls = new TreeView();
+            panelRight = new Panel();
+            lstMappedPermissions = new ListView();
+            panelRightTop = new Panel();
+            lblSelectedControl = new Label();
+            chkAffectVisibility = new CheckBox();
+            chkAffectEnabled = new CheckBox();
+            panelRightBottom = new Panel();
+            lstAvailableMappingPermissions = new ListView();
+            txtMapPermFilter = new TextBox();
+            lblMapPermFilter = new Label();
+            btnAddControlMapping = new Button();
+            btnRemoveControlMapping = new Button();
+            cmbForms = new ComboBox();
+            lblSelectForm = new Label();
+            btnRefreshForms = new Button();
             tabControl.SuspendLayout();
             basicPermissionsTab.SuspendLayout();
             combinedPermissionsTab.SuspendLayout();
@@ -136,6 +159,8 @@
             tabDeniedPermissions.SuspendLayout();
             panel10.SuspendLayout();
             panel11.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainerMapping).BeginInit();
+            splitContainerMapping.SuspendLayout();
             SuspendLayout();
             // 
             // tabControl
@@ -144,6 +169,7 @@
             tabControl.Controls.Add(basicPermissionsTab);
             tabControl.Controls.Add(combinedPermissionsTab);
             tabControl.Controls.Add(userPermissionsTab);
+            tabControl.Controls.Add(controlMappingTab);
             tabControl.Font = new Font("メイリオ", 12F, FontStyle.Regular, GraphicsUnit.Point, 128);
             tabControl.Location = new Point(4, 2);
             tabControl.Name = "tabControl";
@@ -634,9 +660,9 @@
             // tabUserPermissions
             // 
             tabUserPermissions.Controls.Add(splitContainer5);
-            tabUserPermissions.Location = new Point(4, 33);
+            tabUserPermissions.Location = new Point(4, 24);
             tabUserPermissions.Name = "tabUserPermissions";
-            tabUserPermissions.Size = new Size(597, 598);
+            tabUserPermissions.Size = new Size(597, 607);
             tabUserPermissions.TabIndex = 1;
             tabUserPermissions.Text = "権限";
             // 
@@ -653,7 +679,7 @@
             // splitContainer5.Panel2
             // 
             splitContainer5.Panel2.Controls.Add(panel11);
-            splitContainer5.Size = new Size(597, 598);
+            splitContainer5.Size = new Size(597, 607);
             splitContainer5.SplitterDistance = 297;
             splitContainer5.TabIndex = 0;
             // 
@@ -666,7 +692,7 @@
             tabControlUserPermissions.Location = new Point(0, 0);
             tabControlUserPermissions.Name = "tabControlUserPermissions";
             tabControlUserPermissions.SelectedIndex = 0;
-            tabControlUserPermissions.Size = new Size(297, 598);
+            tabControlUserPermissions.Size = new Size(297, 607);
             tabControlUserPermissions.TabIndex = 0;
             // 
             // tabEffectivePermissions
@@ -674,7 +700,7 @@
             tabEffectivePermissions.Controls.Add(lstEffectivePermissions);
             tabEffectivePermissions.Location = new Point(4, 33);
             tabEffectivePermissions.Name = "tabEffectivePermissions";
-            tabEffectivePermissions.Size = new Size(289, 561);
+            tabEffectivePermissions.Size = new Size(289, 570);
             tabEffectivePermissions.TabIndex = 0;
             tabEffectivePermissions.Text = "有効な権限";
             // 
@@ -685,7 +711,7 @@
             lstEffectivePermissions.FullRowSelect = true;
             lstEffectivePermissions.Location = new Point(0, 0);
             lstEffectivePermissions.Name = "lstEffectivePermissions";
-            lstEffectivePermissions.Size = new Size(289, 561);
+            lstEffectivePermissions.Size = new Size(289, 570);
             lstEffectivePermissions.TabIndex = 0;
             lstEffectivePermissions.UseCompatibleStateImageBehavior = false;
             lstEffectivePermissions.View = View.Details;
@@ -694,9 +720,9 @@
             // 
             tabAdditionalPermissions.Controls.Add(lstAdditionalPermissions);
             tabAdditionalPermissions.Controls.Add(panel9);
-            tabAdditionalPermissions.Location = new Point(4, 33);
+            tabAdditionalPermissions.Location = new Point(4, 24);
             tabAdditionalPermissions.Name = "tabAdditionalPermissions";
-            tabAdditionalPermissions.Size = new Size(289, 561);
+            tabAdditionalPermissions.Size = new Size(289, 579);
             tabAdditionalPermissions.TabIndex = 1;
             tabAdditionalPermissions.Text = "追加権限";
             // 
@@ -707,7 +733,7 @@
             lstAdditionalPermissions.FullRowSelect = true;
             lstAdditionalPermissions.Location = new Point(0, 0);
             lstAdditionalPermissions.Name = "lstAdditionalPermissions";
-            lstAdditionalPermissions.Size = new Size(289, 526);
+            lstAdditionalPermissions.Size = new Size(289, 544);
             lstAdditionalPermissions.TabIndex = 1;
             lstAdditionalPermissions.UseCompatibleStateImageBehavior = false;
             lstAdditionalPermissions.View = View.Details;
@@ -716,7 +742,7 @@
             // 
             panel9.Controls.Add(btnRemovePermFromUser);
             panel9.Dock = DockStyle.Bottom;
-            panel9.Location = new Point(0, 526);
+            panel9.Location = new Point(0, 544);
             panel9.Name = "panel9";
             panel9.Size = new Size(289, 35);
             panel9.TabIndex = 0;
@@ -736,9 +762,9 @@
             // 
             tabDeniedPermissions.Controls.Add(lstDeniedPermissions);
             tabDeniedPermissions.Controls.Add(panel10);
-            tabDeniedPermissions.Location = new Point(4, 33);
+            tabDeniedPermissions.Location = new Point(4, 24);
             tabDeniedPermissions.Name = "tabDeniedPermissions";
-            tabDeniedPermissions.Size = new Size(289, 561);
+            tabDeniedPermissions.Size = new Size(289, 579);
             tabDeniedPermissions.TabIndex = 2;
             tabDeniedPermissions.Text = "拒否権限";
             // 
@@ -749,7 +775,7 @@
             lstDeniedPermissions.FullRowSelect = true;
             lstDeniedPermissions.Location = new Point(0, 0);
             lstDeniedPermissions.Name = "lstDeniedPermissions";
-            lstDeniedPermissions.Size = new Size(289, 526);
+            lstDeniedPermissions.Size = new Size(289, 544);
             lstDeniedPermissions.TabIndex = 1;
             lstDeniedPermissions.UseCompatibleStateImageBehavior = false;
             lstDeniedPermissions.View = View.Details;
@@ -758,7 +784,7 @@
             // 
             panel10.Controls.Add(btnRemoveDeniedPerm);
             panel10.Dock = DockStyle.Bottom;
-            panel10.Location = new Point(0, 526);
+            panel10.Location = new Point(0, 544);
             panel10.Name = "panel10";
             panel10.Size = new Size(289, 35);
             panel10.TabIndex = 0;
@@ -784,7 +810,7 @@
             panel11.Dock = DockStyle.Fill;
             panel11.Location = new Point(0, 0);
             panel11.Name = "panel11";
-            panel11.Size = new Size(296, 598);
+            panel11.Size = new Size(296, 607);
             panel11.TabIndex = 0;
             // 
             // lstAvailableUserPerms
@@ -794,7 +820,7 @@
             lstAvailableUserPerms.FullRowSelect = true;
             lstAvailableUserPerms.Location = new Point(15, 53);
             lstAvailableUserPerms.Name = "lstAvailableUserPerms";
-            lstAvailableUserPerms.Size = new Size(268, 492);
+            lstAvailableUserPerms.Size = new Size(268, 501);
             lstAvailableUserPerms.TabIndex = 4;
             lstAvailableUserPerms.UseCompatibleStateImageBehavior = false;
             lstAvailableUserPerms.View = View.Details;
@@ -820,7 +846,7 @@
             // 
             btnDenyPermForUser.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             btnDenyPermForUser.Font = new Font("メイリオ", 9F, FontStyle.Regular, GraphicsUnit.Point, 128);
-            btnDenyPermForUser.Location = new Point(148, 551);
+            btnDenyPermForUser.Location = new Point(148, 560);
             btnDenyPermForUser.Name = "btnDenyPermForUser";
             btnDenyPermForUser.Size = new Size(135, 36);
             btnDenyPermForUser.TabIndex = 3;
@@ -831,12 +857,22 @@
             // 
             btnAddPermToUser.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             btnAddPermToUser.Font = new Font("メイリオ", 9F, FontStyle.Regular, GraphicsUnit.Point, 128);
-            btnAddPermToUser.Location = new Point(15, 551);
+            btnAddPermToUser.Location = new Point(15, 560);
             btnAddPermToUser.Name = "btnAddPermToUser";
             btnAddPermToUser.Size = new Size(127, 36);
             btnAddPermToUser.TabIndex = 2;
             btnAddPermToUser.Text = "権限を追加";
             btnAddPermToUser.UseVisualStyleBackColor = true;
+            // 
+            // controlMappingTab
+            // 
+            controlMappingTab.Location = new Point(4, 33);
+            controlMappingTab.Name = "controlMappingTab";
+            controlMappingTab.Padding = new Padding(3);
+            controlMappingTab.Size = new Size(886, 635);
+            controlMappingTab.TabIndex = 3;
+            controlMappingTab.Text = "コントロール権限マッピング";
+            controlMappingTab.UseVisualStyleBackColor = true;
             // 
             // btnCancel
             // 
@@ -859,6 +895,204 @@
             btnSave.TabIndex = 3;
             btnSave.Text = "保存";
             btnSave.UseVisualStyleBackColor = true;
+            // 
+            // splitContainerMapping
+            // 
+            splitContainerMapping.Location = new Point(0, 0);
+            splitContainerMapping.Name = "splitContainerMapping";
+            splitContainerMapping.Size = new Size(150, 100);
+            splitContainerMapping.TabIndex = 0;
+            // 
+            // panelLeft
+            // 
+            panelLeft.Location = new Point(0, 0);
+            panelLeft.Name = "panelLeft";
+            panelLeft.Size = new Size(200, 100);
+            panelLeft.TabIndex = 0;
+            // 
+            // lblFormFilter
+            // 
+            lblFormFilter.Location = new Point(0, 0);
+            lblFormFilter.Name = "lblFormFilter";
+            lblFormFilter.Size = new Size(100, 23);
+            lblFormFilter.TabIndex = 0;
+            // 
+            // txtFormFilter
+            // 
+            txtFormFilter.Location = new Point(0, 0);
+            txtFormFilter.Name = "txtFormFilter";
+            txtFormFilter.Size = new Size(100, 23);
+            txtFormFilter.TabIndex = 0;
+            // 
+            // treeControls
+            // 
+            treeControls.LineColor = Color.Empty;
+            treeControls.Location = new Point(0, 0);
+            treeControls.Name = "treeControls";
+            treeControls.Size = new Size(121, 97);
+            treeControls.TabIndex = 0;
+            // 
+            // panelRight
+            // 
+            panelRight.Location = new Point(0, 0);
+            panelRight.Name = "panelRight";
+            panelRight.Size = new Size(200, 100);
+            panelRight.TabIndex = 0;
+            // 
+            // lstMappedPermissions
+            // 
+            lstMappedPermissions.Location = new Point(0, 0);
+            lstMappedPermissions.Name = "lstMappedPermissions";
+            lstMappedPermissions.Size = new Size(121, 97);
+            lstMappedPermissions.TabIndex = 0;
+            lstMappedPermissions.UseCompatibleStateImageBehavior = false;
+            // 
+            // panelRightTop
+            // 
+            panelRightTop.Location = new Point(0, 0);
+            panelRightTop.Name = "panelRightTop";
+            panelRightTop.Size = new Size(200, 100);
+            panelRightTop.TabIndex = 0;
+            // 
+            // lblSelectedControl
+            // 
+            lblSelectedControl.Location = new Point(0, 0);
+            lblSelectedControl.Name = "lblSelectedControl";
+            lblSelectedControl.Size = new Size(100, 23);
+            lblSelectedControl.TabIndex = 0;
+            // 
+            // chkAffectVisibility
+            // 
+            chkAffectVisibility.Location = new Point(0, 0);
+            chkAffectVisibility.Name = "chkAffectVisibility";
+            chkAffectVisibility.Size = new Size(104, 24);
+            chkAffectVisibility.TabIndex = 0;
+            // 
+            // chkAffectEnabled
+            // 
+            chkAffectEnabled.Location = new Point(0, 0);
+            chkAffectEnabled.Name = "chkAffectEnabled";
+            chkAffectEnabled.Size = new Size(104, 24);
+            chkAffectEnabled.TabIndex = 0;
+            // 
+            // panelRightBottom
+            // 
+            panelRightBottom.Location = new Point(0, 0);
+            panelRightBottom.Name = "panelRightBottom";
+            panelRightBottom.Size = new Size(200, 100);
+            panelRightBottom.TabIndex = 0;
+            // 
+            // lstAvailableMappingPermissions
+            // 
+            lstAvailableMappingPermissions.Location = new Point(0, 0);
+            lstAvailableMappingPermissions.Name = "lstAvailableMappingPermissions";
+            lstAvailableMappingPermissions.Size = new Size(121, 97);
+            lstAvailableMappingPermissions.TabIndex = 0;
+            lstAvailableMappingPermissions.UseCompatibleStateImageBehavior = false;
+            // 
+            // txtMapPermFilter
+            // 
+            txtMapPermFilter.Location = new Point(0, 0);
+            txtMapPermFilter.Name = "txtMapPermFilter";
+            txtMapPermFilter.Size = new Size(100, 23);
+            txtMapPermFilter.TabIndex = 0;
+            // 
+            // lblMapPermFilter
+            // 
+            lblMapPermFilter.Location = new Point(0, 0);
+            lblMapPermFilter.Name = "lblMapPermFilter";
+            lblMapPermFilter.Size = new Size(100, 23);
+            lblMapPermFilter.TabIndex = 0;
+            // 
+            // btnAddControlMapping
+            // 
+            btnAddControlMapping.Location = new Point(0, 0);
+            btnAddControlMapping.Name = "btnAddControlMapping";
+            btnAddControlMapping.Size = new Size(75, 23);
+            btnAddControlMapping.TabIndex = 0;
+            // 
+            // btnRemoveControlMapping
+            // 
+            btnRemoveControlMapping.Location = new Point(0, 0);
+            btnRemoveControlMapping.Name = "btnRemoveControlMapping";
+            btnRemoveControlMapping.Size = new Size(75, 23);
+            btnRemoveControlMapping.TabIndex = 0;
+            // 
+            // cmbForms
+            // 
+            cmbForms.Location = new Point(0, 0);
+            cmbForms.Name = "cmbForms";
+            cmbForms.Size = new Size(121, 23);
+            cmbForms.TabIndex = 0;
+            // 
+            // lblSelectForm
+            // 
+            lblSelectForm.Location = new Point(0, 0);
+            lblSelectForm.Name = "lblSelectForm";
+            lblSelectForm.Size = new Size(100, 23);
+            lblSelectForm.TabIndex = 0;
+            // 
+            // btnRefreshForms
+            // 
+            btnRefreshForms.Location = new Point(0, 0);
+            btnRefreshForms.Name = "btnRefreshForms";
+            btnRefreshForms.Size = new Size(75, 23);
+            btnRefreshForms.TabIndex = 0;
+            // フォーム選択の設定
+            lblSelectForm.Text = "フォームを選択:";
+            cmbForms.DropDownStyle = ComboBoxStyle.DropDownList;
+            btnRefreshForms.Text = "更新";
+            //btnRefreshForms.Click += BtnRefreshForms_Click;
+
+            // フォーム選択変更イベント
+            //cmbForms.SelectedIndexChanged += CmbForms_SelectedIndexChanged;
+
+            // コントロールツリーの設定
+            treeControls.HideSelection = false;
+            //treeControls.AfterSelect += TreeControls_AfterSelect;
+
+            // フィルター設定
+            lblFormFilter.Text = "コントロールフィルタ:";
+            //txtFormFilter.TextChanged += TxtFormFilter_TextChanged;
+
+            // 権限一覧の設定
+            lstMappedPermissions.View = View.Details;
+            lstMappedPermissions.FullRowSelect = true;
+            lstMappedPermissions.Columns.Add("ID", 50);
+            lstMappedPermissions.Columns.Add("権限名", 200);
+            lstMappedPermissions.Columns.Add("Visibility", 70);
+            lstMappedPermissions.Columns.Add("Enabled", 70);
+
+            // 権限マッピング設定のコンテキストメニュー
+            var mappingContextMenu = new ContextMenuStrip();
+            var deleteItem = mappingContextMenu.Items.Add("削除");
+            //deleteItem.Click += MappingDelete_Click;
+            lstMappedPermissions.ContextMenuStrip = mappingContextMenu;
+
+            // 選択コントロールラベル
+            lblSelectedControl.Text = "選択中のコントロール: なし";
+
+            // チェックボックスの設定
+            chkAffectVisibility.Text = "表示/非表示を制御する";
+            chkAffectEnabled.Text = "有効/無効を制御する";
+            chkAffectVisibility.Checked = true;
+            chkAffectEnabled.Checked = true;
+
+            // 利用可能な権限一覧の設定
+            lstAvailableMappingPermissions.View = View.Details;
+            lstAvailableMappingPermissions.FullRowSelect = true;
+            lstAvailableMappingPermissions.Columns.Add("ID", 50);
+            lstAvailableMappingPermissions.Columns.Add("権限名", 200);
+
+            // フィルター設定
+            lblMapPermFilter.Text = "権限フィルタ:";
+            //txtMapPermFilter.TextChanged += TxtMapPermFilter_TextChanged;
+
+            // ボタンの設定
+            btnAddControlMapping.Text = "追加 >>";
+            btnRemoveControlMapping.Text = "<< 削除";
+            //btnAddControlMapping.Click += BtnAddControlMapping_Click;
+            //btnRemoveControlMapping.Click += BtnRemoveControlMapping_Click;
             // 
             // FormPermission
             // 
@@ -919,6 +1153,8 @@
             panel10.ResumeLayout(false);
             panel11.ResumeLayout(false);
             panel11.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainerMapping).EndInit();
+            splitContainerMapping.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -997,5 +1233,28 @@
         private Button btnAddPermToUser;
         private Button btnDenyPermForUser;
         private ListView lstAvailableUserPerms;
+        private TabPage controlMappingTab;
+
+        // コントロール権限マッピングタブのコントロール
+        private SplitContainer splitContainerMapping;
+        private Panel panelLeft;
+        private Label lblFormFilter;
+        private TextBox txtFormFilter;
+        private TreeView treeControls;
+        private Panel panelRight;
+        private ListView lstMappedPermissions;
+        private Panel panelRightTop;
+        private Label lblSelectedControl;
+        private CheckBox chkAffectVisibility;
+        private CheckBox chkAffectEnabled;
+        private Panel panelRightBottom;
+        private ListView lstAvailableMappingPermissions;
+        private TextBox txtMapPermFilter;
+        private Label lblMapPermFilter;
+        private Button btnAddControlMapping;
+        private Button btnRemoveControlMapping;
+        private ComboBox cmbForms;
+        private Label lblSelectForm;
+        private Button btnRefreshForms;
     }
 }
