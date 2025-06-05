@@ -1,5 +1,4 @@
-﻿using CoreLibWinforms.Permissions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,218 +12,202 @@ namespace CoreLibWinforms.Core.Permissions
     /// </summary>
     public class PermissionSystem
     {
-        public static string PermissionsFilePath = "permissions.json";
-
         private UserPermissionService _userPermissionManager;
         private PermissionRegistry _permissionMaster;
         private ControlPermissionMapper _controlPermissionMapManager;
 
-        /// <summary>
-        /// ユーザー権限管理
-        /// </summary>
+        /// <summary>ユーザー権限管理</summary>
         public UserPermissionService UserPermissionManager => _userPermissionManager;
 
-        /// <summary>
-        /// 権限マスター管理
-        /// </summary>
+        /// <summary>権限マスター管理</summary>
         public PermissionRegistry PermissionMaster => _permissionMaster;
 
-        /// <summary>
-        /// コントロール権限マッピング管理
-        /// </summary>
+        /// <summary>コントロール権限マッピング管理</summary>
         public ControlPermissionMapper ControlPermissionMapManager => _controlPermissionMapManager;
-
-        /// <summary>
-        /// 現在のユーザーID
-        /// </summary>
-        public string CurrentUserId { get; private set; }
 
         public PermissionSystem()
         {
             _permissionMaster = new PermissionRegistry();
             _userPermissionManager = new UserPermissionService();
-            _controlPermissionMapManager = new ControlPermissionMapper(_userPermissionManager, _permissionMaster);
+            _controlPermissionMapManager = new ControlPermissionMapper();
         }
 
         /// <summary>
-        /// 現在のユーザーを設定
+        /// ユーザーIDに基づいて持っている権限を取得し、その権限からコントロールの状態を変更するメソッド
         /// </summary>
         /// <param name="userId">ユーザーID</param>
-        public void SetCurrentUser(string userId)
+        /// <param name="control">対象のコントロール</param>
+        public void ApplyUserPermissionsToControl(string userId, System.Windows.Forms.Control control)
         {
-            if (string.IsNullOrEmpty(userId))
-                throw new ArgumentNullException(nameof(userId));
-
-            var user = _userPermissionManager.GetUser(userId);
-            if (user == null)
-                throw new InvalidOperationException($"User with ID {userId} not found.");
-
-            CurrentUserId = userId;
-        }
-
-        /// <summary>
-        /// 現在のユーザーが特定の権限を持っているか確認
-        /// </summary>
-        /// <param name="permissionId">権限ID</param>
-        /// <returns>権限があるかどうか</returns>
-        public bool CurrentUserHasPermission(int permissionId)
-        {
-            if (string.IsNullOrEmpty(CurrentUserId))
-                return false;
-
-            return UserHasPermission(CurrentUserId, permissionId);
-        }
-
-        /// <summary>
-        /// 指定したユーザーが特定の権限を持っているか確認
-        /// </summary>
-        /// <param name="userId">ユーザーID</param>
-        /// <param name="permissionId">権限ID</param>
-        /// <returns>権限があるかどうか</returns>
-        public bool UserHasPermission(string userId, int permissionId)
-        {
-            if (string.IsNullOrEmpty(userId))
-                return false;
-
-            var user = _userPermissionManager.GetUser(userId);
-            if (user == null)
-                return false;
-
-            // 明示的に拒否された権限をチェック
-            if (user.HasDeniedPermission(permissionId))
-                return false;
-
-            // 追加で付与された権限をチェック
-            if (user.HasAdditionalPermission(permissionId))
-                return true;
-
-            // ユーザーのロールに基づいて権限をチェック
-            foreach (var roleId in user.AssignedRoleIds)
-            {
-                if (_permissionMaster.HasPermissionRole(roleId, permissionId))
-                    return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// フォームに対して権限を適用
-        /// </summary>
-        /// <param name="form">適用対象のフォーム</param>
-        public void ApplyPermissionsToForm(Form form)
-        {
-            if (form == null)
-                throw new ArgumentNullException(nameof(form));
-
-            if (string.IsNullOrEmpty(CurrentUserId))
-                throw new InvalidOperationException("Current user not set.");
-
-            _controlPermissionMapManager.ApplyPermissionsToForm(form, CurrentUserId);
-        }
-
-        /// <summary>
-        /// 権限設定を保存
-        /// </summary>
-        public async Task SavePermissionsAsync()
-        {
-            var data = new PermissionsData
-            {
-                Permissions = _permissionMaster.GetAllPermissions().ToList(),
-                Roles = _permissionMaster.GetAllRoles().ToList(),
-                Users = _userPermissionManager.GetAllUsers().ToList()
-            };
-
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true
-            };
-
-            using (var fs = File.Create(PermissionsFilePath))
-            {
-                await JsonSerializer.SerializeAsync(fs, data, options);
-            }
-        }
-
-        /// <summary>
-        /// 権限設定を読み込み
-        /// </summary>
-        public async Task LoadPermissionsAsync()
-        {
-            if (!File.Exists(PermissionsFilePath))
+            if (string.IsNullOrEmpty(userId) || control == null)
                 return;
 
-            using (var fs = File.OpenRead(PermissionsFilePath))
-            {
-                var data = await JsonSerializer.DeserializeAsync<PermissionsData>(fs);
-                if (data == null)
-                    return;
+            // ユーザー情報の取得
+            var userProfile = _userPermissionManager.GetUser(userId);
+            if (userProfile == null)
+                return;
 
-                // データのインポート処理
-                ImportPermissionsData(data);
+            // ユーザーが持つ全ての権限IDを取得
+            var effectivePermissionIds = GetUserEffectivePermissions(userId);
+            if (effectivePermissionIds.Count == 0)
+                return;
+
+            ApplyPermissionsToControl(effectivePermissionIds, control);
+        }
+
+        /// <summary>
+        /// ユーザーの実効権限IDリストを取得
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <returns>権限IDのリスト</returns>
+        public List<int> GetUserEffectivePermissions(string userId)
+        {
+            var result = new HashSet<int>();
+
+            // ユーザー情報の取得
+            var userProfile = _userPermissionManager.GetUser(userId);
+            if (userProfile == null)
+                return new List<int>();
+
+            // ユーザーに割り当てられているロールからの権限を取得
+            foreach (var roleId in userProfile.AssignedRoleIds)
+            {
+                var role = _permissionMaster.GetRole(roleId);
+                if (role != null)
+                {
+                    // ロールが持つ権限IDを追加
+                    for (int i = 0; i < role.Permissions.Length; i++)
+                    {
+                        if (role.Permissions[i])
+                            result.Add(i);
+                    }
+                }
+            }
+
+            // 追加権限を追加
+            foreach (var permId in userProfile.AdditionalPermissionIds)
+            {
+                result.Add(permId);
+            }
+
+            // 拒否権限を削除
+            foreach (var permId in userProfile.DeniedPermissionIds)
+            {
+                result.Remove(permId);
+            }
+
+            return result.ToList();
+        }
+
+        /// <summary>
+        /// 権限IDリストに基づいてコントロールの状態を変更
+        /// </summary>
+        /// <param name="permissionIds">権限IDのリスト</param>
+        /// <param name="control">対象のコントロール</param>
+        public void ApplyPermissionsToControl(List<int> permissionIds, System.Windows.Forms.Control control)
+        {
+            if (permissionIds == null || permissionIds.Count == 0 || control == null)
+                return;
+
+            bool hasAnyVisibilityPermission = false;
+            bool hasAnyEnabledPermission = false;
+            bool shouldBeVisible = false;
+            bool shouldBeEnabled = false;
+
+            string controlName = control.Name;
+
+            // 各権限に対して設定を確認
+            foreach (var permId in permissionIds)
+            {
+                var settings = _controlPermissionMapManager.GetControlPermissionSettings(permId, controlName);
+                if (settings != null)
+                {
+                    // 表示権限がある場合
+                    if (settings.AffectVisibility)
+                    {
+                        hasAnyVisibilityPermission = true;
+                        shouldBeVisible = true;
+                    }
+
+                    // 有効化権限がある場合
+                    if (settings.AffectEnabled)
+                    {
+                        hasAnyEnabledPermission = true;
+                        shouldBeEnabled = true;
+                    }
+                }
+            }
+
+            // 表示/非表示の制御
+            if (hasAnyVisibilityPermission)
+            {
+                control.Visible = shouldBeVisible;
+            }
+
+            // 有効/無効の制御
+            if (hasAnyEnabledPermission)
+            {
+                control.Enabled = shouldBeEnabled;
+            }
+
+            // 子コントロールにも適用（再帰的に処理）
+            foreach (System.Windows.Forms.Control childControl in control.Controls)
+            {
+                ApplyPermissionsToControl(permissionIds, childControl);
             }
         }
 
         /// <summary>
-        /// 権限設定データをインポート
+        /// フォーム全体に権限設定を適用
         /// </summary>
-        private void ImportPermissionsData(PermissionsData data)
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="form">対象のフォーム</param>
+        public void ApplyUserPermissionsToForm(string userId, System.Windows.Forms.Form form)
         {
-            // 現在の設定をクリア
-            _permissionMaster = new PermissionRegistry();
-            _userPermissionManager = new UserPermissionService();
+            if (string.IsNullOrEmpty(userId) || form == null)
+                return;
 
-            // 権限の復元
-            foreach (var permission in data.Permissions)
-            {
-                var newPerm = _permissionMaster.RegisterNewPermission(permission.Name);
-                // IDは自動生成されるため、上書きする必要がある場合は追加コードが必要
-            }
+            // ユーザーの効果的な権限を取得
+            var effectivePermissionIds = GetUserEffectivePermissions(userId);
+            if (effectivePermissionIds.Count == 0)
+                return;
 
-            // ロールの復元
-            foreach (var role in data.Roles)
-            {
-                var newRole = _permissionMaster.RegisterNewRole(role.Name);
-                // 関連する権限を設定
-                // この部分はRoleクラスの実装によって異なる
-            }
-
-            // ユーザーの復元
-            foreach (var user in data.Users)
-            {
-                var newUser = _userPermissionManager.RegisterNewUserPermission(user.UserId);
-
-                // ロールの割り当て
-                foreach (var roleId in user.AssignedRoleIds)
-                {
-                    _userPermissionManager.AssignRoleToUser(user.UserId, roleId);
-                }
-
-                // 追加権限の割り当て
-                foreach (var permId in user.AdditionalPermissionIds)
-                {
-                    _userPermissionManager.GrantAdditionalPermissionToUser(user.UserId, permId);
-                }
-
-                // 拒否権限の設定
-                foreach (var permId in user.DeniedPermissionIds)
-                {
-                    _userPermissionManager.DenyPermissionForUser(user.UserId, permId);
-                }
-            }
-
-            // 最後に新しいControlPermissionMapManagerを作成
-            _controlPermissionMapManager = new ControlPermissionMapper(_userPermissionManager, _permissionMaster);
+            // フォーム自体に権限を適用
+            ApplyPermissionsToControl(effectivePermissionIds, form);
         }
 
         /// <summary>
-        /// 権限データを保持するためのクラス
+        /// ユーザーが特定の権限を持っているかチェック
         /// </summary>
-        private class PermissionsData
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissionId">権限ID</param>
+        /// <returns>権限を持っている場合true、そうでなければfalse</returns>
+        public bool UserHasPermission(string userId, int permissionId)
         {
-            public List<Permission> Permissions { get; set; } = new List<Permission>();
-            public List<Role> Roles { get; set; } = new List<Role>();
-            public List<UserPermissionProfile> Users { get; set; } = new List<UserPermissionProfile>();
+            // ユーザーの効果的な権限を取得
+            var effectivePermissions = GetUserEffectivePermissions(userId);
+            // 該当の権限IDが含まれるかチェック
+            return effectivePermissions.Contains(permissionId);
+        }
+
+        public void Save()
+        {
+            // コントロール権限マッピングをJSONファイルに保存
+            _controlPermissionMapManager.Save();
+            // ユーザー権限情報をJSONファイルに保存
+            _userPermissionManager.Save();
+            // 権限マスター情報をJSONファイルに保存
+            _permissionMaster.Save();
+        }
+
+        public void Load()
+        {
+            // コントロール権限マッピングをJSONファイルから読み込み
+            _controlPermissionMapManager.Load();
+            // ユーザー権限情報をJSONファイルから読み込み
+            _userPermissionManager.Load();
+            // 権限マスター情報をJSONファイルから読み込み
+            _permissionMaster.Load();
         }
     }
 

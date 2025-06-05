@@ -2,10 +2,219 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace CoreLibWinforms.Core.Permissions
 {
+
+
+    public class ControlPermissionMapper
+    {
+        public static string FilePath = "ControlPermissionMap.json";
+        /// <summary>
+        /// 権限に対してコントロールの権限設定をマッピングする辞書
+        /// </summary>
+        private readonly Dictionary<int, List<ControlPermissionSettings>> _controlPermissionMaps;
+
+        public ControlPermissionMapper()
+        {
+            _controlPermissionMaps = new Dictionary<int, List<ControlPermissionSettings>>();
+        }
+
+        /// <summary>
+        /// コントロールに権限を関連付ける
+        /// </summary>
+        public void RegisterControl(int permissionId, string controlName, bool affectVisibility = true, bool affectEnabled = true)
+        {
+            // 指定された権限IDに対するリストがまだ存在しない場合は作成
+            if (!_controlPermissionMaps.ContainsKey(permissionId))
+            {
+                _controlPermissionMaps[permissionId] = new List<ControlPermissionSettings>();
+            }
+
+            // 既存の設定を確認
+            var existingSetting = GetControlPermissionSettings(permissionId, controlName);
+            if (existingSetting != null)
+            {
+                // 既存の設定を更新
+                existingSetting.AffectVisibility = affectVisibility;
+                existingSetting.AffectEnabled = affectEnabled;
+            }
+            else
+            {
+                // 新しい設定を追加
+                _controlPermissionMaps[permissionId].Add(new ControlPermissionSettings
+                {
+                    ControlName = controlName,
+                    PermissionId = permissionId,
+                    AffectVisibility = affectVisibility,
+                    AffectEnabled = affectEnabled
+                });
+            }
+        }
+
+        public void UnregisterControl(int permissionId, string controlName)
+        {
+            if (_controlPermissionMaps.TryGetValue(permissionId, out var settingsList))
+            {
+                // 指定されたコントロール名に一致する設定を削除
+                var settingToRemove = settingsList.FirstOrDefault(s => s.ControlName == controlName);
+                if (settingToRemove != null)
+                {
+                    settingsList.Remove(settingToRemove);
+
+                    // リストが空になった場合は、辞書からキーを削除
+                    if (settingsList.Count == 0)
+                    {
+                        _controlPermissionMaps.Remove(permissionId);
+                    }
+                }
+            }
+        }
+
+        public ControlPermissionSettings GetControlPermissionSettings(int permissionId, string controlName)
+        {
+            if (_controlPermissionMaps.TryGetValue(permissionId, out var settingsList))
+            {
+                return settingsList.FirstOrDefault(s => s.ControlName == controlName);
+            }
+            return null;
+        }
+
+        public List<ControlPermissionSettings> GetControlPermissionSettings(int permissionId)
+        {
+            if (_controlPermissionMaps.TryGetValue(permissionId, out var settingsList))
+            {
+                return settingsList;
+            }
+            return new List<ControlPermissionSettings>();
+        }
+
+        /// <summary>
+        /// コントロール名でマッピングを検索するためのメソッド
+        /// </summary>
+        /// <param name="controlName">コントロール名</param>
+        /// <returns>そのコントロールに対する権限設定のリスト</returns>
+        public List<ControlPermissionSettings> GetControlPermissionSettingsByControlName(string controlName)
+        {
+            var result = new List<ControlPermissionSettings>();
+
+            foreach (var settingsList in _controlPermissionMaps.Values)
+            {
+                result.AddRange(settingsList.Where(s => s.ControlName == controlName));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// すべてのコントロール権限マッピングをコントロール名をキーにして取得
+        /// </summary>
+        /// <returns>コントロール名と権限設定のディクショナリ</returns>
+        public Dictionary<string, List<ControlPermissionSettings>> GetAllMappings()
+        {
+            // コントロール名をキーとするディクショナリ
+            var result = new Dictionary<string, List<ControlPermissionSettings>>();
+
+            // 各権限IDと設定リストのペアについて処理
+            foreach (var kvp in _controlPermissionMaps)
+            {
+                foreach (var setting in kvp.Value)
+                {
+                    // コントロール名が既にキーとして存在するか確認
+                    if (!result.TryGetValue(setting.ControlName, out var settingsList))
+                    {
+                        // 存在しない場合は新しいリストを作成
+                        settingsList = new List<ControlPermissionSettings>();
+                        result[setting.ControlName] = settingsList;
+                    }
+
+                    // 設定を追加
+                    settingsList.Add(setting);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// コントロール権限マッピングをJSONファイルに保存
+        /// </summary>
+        public void Save()
+        {
+            try
+            {
+                // すべての設定を平坦なリストに変換
+                var allSettings = new List<ControlPermissionSettings>();
+
+                foreach (var kvp in _controlPermissionMaps)
+                {
+                    allSettings.AddRange(kvp.Value);
+                }
+
+                // JSONオプションを設定（整形出力）
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+
+                // JSONにシリアライズ
+                string jsonString = JsonSerializer.Serialize(allSettings, options);
+
+                // ファイルに保存
+                File.WriteAllText(FilePath, jsonString);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"コントロール権限マッピングの保存中にエラーが発生しました: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// JSONファイルからコントロール権限マッピングを読み込み
+        /// </summary>
+        public void Load()
+        {
+            // ファイルが存在しない場合は何もしない
+            if (!File.Exists(FilePath))
+                return;
+
+            try
+            {
+                // ファイルからJSONを読み込み
+                string jsonString = File.ReadAllText(FilePath);
+
+                // JSONをControlPermissionSettingsのリストにデシリアライズ
+                var settings = JsonSerializer.Deserialize<List<ControlPermissionSettings>>(jsonString);
+
+                // 既存のマッピングをクリア
+                _controlPermissionMaps.Clear();
+
+                // デシリアライズした設定を辞書に再構成
+                if (settings != null)
+                {
+                    foreach (var setting in settings)
+                    {
+                        if (!_controlPermissionMaps.TryGetValue(setting.PermissionId, out var settingsList))
+                        {
+                            settingsList = new List<ControlPermissionSettings>();
+                            _controlPermissionMaps[setting.PermissionId] = settingsList;
+                        }
+
+                        settingsList.Add(setting);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"コントロール権限マッピングの読み込み中にエラーが発生しました: {ex.Message}");
+                throw;
+            }
+        }
+    }
+
     /// <summary>
     /// コントロールの権限設定を保持するクラス
     /// </summary>
@@ -29,226 +238,5 @@ namespace CoreLibWinforms.Core.Permissions
         /// 有効/無効を制御するか
         /// </summary>
         public bool AffectEnabled { get; set; } = true;
-    }
-
-    public class ControlPermissionMapper
-    {
-        private readonly Dictionary<string, List<ControlPermissionSettings>> _controlPermissionMaps;
-        private UserPermissionService _userPermissionManager;
-        private PermissionRegistry _permissionMaster;
-
-        public ControlPermissionMapper(UserPermissionService userPermissionManager, PermissionRegistry permissionMaster)
-        {
-            _controlPermissionMaps = new Dictionary<string, List<ControlPermissionSettings>>();
-            _userPermissionManager = userPermissionManager ?? throw new ArgumentNullException(nameof(userPermissionManager));
-            _permissionMaster = permissionMaster ?? throw new ArgumentNullException(nameof(permissionMaster));
-        }
-
-        /// <summary>
-        /// コントロールに権限を関連付ける
-        /// </summary>
-        public void RegisterControl(string controlName, int permissionId, bool affectVisibility = true, bool affectEnabled = true)
-        {
-            if (!_controlPermissionMaps.ContainsKey(controlName))
-            {
-                _controlPermissionMaps[controlName] = new List<ControlPermissionSettings>();
-            }
-
-            // 同じ権限IDの設定がすでに存在する場合は更新
-            var existingSetting = _controlPermissionMaps[controlName]
-                .FirstOrDefault(s => s.PermissionId == permissionId);
-
-            if (existingSetting != null)
-            {
-                existingSetting.AffectVisibility = affectVisibility;
-                existingSetting.AffectEnabled = affectEnabled;
-            }
-            else
-            {
-                _controlPermissionMaps[controlName].Add(
-                    new ControlPermissionSettings
-                    {
-                        ControlName = controlName,
-                        PermissionId = permissionId,
-                        AffectVisibility = affectVisibility,
-                        AffectEnabled = affectEnabled
-                    });
-            }
-        }
-
-        public void UnregisterControl(string controlName, int permissionId)
-        {
-            if (_controlPermissionMaps.TryGetValue(controlName, out var settings))
-            {
-                settings.RemoveAll(x => x.PermissionId == permissionId);
-
-                // 設定が空になったらキー自体を削除
-                if (settings.Count == 0)
-                {
-                    _controlPermissionMaps.Remove(controlName);
-                }
-            }
-        }
-
-        /// <summary>
-        /// ユーザーの権限に基づいてコントロールに権限を適用
-        /// </summary>
-        /// <param name="controlName">コントロール名</param>
-        /// <param name="control">適用対象のコントロール</param>
-        /// <param name="userId">ユーザーID (省略時は現在のユーザー)</param>
-        public void ApplyPermissionsToControl(string controlName, Control control, string userId = null)
-        {
-            if (string.IsNullOrEmpty(controlName))
-                throw new ArgumentNullException(nameof(controlName));
-
-            if (control == null)
-                throw new ArgumentNullException(nameof(control));
-
-            string effectiveUserId = userId;
-            if (string.IsNullOrEmpty(effectiveUserId))
-                throw new InvalidOperationException("User ID is not specified or set.");
-
-            var user = _userPermissionManager.GetUser(effectiveUserId);
-            if (user == null)
-                throw new InvalidOperationException($"User with ID {effectiveUserId} not found.");
-
-            if (!_controlPermissionMaps.TryGetValue(controlName, out var settings) || settings.Count == 0)
-                return; // 権限設定がない場合は何もしない
-
-            bool hasAnyPermission = false;
-
-            foreach (var setting in settings)
-            {
-                bool hasPerm = UserHasPermission(effectiveUserId, setting.PermissionId);
-
-                if (hasPerm)
-                {
-                    hasAnyPermission = true;
-                    break;
-                }
-            }
-
-            // 権限がない場合の処理
-            if (!hasAnyPermission)
-            {
-                // すべての権限設定を確認し、AffectVisibilityとAffectEnabledフラグに応じて設定
-                bool shouldBeVisible = true;
-                bool shouldBeEnabled = true;
-
-                foreach (var setting in settings)
-                {
-                    if (setting.AffectVisibility)
-                        shouldBeVisible = false;
-
-                    if (setting.AffectEnabled)
-                        shouldBeEnabled = false;
-                }
-
-                if (!shouldBeVisible)
-                    control.Visible = false;
-
-                if (!shouldBeEnabled)
-                    control.Enabled = false;
-            }
-        }
-        /// <summary>
-        /// ユーザーの権限に基づいてフォーム上のすべてのコントロールに権限を適用
-        /// </summary>
-        /// <param name="form">適用対象のフォーム</param>
-        /// <param name="userId">ユーザーID (省略時は現在のユーザー)</param>
-        public void ApplyPermissionsToForm(Form form, string userId = null)
-        {
-            if (form == null)
-                throw new ArgumentNullException(nameof(form));
-
-            // フォーム上のすべてのコントロールを再帰的に処理
-            ApplyPermissionsToControlsRecursive(form.Controls, userId);
-        }
-
-        /// <summary>
-        /// コントロールコレクションに対して再帰的に権限を適用
-        /// </summary>
-        private void ApplyPermissionsToControlsRecursive(Control.ControlCollection controls, string userId)
-        {
-            foreach (Control control in controls)
-            {
-                // このコントロールに権限設定があれば適用
-                if (_controlPermissionMaps.ContainsKey(control.Name))
-                {
-                    ApplyPermissionsToControl(control.Name, control, userId);
-                }
-
-                // 子コントロールがあれば再帰的に適用
-                if (control.Controls.Count > 0)
-                {
-                    ApplyPermissionsToControlsRecursive(control.Controls, userId);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 特定のフォーム用のマッピングをクリア
-        /// </summary>
-        public void ClearFormMapping(string formName)
-        {
-            if (string.IsNullOrEmpty(formName))
-                throw new ArgumentNullException(nameof(formName));
-
-            var keysToRemove = _controlPermissionMaps.Keys
-                .Where(key => key.StartsWith(formName + "."))
-                .ToList();
-
-            foreach (var key in keysToRemove)
-            {
-                _controlPermissionMaps.Remove(key);
-            }
-        }
-
-        /// <summary>
-        /// すべてのマッピングをクリア
-        /// </summary>
-        public void ClearAllMappings()
-        {
-            _controlPermissionMaps.Clear();
-        }
-
-        /// <summary>
-        /// 指定したユーザーが権限を持っているかどうかを判定
-        /// </summary>
-        private bool UserHasPermission(string userId, int permissionId)
-        {
-            if (string.IsNullOrEmpty(userId))
-                return false;
-
-            var user = _userPermissionManager.GetUser(userId);
-            if (user == null)
-                return false;
-
-            // 明示的に拒否された権限はチェック
-            if (user.HasDeniedPermission(permissionId))
-                return false;
-
-            // 追加で付与された権限をチェック
-            if (user.HasAdditionalPermission(permissionId))
-                return true;
-
-            // ユーザーのロールに基づいて権限をチェック
-            foreach (var roleId in user.AssignedRoleIds)
-            {
-                if (_permissionMaster.HasPermissionRole(roleId, permissionId))
-                    return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// 現在のマッピング情報を取得
-        /// </summary>
-        public IEnumerable<KeyValuePair<string, List<ControlPermissionSettings>>> GetAllMappings()
-        {
-            return _controlPermissionMaps;
-        }
-
     }
 }

@@ -877,398 +877,124 @@ namespace CoreLibWinforms.Forms
             }
         }
 
-
-
-
-
-
         #region コントロール権限マッピングタブ
-        private void InitializeControlMappingTab()
+        private int _selectedPermissionId = -1;
+        private string _selectedControlName = string.Empty;
+
+        private void RefreshPermissionListForMapping()
         {
-            // フォーム選択の設定
-            lblSelectForm.Text = "フォームを選択:";
-            cmbForms.DropDownStyle = ComboBoxStyle.DropDownList;
-            btnRefreshForms.Text = "更新";
-            btnRefreshForms.Click += BtnRefreshForms_Click;
-
-            // フォーム選択変更イベント
-            cmbForms.SelectedIndexChanged += CmbForms_SelectedIndexChanged;
-
-            // コントロールツリーの設定
-            treeControls.HideSelection = false;
-            treeControls.AfterSelect += TreeControls_AfterSelect;
-
-            // フィルター設定
-            lblFormFilter.Text = "コントロールフィルタ:";
-            txtFormFilter.TextChanged += TxtFormFilter_TextChanged;
-
-            // 権限一覧の設定
-            lstMappedPermissions.View = View.Details;
-            lstMappedPermissions.FullRowSelect = true;
-            lstMappedPermissions.Columns.Add("ID", 50);
-            lstMappedPermissions.Columns.Add("権限名", 200);
-            lstMappedPermissions.Columns.Add("Visibility", 70);
-            lstMappedPermissions.Columns.Add("Enabled", 70);
-
-            // 権限マッピング設定のコンテキストメニュー
-            var mappingContextMenu = new ContextMenuStrip();
-            var deleteItem = mappingContextMenu.Items.Add("削除");
-            deleteItem.Click += MappingDelete_Click;
-            lstMappedPermissions.ContextMenuStrip = mappingContextMenu;
-
-            // 選択コントロールラベル
-            lblSelectedControl.Text = "選択中のコントロール: なし";
-
-            // チェックボックスの設定
-            chkAffectVisibility.Text = "表示/非表示を制御する";
-            chkAffectEnabled.Text = "有効/無効を制御する";
-            chkAffectVisibility.Checked = true;
-            chkAffectEnabled.Checked = true;
-
-            // 利用可能な権限一覧の設定
-            lstAvailableMappingPermissions.View = View.Details;
-            lstAvailableMappingPermissions.FullRowSelect = true;
-            lstAvailableMappingPermissions.Columns.Add("ID", 50);
-            lstAvailableMappingPermissions.Columns.Add("権限名", 200);
-
-            // フィルター設定
-            lblMapPermFilter.Text = "権限フィルタ:";
-            txtMapPermFilter.TextChanged += TxtMapPermFilter_TextChanged;
-
-            // ボタンの設定
-            btnAddControlMapping.Text = "追加 >>";
-            btnRemoveControlMapping.Text = "<< 削除";
-            btnAddControlMapping.Click += BtnAddControlMapping_Click;
-            btnRemoveControlMapping.Click += BtnRemoveControlMapping_Click;
-
-            // フォームリストの初期化
-            RefreshFormList();
-        }
-
-        private void RefreshFormList()
-        {
-            cmbForms.Items.Clear();
-
-            // アプリケーション内のすべてのフォームタイプを取得
-            var formTypes = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => a.GetTypes())
-                .Where(t => t.IsSubclassOf(typeof(Form)))
-                .OrderBy(t => t.Name)
-                .ToList();
-
-            foreach (var formType in formTypes)
+            dataGridView1.Rows.Clear();
+            foreach (var permission in _permissionManager.PermissionMaster.GetAllPermissions())
             {
-                cmbForms.Items.Add(formType.Name);
-            }
-
-            // 現在のフォームを選択
-            cmbForms.Items.Add(this.GetType().Name);
-            cmbForms.SelectedItem = this.GetType().Name;
-        }
-
-        private void BtnRefreshForms_Click(object sender, EventArgs e)
-        {
-            RefreshFormList();
-        }
-
-        private void CmbForms_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cmbForms.SelectedItem == null) return;
-
-            string selectedFormName = cmbForms.SelectedItem.ToString();
-            LoadControlsForForm(selectedFormName);
-        }
-
-        private void LoadControlsForForm(string formName)
-        {
-            treeControls.Nodes.Clear();
-
-            // 本来はリフレクションを使用して選択したフォームのコントロール構造を取得すべきですが、
-            // デモ目的として簡単な例を表示します
-            // 実際の実装ではフォームのインスタンスを作成し、コントロール階層を取得します
-
-            var rootNode = new TreeNode(formName);
-            rootNode.Tag = formName;
-
-            if (formName == this.GetType().Name)
-            {
-                // 現在のフォームの場合、実際のコントロールを表示
-                foreach (Control control in this.Controls)
-                {
-                    AddControlNode(rootNode, control);
-                }
-            }
-            else
-            {
-                // デモ用のダミーコントロール
-                AddDummyNodes(rootNode, formName);
-            }
-
-            treeControls.Nodes.Add(rootNode);
-            rootNode.Expand();
-        }
-
-        private void AddControlNode(TreeNode parentNode, Control control)
-        {
-            var node = new TreeNode(control.Name);
-            node.Tag = control.Name;
-            parentNode.Nodes.Add(node);
-
-            foreach (Control childControl in control.Controls)
-            {
-                AddControlNode(node, childControl);
+                int rowIdx = dataGridView1.Rows.Add(permission.Id, permission.Name);
+                dataGridView1.Rows[rowIdx].Tag = permission;
             }
         }
 
-        private void AddDummyNodes(TreeNode parentNode, string formName)
+        private void DataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            // デモ用のダミーノード
-            var mainPanel = new TreeNode("mainPanel");
-            mainPanel.Tag = $"{formName}.mainPanel";
-            parentNode.Nodes.Add(mainPanel);
+            if (e.RowIndex < 0) return;
 
-            var btnOk = new TreeNode("btnOk");
-            btnOk.Tag = $"{formName}.btnOk";
-            mainPanel.Nodes.Add(btnOk);
+            var permission = (Permission)dataGridView1.Rows[e.RowIndex].Tag;
+            _selectedPermissionId = permission.Id;
+            lblTitleSelectedPermission.Text = $"選択中の権限：{permission.Name}";
 
-            var btnCancel = new TreeNode("btnCancel");
-            btnCancel.Tag = $"{formName}.btnCancel";
-            mainPanel.Nodes.Add(btnCancel);
-
-            var dataPanel = new TreeNode("dataPanel");
-            dataPanel.Tag = $"{formName}.dataPanel";
-            parentNode.Nodes.Add(dataPanel);
-
-            var dataGrid = new TreeNode("dataGridView1");
-            dataGrid.Tag = $"{formName}.dataGridView1";
-            dataPanel.Nodes.Add(dataGrid);
+            // 選択された権限に関連付けられたコントロールを表示
+            RefreshControlMappingList();
         }
 
-        private void TreeControls_AfterSelect(object sender, TreeViewEventArgs e)
+        private void RefreshControlMappingList()
         {
-            if (e.Node == null) return;
+            if (_selectedPermissionId < 0)
+            {
+                dataGridView2.Rows.Clear();
+                return;
+            }
 
-            string controlName = e.Node.Tag.ToString();
-            lblSelectedControl.Text = $"選択中のコントロール: {controlName}";
+            dataGridView2.Rows.Clear();
 
-            // 選択したコントロールのマッピング情報を表示
-            RefreshMappedPermissionsList(controlName);
-            RefreshAvailablePermissionsList(controlName);
-        }
-
-        private void RefreshMappedPermissionsList(string controlName)
-        {
-            lstMappedPermissions.Items.Clear();
-
-            var mappings = _permissionManager.ControlPermissionMapManager.GetAllMappings()
-                .Where(m => m.Key == controlName)
-                .SelectMany(m => m.Value)
-                .ToList();
+            // 選択された権限に関連付けられているコントロールマッピングを取得して表示
+            var mappings = _permissionManager.ControlPermissionMapManager.GetAllMappings();
 
             foreach (var mapping in mappings)
             {
-                var permission = _permissionManager.GetPermission(mapping.PermissionId);
-                if (permission == null) continue;
-
-                var item = new ListViewItem(permission.Id.ToString());
-                item.SubItems.Add(permission.Name);
-                item.SubItems.Add(mapping.AffectVisibility ? "Yes" : "No");
-                item.SubItems.Add(mapping.AffectEnabled ? "Yes" : "No");
-                item.Tag = mapping;
-
-                lstMappedPermissions.Items.Add(item);
-            }
-        }
-
-        private void RefreshAvailablePermissionsList(string controlName)
-        {
-            lstAvailableMappingPermissions.Items.Clear();
-
-            // 既にマッピングされている権限IDを取得
-            var mappedPermissionIds = _permissionManager.ControlPermissionMapManager.GetAllMappings()
-                .Where(m => m.Key == controlName)
-                .SelectMany(m => m.Value)
-                .Select(m => m.PermissionId)
-                .ToList();
-
-            // 利用可能な権限をリストに追加
-            foreach (var permission in _permissionManager.GetAllPermissions())
-            {
-                // 既にマッピングされている権限は除外
-                if (mappedPermissionIds.Contains(permission.Id)) continue;
-
-                var item = new ListViewItem(permission.Id.ToString());
-                item.SubItems.Add(permission.Name);
-                item.Tag = permission;
-
-                lstAvailableMappingPermissions.Items.Add(item);
-            }
-        }
-
-        private void TxtFormFilter_TextChanged(object sender, EventArgs e)
-        {
-            // コントロールツリーのフィルタリング
-            string filter = txtFormFilter.Text.ToLower();
-
-            if (string.IsNullOrWhiteSpace(filter))
-            {
-                // フィルタがなければ、すべてのノードを表示
-                foreach (TreeNode node in treeControls.Nodes)
+                // 権限IDで絞り込み
+                foreach (var setting in mapping.Value.Where(s => s.PermissionId == _selectedPermissionId))
                 {
-                    ShowAllNodes(node);
-                }
-            }
-            else
-            {
-                // フィルタがあれば、条件に合うノードだけ表示
-                foreach (TreeNode node in treeControls.Nodes)
-                {
-                    FilterNodes(node, filter);
+                    int rowIdx = dataGridView2.Rows.Add(
+                        setting.ControlName,
+                        setting.AffectVisibility,
+                        setting.AffectEnabled);
+
+                    dataGridView2.Rows[rowIdx].Tag = setting;
                 }
             }
         }
 
-        private void ShowAllNodes(TreeNode node)
+        private void DataGridView2_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            node.Expand();
+            if (e.RowIndex < 0) return;
 
-            foreach (TreeNode childNode in node.Nodes)
-            {
-                ShowAllNodes(childNode);
-            }
+            var setting = (ControlPermissionSettings)dataGridView2.Rows[e.RowIndex].Tag;
+            _selectedControlName = setting.ControlName;
         }
 
-        private bool FilterNodes(TreeNode node, string filter)
+        private void BtnAddControl_Click(object sender, EventArgs e)
         {
-            bool nodeVisible = node.Text.ToLower().Contains(filter);
-            bool anyChildVisible = false;
-
-            foreach (TreeNode childNode in node.Nodes)
+            if (_selectedPermissionId < 0)
             {
-                bool childVisible = FilterNodes(childNode, filter);
-                anyChildVisible = anyChildVisible || childVisible;
-            }
-
-            if (nodeVisible || anyChildVisible)
-            {
-                node.Expand();
-                return true;
-            }
-
-            return false;
-        }
-
-        private void TxtMapPermFilter_TextChanged(object sender, EventArgs e)
-        {
-            string filter = txtMapPermFilter.Text.ToLower();
-
-            foreach (ListViewItem item in lstAvailableMappingPermissions.Items)
-            {
-                bool visible = string.IsNullOrWhiteSpace(filter) ||
-                              item.Text.ToLower().Contains(filter) ||
-                              item.SubItems[1].Text.ToLower().Contains(filter);
-
-                item.Visible = visible;
-            }
-        }
-
-        private void BtnAddControlMapping_Click(object sender, EventArgs e)
-        {
-            if (lstAvailableMappingPermissions.SelectedItems.Count == 0) return;
-
-            if (treeControls.SelectedNode == null)
-            {
-                MessageBox.Show("マッピングを追加するコントロールを選択してください", "選択エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("権限を選択してください", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            string controlName = treeControls.SelectedNode.Tag.ToString();
-
-            try
+            if (string.IsNullOrWhiteSpace(txtControlName.Text))
             {
-                foreach (ListViewItem item in lstAvailableMappingPermissions.SelectedItems)
-                {
-                    var permission = (Permission)item.Tag;
-                    _permissionManager.ControlPermissionMapManager.RegisterControl(
-                        controlName,
-                        permission.Id,
-                        chkAffectVisibility.Checked,
-                        chkAffectEnabled.Checked);
-                }
-
-                RefreshMappedPermissionsList(controlName);
-                RefreshAvailablePermissionsList(controlName);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"マッピングの追加に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void BtnRemoveControlMapping_Click(object sender, EventArgs e)
-        {
-            RemoveSelectedMappings();
-        }
-
-        private void MappingDelete_Click(object sender, EventArgs e)
-        {
-            RemoveSelectedMappings();
-        }
-
-        private void RemoveSelectedMappings()
-        {
-            if (lstMappedPermissions.SelectedItems.Count == 0) return;
-
-            if (treeControls.SelectedNode == null)
-            {
-                MessageBox.Show("マッピングを削除するコントロールを選択してください", "選択エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("コントロール名を入力してください", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            string controlName = treeControls.SelectedNode.Tag.ToString();
-
             try
             {
-                foreach (ListViewItem item in lstMappedPermissions.SelectedItems)
-                {
-                    var mapping = (ControlPermissionSettings)item.Tag;
-                    _permissionManager.ControlPermissionMapManager.UnregisterControl(
-                        controlName,
-                        mapping.PermissionId);
-                }
+                // コントロールのマッピングを登録
+                _permissionManager.ControlPermissionMapManager.RegisterControl(
+                    txtControlName.Text,
+                    _selectedPermissionId,
+                    true,  // Visibilityに影響
+                    true   // Enabledに影響
+                );
 
-                RefreshMappedPermissionsList(controlName);
-                RefreshAvailablePermissionsList(controlName);
+                txtControlName.Clear();
+                RefreshControlMappingList();
+                MessageBox.Show("コントロールマッピングを追加しました", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"マッピングの削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"コントロールマッピングの追加に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void DeleteControlMapping_Click(object sender, EventArgs e)
+        {
+            if (dataGridView2.SelectedRows.Count == 0) return;
+
+            var setting = (ControlPermissionSettings)dataGridView2.SelectedRows[0].Tag;
+
+            if (MessageBox.Show($"コントロール「{setting.ControlName}」のマッピングを削除してもよろしいですか？",
+                "削除の確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            try
+            {
+                _permissionManager.ControlPermissionMapManager.UnregisterControl(setting.ControlName, setting.PermissionId);
+                RefreshControlMappingList();
+                MessageBox.Show("コントロールマッピングを削除しました", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"コントロールマッピングの削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
-        /*
-         
-        +------------------------------------------------+
-        | [ComboBox:フォーム選択]    [Button:更新]       |
-        +------------------------------------------------+
-        | +--------------------+ +----------------------+ |
-        | | [TextBox:フィルタ] | | [Label:選択コントロール] |
-        | +--------------------+ +----------------------+ |
-        | |                    | | [ListView:マッピング済み] |
-        | |                    | |                      | |
-        | | [TreeView:         | |                      | |
-        | |  コントロール階層]   | |                      | |
-        | |                    | | [CheckBox:Visibility] | |
-        | |                    | | [CheckBox:Enabled]    | |
-        | |                    | +----------------------+ |
-        | |                    | | [TextBox:権限フィルタ] | |
-        | |                    | | [ListView:利用可能権限] | |
-        | |                    | |                      | |
-        | |                    | | [Button:追加 >>]      | |
-        | |                    | | [Button:<< 削除]      | |
-        | +--------------------+ +----------------------+ |
-        +------------------------------------------------+
-         
-         */
+
     }
 }
