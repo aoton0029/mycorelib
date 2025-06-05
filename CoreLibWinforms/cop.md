@@ -1,3 +1,409 @@
+ご提案の通り、PermissionIdを基準にしてコントロールを紐付ける方が直感的でわかりやすいアプローチになります。現在の実装では、コントロールID（名前）をキーとしてマッピングしていますが、権限IDをキーとして複数のコントロールを紐付ける設計に変更することで、管理がしやすくなります。
+
+以下に、PermissionIdに対してコントロールを紐付ける形に変更した実装を提案します：
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.IO;
+using System.Windows.Forms;
+
+namespace CoreLibWinforms.Permissions
+{
+    /// <summary>
+    /// 権限IDに対してコントロールを紐付けて管理するクラス
+    /// </summary>
+    public class PermissionControlMapper
+    {
+        // 権限IDごとにコントロール情報のリストを保持
+        private Dictionary<int, List<ControlConfig>> _permissionMappings = 
+            new Dictionary<int, List<ControlConfig>>();
+
+        // 保存ファイルのデフォルトパス
+        public static string DefaultMappingFilePath = "permission_controls.json";
+
+        /// <summary>
+        /// 権限IDに対してコントロールを紐付ける
+        /// </summary>
+        /// <param name="permissionId">権限ID</param>
+        /// <param name="controlId">コントロール識別子（通常はName）</param>
+        /// <param name="visibilityControlled">表示/非表示を制御するか</param>
+        /// <param name="enableControlled">有効/無効を制御するか</param>
+        public void MapPermissionToControl(int permissionId, string controlId, 
+            bool visibilityControlled = true, bool enableControlled = false)
+        {
+            if (!_permissionMappings.TryGetValue(permissionId, out var controlList))
+            {
+                controlList = new List<ControlConfig>();
+                _permissionMappings[permissionId] = controlList;
+            }
+
+            // 既存のマッピングがあれば更新、なければ追加
+            var existingConfig = controlList.Find(c => c.ControlId == controlId);
+            if (existingConfig != null)
+            {
+                existingConfig.ControlVisibility = visibilityControlled;
+                existingConfig.ControlEnabled = enableControlled;
+            }
+            else
+            {
+                controlList.Add(new ControlConfig
+                {
+                    ControlId = controlId,
+                    ControlVisibility = visibilityControlled,
+                    ControlEnabled = enableControlled
+                });
+            }
+        }
+
+        /// <summary>
+        /// 権限からコントロールの紐付けを削除
+        /// </summary>
+        /// <param name="permissionId">権限ID</param>
+        /// <param name="controlId">コントロール識別子</param>
+        /// <returns>削除に成功したかどうか</returns>
+        public bool RemoveControlFromPermission(int permissionId, string controlId)
+        {
+            if (_permissionMappings.TryGetValue(permissionId, out var controlList))
+            {
+                return controlList.RemoveAll(c => c.ControlId == controlId) > 0;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 指定した権限IDに紐付けられたすべてのコントロール設定を取得
+        /// </summary>
+        /// <param name="permissionId">権限ID</param>
+        /// <returns>コントロール設定のリスト</returns>
+        public List<ControlConfig> GetControlsByPermission(int permissionId)
+        {
+            return _permissionMappings.TryGetValue(permissionId, out var controlList) 
+                ? controlList 
+                : new List<ControlConfig>();
+        }
+
+        /// <summary>
+        /// 指定したコントロールIDがどの権限に紐付けられているか取得
+        /// </summary>
+        /// <param name="controlId">コントロール識別子</param>
+        /// <returns>権限IDのリスト</returns>
+        public List<int> GetPermissionsByControlId(string controlId)
+        {
+            var result = new List<int>();
+            foreach (var kvp in _permissionMappings)
+            {
+                if (kvp.Value.Exists(c => c.ControlId == controlId))
+                {
+                    result.Add(kvp.Key);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// すべての権限マッピングを取得
+        /// </summary>
+        public IReadOnlyDictionary<int, List<ControlConfig>> GetAllMappings()
+        {
+            return _permissionMappings;
+        }
+
+        /// <summary>
+        /// マッピング情報をJSONファイルに保存
+        /// </summary>
+        /// <param name="filePath">保存先ファイルパス（指定しない場合はデフォルト）</param>
+        public void SaveMappings(string filePath = null)
+        {
+            filePath ??= DefaultMappingFilePath;
+            
+            var mappingData = new Dictionary<string, List<ControlConfig>>();
+            
+            // 整数キーを文字列に変換（JSONシリアライズのため）
+            foreach (var kvp in _permissionMappings)
+            {
+                mappingData[kvp.Key.ToString()] = kvp.Value;
+            }
+            
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+            
+            string jsonString = JsonSerializer.Serialize(mappingData, options);
+            File.WriteAllText(filePath, jsonString);
+        }
+
+        /// <summary>
+        /// マッピング情報をJSONファイルから読み込み
+        /// </summary>
+        /// <param name="filePath">読み込むファイルパス（指定しない場合はデフォルト）</param>
+        /// <returns>成功した場合はtrue</returns>
+        public bool LoadMappings(string filePath = null)
+        {
+            filePath ??= DefaultMappingFilePath;
+            
+            if (!File.Exists(filePath))
+                return false;
+
+            try
+            {
+                string jsonString = File.ReadAllText(filePath);
+                var stringMappings = JsonSerializer.Deserialize<Dictionary<string, List<ControlConfig>>>(jsonString);
+                
+                _permissionMappings.Clear();
+                
+                // 文字列キーを整数に戻す
+                foreach (var kvp in stringMappings)
+                {
+                    if (int.TryParse(kvp.Key, out int permissionId))
+                    {
+                        _permissionMappings[permissionId] = kvp.Value;
+                    }
+                }
+                
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// フォーム内の全コントロールに対して権限を適用する
+        /// </summary>
+        /// <param name="form">対象フォーム</param>
+        /// <param name="userPermissions">ユーザーが持つ権限IDのリスト</param>
+        public void ApplyPermissionsToForm(Form form, IEnumerable<int> userPermissions)
+        {
+            // まず全コントロールの状態をリセット用のリストを作成
+            var allControlMappings = new Dictionary<string, ControlState>();
+            
+            // 全マッピングをスキャンして、コントロールIDごとの初期状態を設定
+            foreach (var permMapping in _permissionMappings)
+            {
+                foreach (var controlConfig in permMapping.Value)
+                {
+                    if (!allControlMappings.ContainsKey(controlConfig.ControlId))
+                    {
+                        allControlMappings[controlConfig.ControlId] = new ControlState
+                        {
+                            // デフォルトでは表示・無効化
+                            Visible = true,
+                            Enabled = false
+                        };
+                    }
+                }
+            }
+            
+            // ユーザーの権限に基づいてコントロール状態を更新
+            foreach (var permissionId in userPermissions)
+            {
+                if (_permissionMappings.TryGetValue(permissionId, out var controlList))
+                {
+                    foreach (var controlConfig in controlList)
+                    {
+                        var state = allControlMappings[controlConfig.ControlId];
+                        
+                        // 権限があれば表示・有効化を設定
+                        if (controlConfig.ControlVisibility)
+                        {
+                            state.Visible = true;
+                        }
+                        
+                        if (controlConfig.ControlEnabled)
+                        {
+                            state.Enabled = true;
+                        }
+                    }
+                }
+            }
+            
+            // コントロールの状態を実際に適用
+            ApplyControlStates(form.Controls, allControlMappings);
+        }
+
+        /// <summary>
+        /// コントロールコレクションに対して状態を適用（再帰的）
+        /// </summary>
+        private void ApplyControlStates(Control.ControlCollection controls, 
+                                       Dictionary<string, ControlState> controlStates)
+        {
+            foreach (Control control in controls)
+            {
+                // コントロールの状態を適用
+                if (controlStates.TryGetValue(control.Name, out var state))
+                {
+                    control.Visible = state.Visible;
+                    control.Enabled = state.Enabled;
+                }
+                
+                // 子コントロールに対しても適用
+                if (control.Controls.Count > 0)
+                {
+                    ApplyControlStates(control.Controls, controlStates);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// コントロールの設定情報
+    /// </summary>
+    public class ControlConfig
+    {
+        /// <summary>
+        /// コントロール識別子（通常はName）
+        /// </summary>
+        public string ControlId { get; set; }
+        
+        /// <summary>
+        /// 表示/非表示の制御を行うか
+        /// </summary>
+        public bool ControlVisibility { get; set; } = true;
+        
+        /// <summary>
+        /// 有効/無効の制御を行うか
+        /// </summary>
+        public bool ControlEnabled { get; set; }
+    }
+
+    /// <summary>
+    /// コントロールの状態を保持するためのクラス
+    /// </summary>
+    private class ControlState
+    {
+        /// <summary>
+        /// 表示状態
+        /// </summary>
+        public bool Visible { get; set; }
+        
+        /// <summary>
+        /// 有効状態
+        /// </summary>
+        public bool Enabled { get; set; }
+    }
+}
+```
+
+### PermissionSystemクラスへの統合
+
+既存の`ControlPermissionMapper`クラスを新しい`PermissionControlMapper`に入れ替える形で実装します：
+
+```csharp
+// PermissionSystemクラスのプロパティを変更
+private PermissionControlMapper _permissionControlMapper;
+
+/// <summary>
+/// 権限に対するコントロールマッピング管理
+/// </summary>
+public PermissionControlMapper PermissionControlMapper => _permissionControlMapper;
+
+// コンストラクタで初期化
+public PermissionSystem()
+{
+    _permissionMaster = new PermissionRegistry();
+    _userPermissionManager = new UserPermissionService();
+    _permissionControlMapper = new PermissionControlMapper();
+}
+
+/// <summary>
+/// フォームに対して権限を適用
+/// </summary>
+/// <param name="form">適用対象のフォーム</param>
+public void ApplyPermissionsToForm(Form form)
+{
+    if (form == null)
+        throw new ArgumentNullException(nameof(form));
+
+    if (string.IsNullOrEmpty(CurrentUserId))
+        throw new InvalidOperationException("Current user not set.");
+
+    // 現在のユーザーが持つ権限IDのリストを取得
+    var userPermissions = GetUserPermissionIds(CurrentUserId);
+    _permissionControlMapper.ApplyPermissionsToForm(form, userPermissions);
+}
+
+/// <summary>
+/// ユーザーが持つすべての権限IDを取得
+/// </summary>
+/// <param name="userId">ユーザーID</param>
+/// <returns>権限IDのリスト</returns>
+private List<int> GetUserPermissionIds(string userId)
+{
+    var permissionIds = new List<int>();
+    var allPermissions = _permissionMaster.GetAllPermissions();
+    
+    foreach (var permission in allPermissions)
+    {
+        if (UserHasPermission(userId, permission.Id))
+        {
+            permissionIds.Add(permission.Id);
+        }
+    }
+    
+    return permissionIds;
+}
+```
+
+## 使用例
+
+以下は、権限を基準としたコントロールマッピングの使用例です：
+
+```csharp
+// PermissionSystemのインスタンスを作成
+PermissionSystem permissionSystem = new PermissionSystem();
+
+// 権限を登録
+int viewPermissionId = permissionSystem.PermissionMaster.RegisterNewPermission("ViewData").Id;
+int editPermissionId = permissionSystem.PermissionMaster.RegisterNewPermission("EditData").Id;
+int adminPermissionId = permissionSystem.PermissionMaster.RegisterNewPermission("AdminAccess").Id;
+
+// 権限にコントロールを紐付け
+permissionSystem.PermissionControlMapper.MapPermissionToControl(viewPermissionId, "viewPanel", true, false);
+permissionSystem.PermissionControlMapper.MapPermissionToControl(viewPermissionId, "dataGridView", true, false);
+
+permissionSystem.PermissionControlMapper.MapPermissionToControl(editPermissionId, "editButton", true, true);
+permissionSystem.PermissionControlMapper.MapPermissionToControl(editPermissionId, "saveButton", true, true);
+
+permissionSystem.PermissionControlMapper.MapPermissionToControl(adminPermissionId, "userManagementButton", true, true);
+permissionSystem.PermissionControlMapper.MapPermissionToControl(adminPermissionId, "systemSettingsPanel", true, true);
+
+// マッピングを保存
+permissionSystem.PermissionControlMapper.SaveMappings();
+
+// アプリケーション起動時
+private void Form1_Load(object sender, EventArgs e)
+{
+    // マッピングを読み込み
+    permissionSystem.PermissionControlMapper.LoadMappings();
+    
+    // 現在のユーザーを設定
+    permissionSystem.SetCurrentUser("aoton0029");
+    
+    // フォームに権限を適用
+    permissionSystem.ApplyPermissionsToForm(this);
+}
+```
+
+## この設計の利点
+
+1. **権限中心の設計**: 権限IDをキーにすることで、「この権限を持つユーザーには、これらのコントロールを表示する」という直感的な考え方に沿った設計になります。
+
+2. **管理のしやすさ**: 新しい権限が追加された場合に、その権限に関連するコントロールを一括で管理できます。
+
+3. **一貫性**: 権限に関連するすべてのコントロールに対して、一貫した表示/非表示や有効/無効の設定が可能です。
+
+4. **視覚的な理解**: 権限ごとにどのコントロールが影響を受けるかが明確になるため、権限管理画面での設定や確認が容易になります。
+
+5. **効率的な適用**: ユーザーが持つ権限のリストを取得し、それらの権限に関連付けられたコントロールに一括適用することで、パフォーマンスが向上します。
+
+この実装により、権限を中心とした直感的なコントロール管理が可能になり、アプリケーションの権限設定がより分かりやすく、管理しやすくなるでしょう。
+---
+
 # コントロールと権限の関連性を保存・読み込みする機能の実装
 
 現在の`Permission.cs`を拡張して、WinFormsコントロールと権限の関係を保存・読み込みできるようにする実装方法を提案します。
