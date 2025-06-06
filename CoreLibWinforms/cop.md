@@ -1,3 +1,107 @@
+C#でZIPファイル内の特定のフォルダのファイル名リストを取得するためのサンプルコードを作成します。このコードでは、`System.IO.Compression`名前空間の`ZipArchive`と`ZipArchiveEntry`クラスを使用します。
+
+以下がサンプルコードです：
+
+```csharp
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Collections.Generic;
+using System.Linq;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        // ZIPファイルのパスを指定
+        string zipFilePath = @"C:\path\to\your\zipfile.zip";
+        
+        // 検索対象のフォルダパス（ZIPファイル内のパス）
+        string targetFolderPath = "folder/inside/zip/";
+        
+        // スラッシュで終わっていない場合は追加（フォルダパスとして扱うため）
+        if (!targetFolderPath.EndsWith("/"))
+            targetFolderPath += "/";
+        
+        try
+        {
+            // ZIPファイルを開く
+            using (ZipArchive archive = ZipFile.Open(zipFilePath, ZipArchiveMode.Read))
+            {
+                // 指定したフォルダ内のファイルを取得
+                List<string> fileNames = new List<string>();
+                
+                foreach (ZipArchiveEntry entry in archive.Entries)
+                {
+                    // エントリが指定フォルダ内にあるかチェック
+                    if (entry.FullName.StartsWith(targetFolderPath) && 
+                        // 同じフォルダ名でない（サブディレクトリを除外するため）
+                        entry.FullName != targetFolderPath && 
+                        // サブディレクトリを除外（直下のファイルのみを取得）
+                        !entry.FullName.Substring(targetFolderPath.Length).Contains('/'))
+                    {
+                        // ファイル名のみを追加（パスを除く）
+                        fileNames.Add(entry.Name);
+                    }
+                }
+                
+                // 結果を表示
+                Console.WriteLine($"フォルダ '{targetFolderPath}' 内のファイル:");
+                foreach (string fileName in fileNames)
+                {
+                    Console.WriteLine(fileName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"エラーが発生しました: {ex.Message}");
+        }
+    }
+}
+```
+
+このコードは以下のような動作をします：
+
+1. 指定したZIPファイルを読み取りモードで開きます
+2. ZIPアーカイブ内の全エントリを走査します
+3. 指定したフォルダパスで始まるエントリをフィルタリングします
+4. サブフォルダは除外し、指定フォルダの直下のファイルのみを取得します
+5. ファイル名のみをリストに追加して表示します
+
+もし、サブフォルダも含めた全ファイルを取得したい場合は、以下のようにコードを変更します：
+
+```csharp
+// サブフォルダも含めて全ファイルを取得する場合
+if (entry.FullName.StartsWith(targetFolderPath) && entry.FullName != targetFolderPath)
+{
+    // フォルダを除外（ファイルのみを取得）
+    if (!entry.FullName.EndsWith("/"))
+    {
+        // フルパスを含む場合
+        // fileNames.Add(entry.FullName);
+        
+        // ファイル名のみの場合
+        fileNames.Add(entry.Name);
+    }
+}
+```
+
+LINQを使った別の書き方も可能です：
+
+```csharp
+// LINQ式を使った書き方
+var fileNames = archive.Entries
+    .Where(entry => entry.FullName.StartsWith(targetFolderPath) && 
+                   entry.FullName != targetFolderPath && 
+                   !entry.FullName.Substring(targetFolderPath.Length).Contains('/'))
+    .Select(entry => entry.Name)
+    .ToList();
+```
+
+必要に応じてこのコードをカスタマイズしてください。
+
+
 ご提案の通り、PermissionIdを基準にしてコントロールを紐付ける方が直感的でわかりやすいアプローチになります。現在の実装では、コントロールID（名前）をキーとしてマッピングしていますが、権限IDをキーとして複数のコントロールを紐付ける設計に変更することで、管理がしやすくなります。
 
 以下に、PermissionIdに対してコントロールを紐付ける形に変更した実装を提案します：
