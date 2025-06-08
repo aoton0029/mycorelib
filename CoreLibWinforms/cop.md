@@ -1,3 +1,1569 @@
+# WinForms製造管理検索ポータルのアーキテクチャ設計
+
+製造管理システムで受注情報、シリアルナンバー、部品情報などを検索するためのWinFormsアプリケーションのアーキテクチャを設計します。
+
+## 推奨アーキテクチャ: レイヤードアーキテクチャ + MVPパターン
+
+### 全体構造
+
+```
+SearchPortal/
+├── UI/                      # プレゼンテーション層
+│   ├── Forms/               # WinFormsフォーム
+│   ├── Controls/            # カスタムコントロール
+│   └── Presenters/          # MVP用のPresenter
+├── Domain/                  # ドメイン層
+│   ├── Models/              # ドメインモデル
+│   ├── Services/            # ドメインサービス
+│   └── Interfaces/          # リポジトリインターフェース
+├── Infrastructure/          # インフラ層
+│   ├── Repositories/        # データアクセス実装
+│   ├── DataProviders/       # 外部サービス接続
+│   └── Caching/             # キャッシュ実装
+└── CrossCutting/            # 横断的関心事
+    ├── Logging/             # ログ機能
+    ├── ErrorHandling/       # エラーハンドリング
+    └── Configuration/       # 設定管理
+```
+
+### 詳細構成
+
+#### 1. UI層 (プレゼンテーション層)
+
+```csharp name=MainSearchForm.cs
+using System;
+using System.Windows.Forms;
+using SearchPortal.UI.Presenters;
+using SearchPortal.Domain.Models;
+
+namespace SearchPortal.UI.Forms
+{
+    public partial class MainSearchForm : Form, ISearchView
+    {
+        private readonly SearchPresenter _presenter;
+
+        public MainSearchForm(SearchPresenter presenter)
+        {
+            InitializeComponent();
+            _presenter = presenter;
+            _presenter.View = this;
+            
+            // イベントハンドラーを設定
+            btnSearch.Click += (s, e) => _presenter.Search(txtSearchQuery.Text, GetSelectedSearchType());
+        }
+
+        private SearchType GetSelectedSearchType()
+        {
+            if (rbOrderInfo.Checked) return SearchType.OrderInfo;
+            if (rbSerialNumber.Checked) return SearchType.SerialNumber;
+            if (rbPartInfo.Checked) return SearchType.PartInfo;
+            return SearchType.All;
+        }
+
+        public void DisplayResults<T>(IEnumerable<T> results)
+        {
+            resultsDataGridView.DataSource = results;
+        }
+
+        public void ShowError(string message)
+        {
+            MessageBox.Show(message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        public void SetBusy(bool isBusy)
+        {
+            this.Cursor = isBusy ? Cursors.WaitCursor : Cursors.Default;
+            searchPanel.Enabled = !isBusy;
+            progressBar.Visible = isBusy;
+        }
+    }
+}
+```
+
+```csharp name=ISearchView.cs
+namespace SearchPortal.UI.Presenters
+{
+    public interface ISearchView
+    {
+        void DisplayResults<T>(IEnumerable<T> results);
+        void ShowError(string message);
+        void SetBusy(bool isBusy);
+    }
+}
+```
+
+```csharp name=SearchPresenter.cs
+using System;
+using System.Threading.Tasks;
+using SearchPortal.Domain.Services;
+using SearchPortal.Domain.Models;
+
+namespace SearchPortal.UI.Presenters
+{
+    public class SearchPresenter
+    {
+        private readonly ISearchService _searchService;
+        public ISearchView View { get; set; }
+
+        public SearchPresenter(ISearchService searchService)
+        {
+            _searchService = searchService;
+        }
+
+        public async void Search(string query, SearchType searchType)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                View.ShowError("検索クエリを入力してください。");
+                return;
+            }
+
+            try
+            {
+                View.SetBusy(true);
+                var results = await Task.Run(() => _searchService.Search(query, searchType));
+                View.DisplayResults(results);
+            }
+            catch (Exception ex)
+            {
+                View.ShowError($"検索中にエラーが発生しました: {ex.Message}");
+            }
+            finally
+            {
+                View.SetBusy(false);
+            }
+        }
+    }
+}
+```
+
+#### 2. ドメイン層
+
+```csharp name=SearchType.cs
+namespace SearchPortal.Domain.Models
+{
+    public enum SearchType
+    {
+        All,
+        OrderInfo,
+        SerialNumber,
+        PartInfo
+    }
+}
+```
+
+```csharp name=Order.cs
+using System;
+using System.Collections.Generic;
+
+namespace SearchPortal.Domain.Models
+{
+    public class Order
+    {
+        public string OrderId { get; set; }
+        public DateTime OrderDate { get; set; }
+        public string CustomerName { get; set; }
+        public string ProductName { get; set; }
+        public int Quantity { get; set; }
+        public OrderStatus Status { get; set; }
+        public List<string> SerialNumbers { get; set; }
+        public List<Part> Parts { get; set; }
+    }
+
+    public enum OrderStatus
+    {
+        New,
+        InProgress,
+        Completed,
+        Shipped,
+        Cancelled
+    }
+}
+```
+
+```csharp name=Part.cs
+namespace SearchPortal.Domain.Models
+{
+    public class Part
+    {
+        public string PartId { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string Manufacturer { get; set; }
+        public string SupplierCode { get; set; }
+        public int StockQuantity { get; set; }
+    }
+}
+```
+
+```csharp name=ISearchService.cs
+using System.Collections.Generic;
+using SearchPortal.Domain.Models;
+
+namespace SearchPortal.Domain.Services
+{
+    public interface ISearchService
+    {
+        IEnumerable<object> Search(string query, SearchType searchType);
+    }
+}
+```
+
+```csharp name=SearchService.cs
+using System.Collections.Generic;
+using System.Linq;
+using SearchPortal.Domain.Models;
+using SearchPortal.Domain.Interfaces;
+
+namespace SearchPortal.Domain.Services
+{
+    public class SearchService : ISearchService
+    {
+        private readonly IOrderRepository _orderRepository;
+        private readonly IPartRepository _partRepository;
+
+        public SearchService(IOrderRepository orderRepository, IPartRepository partRepository)
+        {
+            _orderRepository = orderRepository;
+            _partRepository = partRepository;
+        }
+
+        public IEnumerable<object> Search(string query, SearchType searchType)
+        {
+            switch (searchType)
+            {
+                case SearchType.OrderInfo:
+                    return _orderRepository.SearchOrders(query);
+
+                case SearchType.SerialNumber:
+                    return _orderRepository.SearchBySerialNumber(query);
+
+                case SearchType.PartInfo:
+                    var parts = _partRepository.SearchParts(query);
+                    if (parts.Any())
+                        return parts;
+                    return _orderRepository.SearchOrdersByPartInfo(query);
+
+                case SearchType.All:
+                default:
+                    var results = new List<object>();
+                    results.AddRange(_orderRepository.SearchOrders(query));
+                    results.AddRange(_orderRepository.SearchBySerialNumber(query));
+                    results.AddRange(_partRepository.SearchParts(query));
+                    return results;
+            }
+        }
+    }
+}
+```
+
+#### 3. インフラ層
+
+```csharp name=IOrderRepository.cs
+using System.Collections.Generic;
+using SearchPortal.Domain.Models;
+
+namespace SearchPortal.Domain.Interfaces
+{
+    public interface IOrderRepository
+    {
+        IEnumerable<Order> SearchOrders(string query);
+        IEnumerable<Order> SearchBySerialNumber(string serialNumber);
+        IEnumerable<Order> SearchOrdersByPartInfo(string partInfo);
+    }
+}
+```
+
+```csharp name=IPartRepository.cs
+using System.Collections.Generic;
+using SearchPortal.Domain.Models;
+
+namespace SearchPortal.Domain.Interfaces
+{
+    public interface IPartRepository
+    {
+        IEnumerable<Part> SearchParts(string query);
+    }
+}
+```
+
+```csharp name=OrderRepository.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using SearchPortal.Domain.Models;
+using SearchPortal.Domain.Interfaces;
+using SearchPortal.Infrastructure.DataProviders;
+
+namespace SearchPortal.Infrastructure.Repositories
+{
+    public class OrderRepository : IOrderRepository
+    {
+        private readonly IDatabaseProvider _databaseProvider;
+
+        public OrderRepository(IDatabaseProvider databaseProvider)
+        {
+            _databaseProvider = databaseProvider;
+        }
+
+        public IEnumerable<Order> SearchOrders(string query)
+        {
+            string sql = @"
+                SELECT * FROM Orders o
+                LEFT JOIN Customers c ON o.CustomerId = c.CustomerId
+                LEFT JOIN Products p ON o.ProductId = p.ProductId
+                WHERE o.OrderId LIKE @Query 
+                   OR c.Name LIKE @Query 
+                   OR p.Name LIKE @Query";
+
+            return _databaseProvider.Query<Order>(sql, new { Query = $"%{query}%" });
+        }
+
+        public IEnumerable<Order> SearchBySerialNumber(string serialNumber)
+        {
+            string sql = @"
+                SELECT o.* FROM Orders o
+                INNER JOIN ProductSerialNumbers psn ON o.OrderId = psn.OrderId
+                WHERE psn.SerialNumber LIKE @SerialNumber";
+
+            return _databaseProvider.Query<Order>(sql, new { SerialNumber = $"%{serialNumber}%" });
+        }
+
+        public IEnumerable<Order> SearchOrdersByPartInfo(string partInfo)
+        {
+            string sql = @"
+                SELECT o.* FROM Orders o
+                INNER JOIN OrderParts op ON o.OrderId = op.OrderId
+                INNER JOIN Parts p ON op.PartId = p.PartId
+                WHERE p.PartId LIKE @Query
+                   OR p.Name LIKE @Query
+                   OR p.Description LIKE @Query";
+
+            return _databaseProvider.Query<Order>(sql, new { Query = $"%{partInfo}%" });
+        }
+    }
+}
+```
+
+#### 4. 依存性注入の設定
+
+```csharp name=Program.cs
+using System;
+using System.Windows.Forms;
+using Microsoft.Extensions.DependencyInjection;
+using SearchPortal.Domain.Interfaces;
+using SearchPortal.Domain.Services;
+using SearchPortal.Infrastructure.DataProviders;
+using SearchPortal.Infrastructure.Repositories;
+using SearchPortal.UI.Forms;
+using SearchPortal.UI.Presenters;
+
+namespace SearchPortal
+{
+    static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+
+            using (var serviceProvider = services.BuildServiceProvider())
+            {
+                var mainForm = serviceProvider.GetRequiredService<MainSearchForm>();
+                Application.Run(mainForm);
+            }
+        }
+
+        private static void ConfigureServices(ServiceCollection services)
+        {
+            // インフラストラクチャ
+            services.AddSingleton<IDatabaseProvider, SqlDatabaseProvider>();
+            
+            // リポジトリ
+            services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddScoped<IPartRepository, PartRepository>();
+            
+            // サービス
+            services.AddScoped<ISearchService, SearchService>();
+            
+            // プレゼンター
+            services.AddScoped<SearchPresenter>();
+            
+            // フォーム
+            services.AddScoped<MainSearchForm>();
+        }
+    }
+}
+```
+
+## アーキテクチャの特徴と利点
+
+1. **MVPパターンの採用**
+   - View (フォーム) とロジックの分離
+   - テスト容易性の向上
+   - UIスレッドと処理スレッドの分離が容易
+
+2. **レイヤード設計**
+   - UI、ドメイン、インフラの明確な責任分離
+   - 各層の依存方向が一方向のみ（上位層→下位層）
+
+3. **依存性注入**
+   - コンポーネント間の疎結合
+   - テスト時のモック置換が容易
+   - 拡張性の向上
+
+4. **非同期処理**
+   - UIのレスポンス性を維持しながらの検索処理
+   - Task.Runによるバックグラウンド処理
+
+5. **拡張性**
+   - 新しい検索タイプの追加が容易
+   - データソースの変更が他の層に影響しない
+
+## 検索の拡張機能
+
+1. **検索フィルタリング**
+   - 日付範囲、ステータス、部品タイプなど詳細フィルター
+
+2. **高度な検索**
+   - AND/OR条件
+   - 複数フィールドの組み合わせ
+
+3. **検索履歴**
+   - 過去の検索クエリの保存と再利用
+
+4. **エクスポート機能**
+   - 検索結果のCSV/Excel出力
+
+5. **キャッシュ機能**
+   - 頻繁に使用される検索結果のキャッシュによるパフォーマンス向上
+
+この設計は、製造管理システムにおける検索ポータルとして拡張性と保守性に優れています。
+
+--- 
+
+# WinForms製造管理検索ポータルへの履歴機能と権限機能の追加
+
+既存の製造管理検索ポータルに履歴機能と権限管理機能を追加します。これにより、ユーザー操作の追跡と適切なアクセス制御が可能になります。
+
+## アーキテクチャの拡張
+
+```
+SearchPortal/
+├── UI/
+│   ├── Forms/
+│   ├── Controls/
+│   └── Presenters/
+├── Domain/
+│   ├── Models/
+│   ├── Services/
+│   └── Interfaces/
+├── Infrastructure/
+│   ├── Repositories/
+│   ├── DataProviders/
+│   └── Caching/
+├── CrossCutting/
+│   ├── Logging/
+│   ├── ErrorHandling/
+│   └── Configuration/
+└── Security/               # 新規追加
+    ├── Authentication/     # 認証機能
+    ├── Authorization/      # 権限管理
+    └── Auditing/           # 操作履歴
+```
+
+## 1. 履歴機能の実装
+
+### ドメインモデル
+
+```csharp name=SearchHistory.cs
+using System;
+
+namespace SearchPortal.Domain.Models
+{
+    public class SearchHistory
+    {
+        public int Id { get; set; }
+        public string UserId { get; set; }
+        public string SearchQuery { get; set; }
+        public SearchType SearchType { get; set; }
+        public DateTime SearchTimestamp { get; set; }
+        public int ResultCount { get; set; }
+        public bool IsFavorite { get; set; }
+        public string Notes { get; set; }
+    }
+}
+```
+
+### リポジトリインターフェース
+
+```csharp name=ISearchHistoryRepository.cs
+using System;
+using System.Collections.Generic;
+using SearchPortal.Domain.Models;
+
+namespace SearchPortal.Domain.Interfaces
+{
+    public interface ISearchHistoryRepository
+    {
+        void SaveSearchHistory(SearchHistory history);
+        IEnumerable<SearchHistory> GetUserSearchHistory(string userId, int maxResults = 100);
+        IEnumerable<SearchHistory> GetUserFavoriteSearches(string userId);
+        void ToggleFavorite(int historyId, bool isFavorite);
+        void UpdateNotes(int historyId, string notes);
+        void DeleteHistoryItem(int historyId);
+        void ClearUserHistory(string userId);
+    }
+}
+```
+
+### サービス実装
+
+```csharp name=SearchHistoryService.cs
+using System;
+using System.Collections.Generic;
+using SearchPortal.Domain.Models;
+using SearchPortal.Domain.Interfaces;
+
+namespace SearchPortal.Domain.Services
+{
+    public class SearchHistoryService : ISearchHistoryService
+    {
+        private readonly ISearchHistoryRepository _historyRepository;
+        private readonly ICurrentUserService _currentUserService;
+
+        public SearchHistoryService(ISearchHistoryRepository historyRepository, 
+                                   ICurrentUserService currentUserService)
+        {
+            _historyRepository = historyRepository;
+            _currentUserService = currentUserService;
+        }
+
+        public void RecordSearch(string searchQuery, SearchType searchType, int resultCount)
+        {
+            var history = new SearchHistory
+            {
+                UserId = _currentUserService.GetCurrentUserId(),
+                SearchQuery = searchQuery,
+                SearchType = searchType,
+                SearchTimestamp = DateTime.UtcNow,
+                ResultCount = resultCount,
+                IsFavorite = false
+            };
+
+            _historyRepository.SaveSearchHistory(history);
+        }
+
+        public IEnumerable<SearchHistory> GetUserHistory(int maxResults = 100)
+        {
+            string userId = _currentUserService.GetCurrentUserId();
+            return _historyRepository.GetUserSearchHistory(userId, maxResults);
+        }
+
+        public IEnumerable<SearchHistory> GetUserFavorites()
+        {
+            string userId = _currentUserService.GetCurrentUserId();
+            return _historyRepository.GetUserFavoriteSearches(userId);
+        }
+
+        public void ToggleFavorite(int historyId, bool isFavorite)
+        {
+            _historyRepository.ToggleFavorite(historyId, isFavorite);
+        }
+
+        public void UpdateNotes(int historyId, string notes)
+        {
+            _historyRepository.UpdateNotes(historyId, notes);
+        }
+
+        public void DeleteHistoryItem(int historyId)
+        {
+            _historyRepository.DeleteHistoryItem(historyId);
+        }
+
+        public void ClearHistory()
+        {
+            string userId = _currentUserService.GetCurrentUserId();
+            _historyRepository.ClearUserHistory(userId);
+        }
+    }
+
+    public interface ISearchHistoryService
+    {
+        void RecordSearch(string searchQuery, SearchType searchType, int resultCount);
+        IEnumerable<SearchHistory> GetUserHistory(int maxResults = 100);
+        IEnumerable<SearchHistory> GetUserFavorites();
+        void ToggleFavorite(int historyId, bool isFavorite);
+        void UpdateNotes(int historyId, string notes);
+        void DeleteHistoryItem(int historyId);
+        void ClearHistory();
+    }
+}
+```
+
+### リポジトリ実装
+
+```csharp name=SearchHistoryRepository.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using SearchPortal.Domain.Models;
+using SearchPortal.Domain.Interfaces;
+using SearchPortal.Infrastructure.DataProviders;
+
+namespace SearchPortal.Infrastructure.Repositories
+{
+    public class SearchHistoryRepository : ISearchHistoryRepository
+    {
+        private readonly IDatabaseProvider _databaseProvider;
+
+        public SearchHistoryRepository(IDatabaseProvider databaseProvider)
+        {
+            _databaseProvider = databaseProvider;
+        }
+
+        public void SaveSearchHistory(SearchHistory history)
+        {
+            string sql = @"
+                INSERT INTO SearchHistory (UserId, SearchQuery, SearchType, SearchTimestamp, ResultCount, IsFavorite, Notes)
+                VALUES (@UserId, @SearchQuery, @SearchType, @SearchTimestamp, @ResultCount, @IsFavorite, @Notes);
+                SELECT SCOPE_IDENTITY();";
+
+            history.Id = _databaseProvider.ExecuteScalar<int>(sql, history);
+        }
+
+        public IEnumerable<SearchHistory> GetUserSearchHistory(string userId, int maxResults = 100)
+        {
+            string sql = @"
+                SELECT TOP(@MaxResults) * FROM SearchHistory 
+                WHERE UserId = @UserId 
+                ORDER BY SearchTimestamp DESC";
+
+            return _databaseProvider.Query<SearchHistory>(sql, new { UserId = userId, MaxResults = maxResults });
+        }
+
+        public IEnumerable<SearchHistory> GetUserFavoriteSearches(string userId)
+        {
+            string sql = @"
+                SELECT * FROM SearchHistory 
+                WHERE UserId = @UserId AND IsFavorite = 1
+                ORDER BY SearchTimestamp DESC";
+
+            return _databaseProvider.Query<SearchHistory>(sql, new { UserId = userId });
+        }
+
+        public void ToggleFavorite(int historyId, bool isFavorite)
+        {
+            string sql = @"
+                UPDATE SearchHistory 
+                SET IsFavorite = @IsFavorite
+                WHERE Id = @Id";
+
+            _databaseProvider.Execute(sql, new { Id = historyId, IsFavorite = isFavorite });
+        }
+
+        public void UpdateNotes(int historyId, string notes)
+        {
+            string sql = @"
+                UPDATE SearchHistory 
+                SET Notes = @Notes
+                WHERE Id = @Id";
+
+            _databaseProvider.Execute(sql, new { Id = historyId, Notes = notes });
+        }
+
+        public void DeleteHistoryItem(int historyId)
+        {
+            string sql = @"DELETE FROM SearchHistory WHERE Id = @Id";
+            _databaseProvider.Execute(sql, new { Id = historyId });
+        }
+
+        public void ClearUserHistory(string userId)
+        {
+            string sql = @"DELETE FROM SearchHistory WHERE UserId = @UserId";
+            _databaseProvider.Execute(sql, new { UserId = userId });
+        }
+    }
+}
+```
+
+### 履歴フォーム
+
+```csharp name=SearchHistoryForm.cs
+using System;
+using System.Windows.Forms;
+using SearchPortal.Domain.Models;
+using SearchPortal.Domain.Services;
+using SearchPortal.UI.Presenters;
+
+namespace SearchPortal.UI.Forms
+{
+    public partial class SearchHistoryForm : Form
+    {
+        private readonly ISearchHistoryService _historyService;
+        private readonly SearchPresenter _searchPresenter;
+
+        public SearchHistoryForm(ISearchHistoryService historyService, SearchPresenter searchPresenter)
+        {
+            InitializeComponent();
+            _historyService = historyService;
+            _searchPresenter = searchPresenter;
+            
+            Load += SearchHistoryForm_Load;
+            tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
+        }
+
+        private void SearchHistoryForm_Load(object sender, EventArgs e)
+        {
+            LoadHistoryData();
+        }
+
+        private void TabControl_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (tabControl.SelectedTab == tabHistory)
+                LoadHistoryData();
+            else if (tabControl.SelectedTab == tabFavorites)
+                LoadFavoriteData();
+        }
+
+        private void LoadHistoryData()
+        {
+            var history = _historyService.GetUserHistory();
+            dgvHistory.DataSource = history;
+            ConfigureDataGridView(dgvHistory);
+        }
+
+        private void LoadFavoriteData()
+        {
+            var favorites = _historyService.GetUserFavorites();
+            dgvFavorites.DataSource = favorites;
+            ConfigureDataGridView(dgvFavorites);
+        }
+
+        private void ConfigureDataGridView(DataGridView dgv)
+        {
+            dgv.Columns["Id"].Visible = false;
+            dgv.Columns["UserId"].Visible = false;
+
+            if (dgv.Columns.Contains("SearchTimestamp"))
+                dgv.Columns["SearchTimestamp"].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss";
+            
+            // 各行にアクション列を追加
+            if (!dgv.Columns.Contains("RerunSearch"))
+            {
+                var btnColumn = new DataGridViewButtonColumn();
+                btnColumn.Name = "RerunSearch";
+                btnColumn.Text = "検索実行";
+                btnColumn.UseColumnTextForButtonValue = true;
+                dgv.Columns.Add(btnColumn);
+                
+                dgv.CellClick += Dgv_CellClick;
+            }
+        }
+
+        private void Dgv_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            var dgv = sender as DataGridView;
+            
+            // 検索再実行ボタンクリック
+            if (e.ColumnIndex == dgv.Columns["RerunSearch"].Index && e.RowIndex >= 0)
+            {
+                var row = dgv.Rows[e.RowIndex];
+                var history = row.DataBoundItem as SearchHistory;
+                
+                if (history != null)
+                {
+                    _searchPresenter.Search(history.SearchQuery, history.SearchType);
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
+                }
+            }
+            
+            // お気に入り操作
+            if (dgv.Columns.Contains("IsFavorite") && e.ColumnIndex == dgv.Columns["IsFavorite"].Index && e.RowIndex >= 0)
+            {
+                var row = dgv.Rows[e.RowIndex];
+                var history = row.DataBoundItem as SearchHistory;
+                
+                if (history != null)
+                {
+                    bool newFavoriteState = !history.IsFavorite;
+                    _historyService.ToggleFavorite(history.Id, newFavoriteState);
+                    
+                    // UIを更新
+                    history.IsFavorite = newFavoriteState;
+                    dgv.RefreshEdit();
+                }
+            }
+        }
+
+        private void btnClearHistory_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("検索履歴をすべて削除しますか？", "履歴削除", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                _historyService.ClearHistory();
+                LoadHistoryData();
+                LoadFavoriteData();
+            }
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            this.DialogResult = DialogResult.Cancel;
+            this.Close();
+        }
+    }
+}
+```
+
+## 2. 権限機能の実装
+
+### ユーザーと権限モデル
+
+```csharp name=User.cs
+using System;
+using System.Collections.Generic;
+
+namespace SearchPortal.Security.Models
+{
+    public class User
+    {
+        public string UserId { get; set; }
+        public string Username { get; set; }
+        public string PasswordHash { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public string Department { get; set; }
+        public UserRole Role { get; set; }
+        public DateTime LastLoginTime { get; set; }
+        public bool IsActive { get; set; }
+        public List<Permission> Permissions { get; set; } = new List<Permission>();
+    }
+
+    public enum UserRole
+    {
+        Guest = 0,
+        Operator = 10,
+        Supervisor = 20,
+        Manager = 30,
+        Administrator = 100
+    }
+
+    public enum Permission
+    {
+        ViewOrderInfo = 1,
+        ViewSerialNumbers = 2,
+        ViewPartInfo = 3,
+        ExportData = 10,
+        ModifyData = 20,
+        AdminAccess = 100
+    }
+}
+```
+
+### 認証・認可サービス
+
+```csharp name=AuthenticationService.cs
+using System;
+using System.Security.Cryptography;
+using System.Text;
+using SearchPortal.Security.Models;
+using SearchPortal.Domain.Interfaces;
+
+namespace SearchPortal.Security.Authentication
+{
+    public interface IAuthenticationService
+    {
+        bool Login(string username, string password);
+        void Logout();
+        User GetCurrentUser();
+        bool IsAuthenticated { get; }
+        bool HasPermission(Permission permission);
+        bool IsInRole(UserRole minimumRole);
+    }
+
+    public class AuthenticationService : IAuthenticationService, ICurrentUserService
+    {
+        private readonly IUserRepository _userRepository;
+        private User _currentUser;
+
+        public AuthenticationService(IUserRepository userRepository)
+        {
+            _userRepository = userRepository;
+        }
+
+        public bool IsAuthenticated => _currentUser != null;
+
+        public bool Login(string username, string password)
+        {
+            var user = _userRepository.GetUserByUsername(username);
+            if (user == null) return false;
+
+            string hashedPassword = HashPassword(password);
+            if (user.PasswordHash != hashedPassword) return false;
+
+            if (!user.IsActive) return false;
+
+            _currentUser = user;
+            
+            // 最終ログイン時間を更新
+            user.LastLoginTime = DateTime.UtcNow;
+            _userRepository.UpdateUser(user);
+
+            return true;
+        }
+
+        public void Logout()
+        {
+            _currentUser = null;
+        }
+
+        public User GetCurrentUser()
+        {
+            return _currentUser;
+        }
+        
+        public string GetCurrentUserId()
+        {
+            return _currentUser?.UserId;
+        }
+
+        public bool HasPermission(Permission permission)
+        {
+            if (!IsAuthenticated) return false;
+            
+            // 管理者は全ての権限を持つ
+            if (_currentUser.Role == UserRole.Administrator) return true;
+            
+            return _currentUser.Permissions.Contains(permission);
+        }
+
+        public bool IsInRole(UserRole minimumRole)
+        {
+            if (!IsAuthenticated) return false;
+            return (int)_currentUser.Role >= (int)minimumRole;
+        }
+
+        private string HashPassword(string password)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(password);
+                byte[] hash = sha256.ComputeHash(bytes);
+                return Convert.ToBase64String(hash);
+            }
+        }
+    }
+}
+```
+
+### ユーザーリポジトリ
+
+```csharp name=IUserRepository.cs
+using SearchPortal.Security.Models;
+using System.Collections.Generic;
+
+namespace SearchPortal.Domain.Interfaces
+{
+    public interface IUserRepository
+    {
+        User GetUserByUsername(string username);
+        User GetUserById(string userId);
+        IEnumerable<User> GetAllUsers();
+        void CreateUser(User user);
+        void UpdateUser(User user);
+        void DeactivateUser(string userId);
+        void SetUserPermissions(string userId, IEnumerable<Permission> permissions);
+    }
+}
+```
+
+```csharp name=UserRepository.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using SearchPortal.Security.Models;
+using SearchPortal.Domain.Interfaces;
+using SearchPortal.Infrastructure.DataProviders;
+
+namespace SearchPortal.Infrastructure.Repositories
+{
+    public class UserRepository : IUserRepository
+    {
+        private readonly IDatabaseProvider _databaseProvider;
+
+        public UserRepository(IDatabaseProvider databaseProvider)
+        {
+            _databaseProvider = databaseProvider;
+        }
+
+        public User GetUserByUsername(string username)
+        {
+            string sql = @"SELECT * FROM Users WHERE Username = @Username";
+            var user = _databaseProvider.QueryFirstOrDefault<User>(sql, new { Username = username });
+            
+            if (user != null)
+            {
+                user.Permissions = GetUserPermissions(user.UserId);
+            }
+            
+            return user;
+        }
+
+        public User GetUserById(string userId)
+        {
+            string sql = @"SELECT * FROM Users WHERE UserId = @UserId";
+            var user = _databaseProvider.QueryFirstOrDefault<User>(sql, new { UserId = userId });
+            
+            if (user != null)
+            {
+                user.Permissions = GetUserPermissions(user.UserId);
+            }
+            
+            return user;
+        }
+
+        public IEnumerable<User> GetAllUsers()
+        {
+            string sql = @"SELECT * FROM Users ORDER BY Username";
+            var users = _databaseProvider.Query<User>(sql);
+            
+            foreach (var user in users)
+            {
+                user.Permissions = GetUserPermissions(user.UserId);
+            }
+            
+            return users;
+        }
+
+        public void CreateUser(User user)
+        {
+            string sql = @"
+                INSERT INTO Users (UserId, Username, PasswordHash, FullName, Email, Department, Role, LastLoginTime, IsActive)
+                VALUES (@UserId, @Username, @PasswordHash, @FullName, @Email, @Department, @Role, @LastLoginTime, @IsActive)";
+            
+            _databaseProvider.Execute(sql, user);
+            
+            if (user.Permissions != null && user.Permissions.Any())
+            {
+                SetUserPermissions(user.UserId, user.Permissions);
+            }
+        }
+
+        public void UpdateUser(User user)
+        {
+            string sql = @"
+                UPDATE Users
+                SET FullName = @FullName,
+                    Email = @Email,
+                    Department = @Department,
+                    Role = @Role,
+                    LastLoginTime = @LastLoginTime,
+                    IsActive = @IsActive
+                WHERE UserId = @UserId";
+                
+            _databaseProvider.Execute(sql, user);
+        }
+
+        public void DeactivateUser(string userId)
+        {
+            string sql = @"UPDATE Users SET IsActive = 0 WHERE UserId = @UserId";
+            _databaseProvider.Execute(sql, new { UserId = userId });
+        }
+
+        public void SetUserPermissions(string userId, IEnumerable<Permission> permissions)
+        {
+            // まず既存の権限を削除
+            string deleteSql = @"DELETE FROM UserPermissions WHERE UserId = @UserId";
+            _databaseProvider.Execute(deleteSql, new { UserId = userId });
+            
+            // 新しい権限を追加
+            if (permissions != null && permissions.Any())
+            {
+                string insertSql = @"
+                    INSERT INTO UserPermissions (UserId, Permission)
+                    VALUES (@UserId, @Permission)";
+                    
+                foreach (var permission in permissions)
+                {
+                    _databaseProvider.Execute(insertSql, new { UserId = userId, Permission = (int)permission });
+                }
+            }
+        }
+
+        private List<Permission> GetUserPermissions(string userId)
+        {
+            string sql = @"SELECT Permission FROM UserPermissions WHERE UserId = @UserId";
+            var permissionIds = _databaseProvider.Query<int>(sql, new { UserId = userId });
+            
+            return permissionIds.Select(id => (Permission)id).ToList();
+        }
+    }
+}
+```
+
+### ログインフォーム
+
+```csharp name=LoginForm.cs
+using System;
+using System.Windows.Forms;
+using SearchPortal.Security.Authentication;
+
+namespace SearchPortal.UI.Forms
+{
+    public partial class LoginForm : Form
+    {
+        private readonly IAuthenticationService _authService;
+
+        public LoginForm(IAuthenticationService authService)
+        {
+            InitializeComponent();
+            _authService = authService;
+            
+            // 今日の日時を表示
+            lblDateTime.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        }
+
+        private void btnLogin_Click(object sender, EventArgs e)
+        {
+            string username = txtUsername.Text;
+            string password = txtPassword.Text;
+            
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            {
+                MessageBox.Show("ユーザー名とパスワードを入力してください。", "エラー", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            
+            lblStatus.Text = "認証中...";
+            Application.DoEvents();
+            
+            try
+            {
+                bool success = _authService.Login(username, password);
+                
+                if (success)
+                {
+                    var user = _authService.GetCurrentUser();
+                    DialogResult = DialogResult.OK;
+                    this.Close();
+                }
+                else
+                {
+                    MessageBox.Show("ユーザー名またはパスワードが正しくありません。", "ログインエラー", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    txtPassword.Clear();
+                    txtPassword.Focus();
+                    lblStatus.Text = "ログインに失敗しました。";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ログイン処理中にエラーが発生しました: {ex.Message}", "エラー", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = "エラーが発生しました。";
+            }
+        }
+
+        private void btnExit_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+    }
+}
+```
+
+## 3. メインアプリケーションの更新
+
+### アプリケーション起動部分の変更
+
+```csharp name=Program.cs
+using System;
+using System.Windows.Forms;
+using Microsoft.Extensions.DependencyInjection;
+using SearchPortal.Domain.Interfaces;
+using SearchPortal.Domain.Services;
+using SearchPortal.Infrastructure.DataProviders;
+using SearchPortal.Infrastructure.Repositories;
+using SearchPortal.UI.Forms;
+using SearchPortal.UI.Presenters;
+using SearchPortal.Security.Authentication;
+
+namespace SearchPortal
+{
+    static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+
+            using (var serviceProvider = services.BuildServiceProvider())
+            {
+                // ログイン処理
+                var authService = serviceProvider.GetRequiredService<IAuthenticationService>();
+                var loginForm = serviceProvider.GetRequiredService<LoginForm>();
+                
+                if (loginForm.ShowDialog() != DialogResult.OK)
+                {
+                    return;
+                }
+                
+                // メインフォームを表示
+                var mainForm = serviceProvider.GetRequiredService<MainSearchForm>();
+                Application.Run(mainForm);
+            }
+        }
+
+        private static void ConfigureServices(ServiceCollection services)
+        {
+            // インフラストラクチャ
+            services.AddSingleton<IDatabaseProvider, SqlDatabaseProvider>();
+            
+            // 認証・認可
+            services.AddScoped<IAuthenticationService, AuthenticationService>();
+            services.AddScoped<ICurrentUserService>(provider => 
+                (ICurrentUserService)provider.GetService<IAuthenticationService>());
+            
+            // リポジトリ
+            services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddScoped<IPartRepository, PartRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<ISearchHistoryRepository, SearchHistoryRepository>();
+            
+            // サービス
+            services.AddScoped<ISearchService, SearchService>();
+            services.AddScoped<ISearchHistoryService, SearchHistoryService>();
+            
+            // プレゼンター
+            services.AddScoped<SearchPresenter>();
+            
+            // フォーム
+            services.AddScoped<LoginForm>();
+            services.AddScoped<MainSearchForm>();
+            services.AddScoped<SearchHistoryForm>();
+        }
+    }
+}
+```
+
+### メインフォームの更新
+
+```csharp name=MainSearchForm.cs
+using System;
+using System.Windows.Forms;
+using System.Collections.Generic;
+using SearchPortal.UI.Presenters;
+using SearchPortal.Domain.Models;
+using SearchPortal.Domain.Services;
+using SearchPortal.Security.Authentication;
+using SearchPortal.Security.Models;
+
+namespace SearchPortal.UI.Forms
+{
+    public partial class MainSearchForm : Form, ISearchView
+    {
+        private readonly SearchPresenter _presenter;
+        private readonly ISearchHistoryService _historyService;
+        private readonly IAuthenticationService _authService;
+        private readonly IServiceProvider _serviceProvider;
+
+        public MainSearchForm(
+            SearchPresenter presenter, 
+            ISearchHistoryService historyService,
+            IAuthenticationService authService,
+            IServiceProvider serviceProvider)
+        {
+            InitializeComponent();
+            _presenter = presenter;
+            _presenter.View = this;
+            _historyService = historyService;
+            _authService = authService;
+            _serviceProvider = serviceProvider;
+            
+            // イベントハンドラーを設定
+            btnSearch.Click += (s, e) => PerformSearch();
+            btnHistory.Click += BtnHistory_Click;
+            
+            this.Load += MainSearchForm_Load;
+        }
+
+        private void MainSearchForm_Load(object sender, EventArgs e)
+        {
+            var currentUser = _authService.GetCurrentUser();
+            lblUser.Text = $"ユーザー: {currentUser.FullName} ({currentUser.Department})";
+            lblDate.Text = $"日時: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+
+            // 権限に基づいてUIを設定
+            ConfigureUIBasedOnPermissions();
+        }
+
+        private void ConfigureUIBasedOnPermissions()
+        {
+            // 受注情報検索の権限チェック
+            rbOrderInfo.Enabled = _authService.HasPermission(Permission.ViewOrderInfo);
+            
+            // シリアルナンバー検索の権限チェック
+            rbSerialNumber.Enabled = _authService.HasPermission(Permission.ViewSerialNumbers);
+            
+            // 部品情報検索の権限チェック
+            rbPartInfo.Enabled = _authService.HasPermission(Permission.ViewPartInfo);
+            
+            // エクスポート機能の権限チェック
+            btnExport.Enabled = _authService.HasPermission(Permission.ExportData);
+            
+            // 管理者機能の権限チェック
+            btnAdmin.Visible = _authService.IsInRole(UserRole.Administrator);
+        }
+
+        private void PerformSearch()
+        {
+            string searchQuery = txtSearchQuery.Text;
+            SearchType searchType = GetSelectedSearchType();
+            
+            // 検索権限の確認
+            if (!ValidateSearchPermissions(searchType))
+            {
+                MessageBox.Show("この検索タイプに対する権限がありません。", 
+                    "権限エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            _presenter.Search(searchQuery, searchType);
+        }
+
+        private bool ValidateSearchPermissions(SearchType searchType)
+        {
+            switch (searchType)
+            {
+                case SearchType.OrderInfo:
+                    return _authService.HasPermission(Permission.ViewOrderInfo);
+                case SearchType.SerialNumber:
+                    return _authService.HasPermission(Permission.ViewSerialNumbers);
+                case SearchType.PartInfo:
+                    return _authService.HasPermission(Permission.ViewPartInfo);
+                case SearchType.All:
+                    return _authService.HasPermission(Permission.ViewOrderInfo) || 
+                           _authService.HasPermission(Permission.ViewSerialNumbers) || 
+                           _authService.HasPermission(Permission.ViewPartInfo);
+                default:
+                    return false;
+            }
+        }
+
+        private SearchType GetSelectedSearchType()
+        {
+            if (rbOrderInfo.Checked) return SearchType.OrderInfo;
+            if (rbSerialNumber.Checked) return SearchType.SerialNumber;
+            if (rbPartInfo.Checked) return SearchType.PartInfo;
+            return SearchType.All;
+        }
+
+        private void BtnHistory_Click(object sender, EventArgs e)
+        {
+            var historyForm = _serviceProvider.GetRequiredService<SearchHistoryForm>();
+            if (historyForm.ShowDialog() == DialogResult.OK)
+            {
+                // 履歴からの検索が実行された場合はフォームをリフレッシュ
+                RefreshResults();
+            }
+        }
+
+        public void DisplayResults<T>(IEnumerable<T> results)
+        {
+            resultsDataGridView.DataSource = results;
+            
+            // 結果の件数
+            int count = 0;
+            foreach (var _ in results) count++;
+            
+            lblResultCount.Text = $"検索結果: {count}件";
+            
+            // 検索履歴に保存
+            _historyService.RecordSearch(txtSearchQuery.Text, GetSelectedSearchType(), count);
+        }
+
+        public void ShowError(string message)
+        {
+            MessageBox.Show(message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        public void SetBusy(bool isBusy)
+        {
+            this.Cursor = isBusy ? Cursors.WaitCursor : Cursors.Default;
+            searchPanel.Enabled = !isBusy;
+            progressBar.Visible = isBusy;
+        }
+
+        private void RefreshResults()
+        {
+            // 現在の検索結果を再度表示する必要がある場合に呼び出す
+        }
+
+        private void btnLogout_Click(object sender, EventArgs e)
+        {
+            _authService.Logout();
+            this.Close();
+            Application.Restart();
+        }
+
+        private void btnExport_Click(object sender, EventArgs e)
+        {
+            if (!_authService.HasPermission(Permission.ExportData))
+            {
+                MessageBox.Show("データのエクスポート権限がありません。", 
+                    "権限エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // エクスポート処理
+            SaveFileDialog saveDialog = new SaveFileDialog
+            {
+                Filter = "CSVファイル (*.csv)|*.csv|Excelファイル (*.xlsx)|*.xlsx",
+                Title = "検索結果をエクスポート",
+                FileName = $"SearchResults_{DateTime.Now:yyyyMMdd_HHmmss}"
+            };
+
+            if (saveDialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    SetBusy(true);
+                    
+                    // 実際のエクスポート処理を実装...
+                    // （ここでは省略）
+                    
+                    MessageBox.Show("エクスポートが完了しました。", 
+                        "エクスポート完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"エクスポート中にエラーが発生しました: {ex.Message}");
+                }
+                finally
+                {
+                    SetBusy(false);
+                }
+            }
+        }
+    }
+}
+```
+
+## 4. 権限とデータベースの定義
+
+```sql name=database_schema.sql
+-- ユーザーテーブル
+CREATE TABLE Users (
+    UserId NVARCHAR(50) PRIMARY KEY,
+    Username NVARCHAR(50) NOT NULL UNIQUE,
+    PasswordHash NVARCHAR(100) NOT NULL,
+    FullName NVARCHAR(100) NOT NULL,
+    Email NVARCHAR(100),
+    Department NVARCHAR(50),
+    Role INT NOT NULL DEFAULT 0,
+    LastLoginTime DATETIME,
+    IsActive BIT NOT NULL DEFAULT 1
+);
+
+-- ユーザー権限テーブル
+CREATE TABLE UserPermissions (
+    UserId NVARCHAR(50) NOT NULL,
+    Permission INT NOT NULL,
+    PRIMARY KEY (UserId, Permission),
+    FOREIGN KEY (UserId) REFERENCES Users(UserId)
+);
+
+-- 検索履歴テーブル
+CREATE TABLE SearchHistory (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    UserId NVARCHAR(50) NOT NULL,
+    SearchQuery NVARCHAR(500) NOT NULL,
+    SearchType INT NOT NULL,
+    SearchTimestamp DATETIME NOT NULL,
+    ResultCount INT NOT NULL DEFAULT 0,
+    IsFavorite BIT NOT NULL DEFAULT 0,
+    Notes NVARCHAR(1000),
+    FOREIGN KEY (UserId) REFERENCES Users(UserId)
+);
+
+-- 初期管理者ユーザーの作成
+INSERT INTO Users (UserId, Username, PasswordHash, FullName, Email, Department, Role, IsActive)
+VALUES ('admin', 'admin', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', '管理者', 'admin@example.com', 'システム管理部', 100, 1);
+
+-- 管理者権限の付与
+INSERT INTO UserPermissions (UserId, Permission) VALUES 
+('admin', 1),   -- ViewOrderInfo
+('admin', 2),   -- ViewSerialNumbers
+('admin', 3),   -- ViewPartInfo
+('admin', 10),  -- ExportData
+('admin', 20),  -- ModifyData
+('admin', 100); -- AdminAccess
+```
+
+## 履歴機能と権限機能の利点
+
+### 履歴機能の利点
+
+1. **検索の効率化**
+   - 過去の検索を再利用して時間を節約
+   - よく使う検索をお気に入り登録して素早くアクセス
+
+2. **ユーザー行動分析**
+   - どの検索が頻繁に使われるか分析可能
+   - システム改善のためのデータ収集
+
+3. **作業の連続性**
+   - 中断した作業を再開しやすい
+   - 複雑な検索条件の保存と再利用
+
+4. **お気に入り機能**
+   - 頻繁に使用する検索の管理
+   - 重要な検索のメモ追加
+
+### 権限機能の利点
+
+1. **セキュリティの強化**
+   - 適切な権限を持つユーザーのみが特定の情報にアクセス可能
+   - 重要な製造データの保護
+
+2. **ユーザーロールに基づいた制限**
+   - 役割に応じた機能制限
+   - 複雑なロールベースアクセス制御
+
+3. **コンプライアンス対応**
+   - アクセスログの記録
+   - 監査や法規制への対応
+
+4. **ユーザー管理**
+   - 中央集中型のユーザー管理
+   - アカウント活性化・非活性化
+
+## まとめ
+
+履歴機能と権限機能を追加することで、製造管理検索ポータルは以下のように強化されます：
+
+1. **利便性の向上**：頻繁に使用する検索の保存と再利用
+2. **セキュリティの強化**：細かい権限制御による情報保護
+3. **パーソナライズ**：ユーザーごとのカスタマイズされた体験
+4. **トレーサビリティ**：誰が、いつ、どのような検索を行ったかを追跡
+5. **組織的な役割管理**：部門や役職に応じたアクセス制御
+
+これらの機能は、製造管理システムの日々の運用において効率性とセキュリティを大幅に向上させます。
+
+--- 
+
+
 現在のPermissionSystemの設計と、その課題点についてお問い合わせいただきました。PermissionSystemはファイルベースで権限設定を管理するシステムですが、操作やコントロール、画面に権限を設定する際に事前定義か動的変更かという選択に悩まれているようですね。
 
 ## 現状の設計の理解
