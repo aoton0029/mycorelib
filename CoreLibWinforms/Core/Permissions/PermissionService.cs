@@ -829,4 +829,247 @@ namespace CoreLibWinforms.Core.Permissions
         public bool ControlReadOnly { get; set; }
     }
 
+    /// <summary>
+    /// PermissionManager の拡張メソッドを提供するクラス
+    /// </summary>
+    public static class PermissionManagerExtensions
+    {
+        /// <summary>
+        /// 列挙型から権限をまとめて登録する
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="manager">PermissionManager インスタンス</param>
+        /// <param name="prefix">権限名の接頭辞（オプション）</param>
+        /// <returns>登録された権限の数</returns>
+        public static int RegisterPermissionsFromEnum<TEnum>(this PermissionManager manager, string prefix = "")
+            where TEnum : struct, Enum
+        {
+            int count = 0;
+            foreach (var value in Enum.GetValues<TEnum>())
+            {
+                int id = Convert.ToInt32(value);
+                string name = prefix + value.ToString();
+
+                // 権限が既に存在する場合はスキップ
+                if (manager.GetPermission(id) != null)
+                    continue;
+
+                manager.AddNewPermission(id, name);
+                count++;
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 列挙型から特定のロールに対して権限を付与する
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="manager">PermissionManager インスタンス</param>
+        /// <param name="roleId">ロールID</param>
+        /// <param name="permissions">付与する権限の配列</param>
+        /// <returns>付与された権限の数</returns>
+        public static int AddPermissionsToRole<TEnum>(this PermissionManager manager, int roleId, params TEnum[] permissions)
+            where TEnum : struct, Enum
+        {
+            int count = 0;
+            foreach (var permission in permissions)
+            {
+                int permissionId = Convert.ToInt32(permission);
+                if (manager.AddPermissionToRole(roleId, permissionId))
+                    count++;
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 列挙型から特定のユーザーに対して追加権限を付与する
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="manager">PermissionManager インスタンス</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissions">付与する権限の配列</param>
+        /// <returns>付与された権限の数</returns>
+        public static int AddPermissionsToUser<TEnum>(this PermissionManager manager, string userId, params TEnum[] permissions)
+            where TEnum : struct, Enum
+        {
+            int count = 0;
+            foreach (var permission in permissions)
+            {
+                int permissionId = Convert.ToInt32(permission);
+                if (manager.AddAdditionalPermissionToUser(userId, permissionId))
+                    count++;
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 列挙型から特定の部門に対して権限を付与する
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="manager">PermissionManager インスタンス</param>
+        /// <param name="departmentId">部門ID</param>
+        /// <param name="permissions">付与する権限の配列</param>
+        /// <returns>付与された権限の数</returns>
+        public static int AddPermissionsToDepartment<TEnum>(this PermissionManager manager, int departmentId, params TEnum[] permissions)
+            where TEnum : struct, Enum
+        {
+            int count = 0;
+            foreach (var permission in permissions)
+            {
+                int permissionId = Convert.ToInt32(permission);
+                if (manager.AddPermissionToDepartment(departmentId, permissionId))
+                    count++;
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 列挙型から権限を削除する
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="manager">PermissionManager インスタンス</param>
+        /// <param name="permissions">削除する権限の配列</param>
+        /// <returns>削除された権限の数</returns>
+        public static int RemovePermissions<TEnum>(this PermissionManager manager, params TEnum[] permissions)
+            where TEnum : struct, Enum
+        {
+            int count = 0;
+            foreach (var permission in permissions)
+            {
+                int permissionId = Convert.ToInt32(permission);
+                if (manager.RemovePermission(permissionId))
+                    count++;
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 列挙型からロールの権限を削除する
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="manager">PermissionManager インスタンス</param>
+        /// <param name="roleId">ロールID</param>
+        /// <param name="permissions">削除する権限の配列</param>
+        /// <returns>削除された権限の数</returns>
+        public static int RemovePermissionsFromRole<TEnum>(this PermissionManager manager, int roleId, params TEnum[] permissions)
+            where TEnum : struct, Enum
+        {
+            int count = 0;
+            foreach (var permission in permissions)
+            {
+                int permissionId = Convert.ToInt32(permission);
+                if (manager.RemovePermissionFromRole(roleId, permissionId))
+                    count++;
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 列挙型からユーザーの追加権限を削除する
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="manager">PermissionManager インスタンス</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissions">削除する権限の配列</param>
+        /// <returns>削除された権限の数</returns>
+        public static int RemovePermissionsFromUser<TEnum>(this PermissionManager manager, string userId, params TEnum[] permissions)
+            where TEnum : struct, Enum
+        {
+            int count = 0;
+            foreach (var permission in permissions)
+            {
+                int permissionId = Convert.ToInt32(permission);
+                if (manager.RemoveAdditionalPermissionFromUser(userId, permissionId))
+                    count++;
+            }
+            return count;
+        }
+    }
+
+    /// <summary>
+    /// PermissionService の拡張メソッドを提供するクラス
+    /// </summary>
+    public static class PermissionServiceExtensions
+    {
+        /// <summary>
+        /// ユーザーが指定した列挙型の権限を持っているかをチェック
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="service">PermissionService インスタンス</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permission">チェックする権限</param>
+        /// <returns>権限がある場合はtrue</returns>
+        public static bool HasPermission<TEnum>(this PermissionService service, string userId, TEnum permission)
+            where TEnum : struct, Enum
+        {
+            int permissionId = Convert.ToInt32(permission);
+            return service.HasPermission(userId, permissionId);
+        }
+
+        /// <summary>
+        /// ユーザーが列挙型で指定した複数の権限のいずれかを持っているかをチェック（OR条件）
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="service">PermissionService インスタンス</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissions">チェックする権限の配列</param>
+        /// <returns>いずれかの権限がある場合はtrue</returns>
+        public static bool HasAnyPermission<TEnum>(this PermissionService service, string userId, params TEnum[] permissions)
+            where TEnum : struct, Enum
+        {
+            var permissionIds = permissions.Select(p => Convert.ToInt32(p));
+            return service.HasAnyPermission(userId, permissionIds);
+        }
+
+        /// <summary>
+        /// ユーザーが列挙型で指定した複数の権限をすべて持っているかをチェック（AND条件）
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="service">PermissionService インスタンス</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissions">チェックする権限の配列</param>
+        /// <returns>すべての権限がある場合はtrue</returns>
+        public static bool HasAllPermissions<TEnum>(this PermissionService service, string userId, params TEnum[] permissions)
+            where TEnum : struct, Enum
+        {
+            var permissionIds = permissions.Select(p => Convert.ToInt32(p));
+            return service.HasAllPermissions(userId, permissionIds);
+        }
+
+        /// <summary>
+        /// 指定したロールがenum型の権限を持っているかチェック
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <param name="service">PermissionService インスタンス</param>
+        /// <param name="roleId">ロールID</param>
+        /// <param name="permission">チェックする権限</param>
+        /// <returns>ロールが権限を持っている場合はtrue</returns>
+        public static bool RoleHasPermission<TEnum>(this PermissionService service, int roleId, TEnum permission)
+            where TEnum : struct, Enum
+        {
+            int permissionId = Convert.ToInt32(permission);
+            var role = service._permissionManager.GetRole(roleId);
+            return role != null && role.Permissions.Contains(permissionId);
+        }
+
+        /// <summary>
+        /// 列挙型で定義された全権限の配列を取得
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <returns>全権限IDの配列</returns>
+        public static int[] GetAllPermissionIds<TEnum>() where TEnum : struct, Enum
+        {
+            return Enum.GetValues<TEnum>().Select(p => Convert.ToInt32(p)).ToArray();
+        }
+
+        /// <summary>
+        /// 列挙型で定義された全権限の名前と値の辞書を取得
+        /// </summary>
+        /// <typeparam name="TEnum">権限IDを表す列挙型</typeparam>
+        /// <returns>権限名と権限IDの辞書</returns>
+        public static Dictionary<string, int> GetPermissionDictionary<TEnum>() where TEnum : struct, Enum
+        {
+            return Enum.GetValues<TEnum>().ToDictionary(p => p.ToString(), p => Convert.ToInt32(p));
+        }
+    }
 }
