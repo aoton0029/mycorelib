@@ -9,203 +9,541 @@ namespace CoreLibWinforms.Core.Permissions
 {
     public class PermissionService
     {
-        private readonly string _permissionsFilePath = "permissions.json";
-        private readonly string _rolesFilePath = "roles.json";
-        private readonly string _userRolesFilePath = "user_roles.json";
-        private readonly string _controlMappingsFilePath = "controlmapping.json";
+        private PermissionManager _permissionManager;
 
-        private readonly Dictionary<string, Permission> _permissions;
-        private readonly Dictionary<string, Role> _roles;
-        private readonly Dictionary<string, UserRole> _userRoles;
-        private readonly Dictionary<string, List<ControlPermissionMapping>> _controlMappings;
-
-        public PermissionService()
+        public PermissionService(PermissionManager permissionManager = null)
         {
-            _permissions = new Dictionary<string, Permission>();
-            _roles = new Dictionary<string, Role>();
-            _userRoles = new Dictionary<string, UserRole>();
-            _controlMappings = new Dictionary<string, List<ControlPermissionMapping>>();
-        }
-
-        #region 権限
-        public List<Permission> GetAllPermissions() => _permissions.Values.ToList();
-
-        public void AddNewPermission(string id, string name)
-        {
-            var permission = new Permission
+            if (permissionManager == null)
             {
-                Id = id,
-                Name = name
-            };
-            _permissions[id] = permission;
-        }
-
-        public void RemovePermission(string id)
-        {
-            _permissions.Remove(id);
-
-            // 関連するロールから権限を削除
-            foreach (var role in _roles.Values)
-            {
-                role.Permissions.Remove(id);
+                _permissionManager = new PermissionManager();
+                _permissionManager.Load(); // Load permissions from file if available
             }
-
-            // ユーザーの追加権限からも削除
-            foreach (var userRole in _userRoles.Values)
+            else
             {
-                userRole.AdditionalPermissions.Remove(id);
+                _permissionManager = permissionManager;
             }
         }
 
-        public Permission GetPermission(string id)
+        #region 高度なユーザー権限チェック機能
+
+        /// <summary>
+        /// ユーザーが特定の権限を持っているかをチェック
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissionId">チェックする権限ID</param>
+        /// <returns>権限がある場合はtrue</returns>
+        public bool HasPermission(string userId, int permissionId)
         {
-            return _permissions.TryGetValue(id, out var permission) ? permission : null;
+            var userRole = _permissionManager.GetUserRole(userId);
+            if (userRole == null) return false;
+
+            // 追加権限でチェック
+            if (userRole.AdditionalPermissions.Contains(permissionId))
+                return true;
+
+            // ロール経由の権限をチェック
+            foreach (var roleId in userRole.Roles)
+            {
+                var role = _permissionManager.GetRole(roleId);
+                if (role != null && role.Permissions.Contains(permissionId))
+                    return true;
+            }
+
+            return false;
         }
 
-        // 権限に依存関係を追加
-        public void AddDependencyToPermission(string permissionId, string dependsOnId)
+        /// <summary>
+        /// ユーザーが特定の名前の権限を持っているかをチェック
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissionName">チェックする権限名</param>
+        /// <returns>権限がある場合はtrue</returns>
+        public bool HasPermission(string userId, string permissionName)
         {
-            if (_permissions.TryGetValue(permissionId, out var permission))
-            {
-                permission.DependsOn.Add(dependsOnId);
-            }
+            var permission = _permissionManager.GetAllPermissions()
+                .FirstOrDefault(p => p.Name == permissionName);
+
+            return permission != null && HasPermission(userId, permission.Id);
         }
 
-        // 権限から依存関係を削除
-        public void RemoveDependencyFromPermission(string permissionId, string dependsOnId)
+        /// <summary>
+        /// ユーザーが複数の権限のいずれかを持っているかをチェック（OR条件）
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissionIds">チェックする権限IDのリスト</param>
+        /// <returns>いずれかの権限がある場合はtrue</returns>
+        public bool HasAnyPermission(string userId, IEnumerable<int> permissionIds)
         {
-            if (_permissions.TryGetValue(permissionId, out var permission))
-            {
-                permission.DependsOn.Remove(dependsOnId);
-            }
+            return permissionIds.Any(permId => HasPermission(userId, permId));
         }
 
-        // 特定の権限の依存関係をすべて取得
-        public HashSet<string> GetPermissionDependencies(string permissionId)
+        /// <summary>
+        /// ユーザーが複数の権限をすべて持っているかをチェック（AND条件）
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="permissionIds">チェックする権限IDのリスト</param>
+        /// <returns>すべての権限がある場合はtrue</returns>
+        public bool HasAllPermissions(string userId, IEnumerable<int> permissionIds)
         {
-            if (_permissions.TryGetValue(permissionId, out var permission))
-            {
-                return new HashSet<string>(permission.DependsOn);
-            }
-            return new HashSet<string>();
+            return permissionIds.All(permId => HasPermission(userId, permId));
         }
+
+        /// <summary>
+        /// ユーザーに付与されているすべての権限IDを取得
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <returns>ユーザーが持つすべての権限ID</returns>
+        public HashSet<int> GetUserPermissions(string userId)
+        {
+            var userRole = _permissionManager.GetUserRole(userId);
+            if (userRole == null) return new HashSet<int>();
+
+            var permissions = new HashSet<int>(userRole.AdditionalPermissions);
+
+            // ロールからの権限を追加
+            foreach (var roleId in userRole.Roles)
+            {
+                var role = _permissionManager.GetRole(roleId);
+                if (role != null)
+                {
+                    permissions.UnionWith(role.Permissions);
+                }
+            }
+
+            return permissions;
+        }
+
+        /// <summary>
+        /// ユーザーが特定のロールを持っているかをチェック
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="roleId">チェックするロールID</param>
+        /// <returns>ロールがある場合はtrue</returns>
+        public bool HasRole(string userId, int roleId)
+        {
+            var userRole = _permissionManager.GetUserRole(userId);
+            return userRole != null && userRole.Roles.Contains(roleId);
+        }
+
+        /// <summary>
+        /// ユーザーが特定の名前のロールを持っているかをチェック
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="roleName">チェックするロール名</param>
+        /// <returns>ロールがある場合はtrue</returns>
+        public bool HasRole(string userId, string roleName)
+        {
+            var role = _permissionManager.GetAllRoles()
+                .FirstOrDefault(r => r.Name == roleName);
+
+            return role != null && HasRole(userId, role.Id);
+        }
+
         #endregion
 
-        #region ロール
-        public List<Role> GetAllRoles() => _roles.Values.ToList();
+        #region UI制御関連の機能
 
-        public void AddNewRole(string roleId, string name)
+        /// <summary>
+        /// フォームのコントロールに対してユーザーの権限に基づいて表示・操作制限を適用
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="formName">フォーム名</param>
+        /// <param name="controlName">コントロール名</param>
+        /// <returns>コントロールの状態（表示、有効、読み取り専用）</returns>
+        public (bool Visible, bool Enabled, bool ReadOnly) GetControlRestrictions(string userId, string formName, string controlName)
         {
-            var role = new Role
+            bool visible = true;
+            bool enabled = true;
+            bool readOnly = false;
+
+            var userRole = _permissionManager.GetUserRole(userId);
+            if (userRole == null) return (visible, enabled, readOnly);
+
+            var controlPermissions = _permissionManager.GetControlPermissions(formName, controlName);
+            if (controlPermissions.Count == 0) return (visible, enabled, readOnly);
+
+            // ユーザーのロールに基づく制限を適用
+            foreach (var roleId in userRole.Roles)
             {
-                Id = roleId,
-                Name = name
-            };
-            _roles[roleId] = role;
-        }
+                var rolePermissions = controlPermissions
+                    .Where(cp => cp.GroupCategory == ControlPermission.GroupCategory_Role && cp.Id == roleId)
+                    .ToList();
 
-        public void RemoveRole(string roleId)
-        {
-            _roles.Remove(roleId);
-
-            // ユーザーロールからこのロールを削除
-            foreach (var userRole in _userRoles.Values)
-            {
-                userRole.Roles.Remove(roleId);
-            }
-        }
-
-        public Role GetRole(string roleId)
-        {
-            return _roles.TryGetValue(roleId, out var role) ? role : null;
-        }
-
-        // ロールに権限を追加
-        public void AddPermissionToRole(string roleId, string permissionId)
-        {
-            if (_roles.TryGetValue(roleId, out var role))
-            {
-                role.Permissions.Add(permissionId);
-            }
-        }
-
-        // ロールから権限を削除
-        public void RemovePermissionFromRole(string roleId, string permissionId)
-        {
-            if (_roles.TryGetValue(roleId, out var role))
-            {
-                role.Permissions.Remove(permissionId);
-            }
-        }
-
-        // 複数の権限をロールに一括追加
-        public void AddPermissionsToRole(string roleId, IEnumerable<string> permissionIds)
-        {
-            if (_roles.TryGetValue(roleId, out var role))
-            {
-                foreach (var permissionId in permissionIds)
+                foreach (var perm in rolePermissions)
                 {
-                    role.Permissions.Add(permissionId);
+                    visible &= perm.ControlVisible;
+                    enabled &= perm.ControlEnabled;
+                    readOnly |= perm.ControlReadOnly;
+                }
+            }
+
+            // 部門ベースの権限は別のユースケースで考慮する必要がある場合は、
+            // 部門IDを引数に追加して同様の処理を行う
+
+            return (visible, enabled, readOnly);
+        }
+
+        /// <summary>
+        /// 指定されたロールに対するすべてのコントロール制限を取得
+        /// </summary>
+        /// <param name="roleId">ロールID</param>
+        /// <returns>コントロール制限のディクショナリ - キー: (フォーム名, コントロール名), 値: (表示, 有効, 読取専用)</returns>
+        public Dictionary<(string FormName, string ControlName), (bool Visible, bool Enabled, bool ReadOnly)>
+            GetAllControlRestrictionsForRole(int roleId)
+        {
+            var result = new Dictionary<(string, string), (bool, bool, bool)>();
+            var rolePermissions = _permissionManager.GetControlPermissionsByRole(roleId);
+
+            foreach (var perm in rolePermissions)
+            {
+                var key = (perm.FormName, perm.ControlName);
+                result[key] = (perm.ControlVisible, perm.ControlEnabled, perm.ControlReadOnly);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// フォーム内のすべてのコントロールに対してユーザーの権限に基づいて制限を適用
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="form">制限を適用するフォーム</param>
+        /// <param name="departmentId">オプショナルな部門ID</param>
+        /// <returns>適用されたコントロールの数</returns>
+        public int ApplyControlPermissionsToForm(string userId, Form form, int? departmentId = null)
+        {
+            if (form == null) throw new ArgumentNullException(nameof(form));
+            if (string.IsNullOrEmpty(userId)) throw new ArgumentNullException(nameof(userId));
+
+            var userRole = _permissionManager.GetUserRole(userId);
+            if (userRole == null) return 0;
+
+            var formName = form.Name;
+            int appliedCount = 0;
+
+            // フォーム内のすべてのコントロールを再帰的に処理
+            return ApplyPermissionsToControls(form.Controls, formName, userId, departmentId, ref appliedCount);
+        }
+
+        private int ApplyPermissionsToControls(Control.ControlCollection controls, string formName,
+            string userId, int? departmentId, ref int appliedCount)
+        {
+            foreach (Control control in controls)
+            {
+                // コントロールの権限を取得して適用
+                var restrictions = GetControlRestrictionsWithDepartment(userId, formName, control.Name, departmentId);
+
+                // コントロールに制限を適用
+                ApplyRestrictionsToControl(control, restrictions);
+                appliedCount++;
+
+                // 子コントロールがある場合は再帰的に処理
+                if (control.Controls.Count > 0)
+                {
+                    ApplyPermissionsToControls(control.Controls, formName, userId, departmentId, ref appliedCount);
+                }
+            }
+
+            return appliedCount;
+        }
+
+        /// <summary>
+        /// コントロールに権限制限を適用
+        /// </summary>
+        /// <param name="control">制限を適用するコントロール</param>
+        /// <param name="restrictions">適用する制限（表示、有効、読み取り専用）</param>
+        private void ApplyRestrictionsToControl(Control control, (bool Visible, bool Enabled, bool ReadOnly) restrictions)
+        {
+            // 表示と有効/無効の設定はすべてのコントロールに適用可能
+            control.Visible = restrictions.Visible;
+            control.Enabled = restrictions.Enabled;
+
+            // 読み取り専用は特定のコントロールタイプにのみ適用
+            if (restrictions.ReadOnly)
+            {
+                // TextBoxの場合
+                if (control is TextBox textBox)
+                {
+                    textBox.ReadOnly = true;
+                }
+                // RichTextBoxの場合
+                else if (control is RichTextBox richTextBox)
+                {
+                    richTextBox.ReadOnly = true;
+                }
+                // DataGridViewの場合
+                else if (control is DataGridView dataGridView)
+                {
+                    dataGridView.ReadOnly = true;
+                }
+                // ComboBoxの場合（編集不可にする）
+                else if (control is ComboBox comboBox)
+                {
+                    comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
                 }
             }
         }
 
-        // ロールに割り当てられた権限の一覧を取得
-        public HashSet<string> GetRolePermissions(string roleId)
+        /// <summary>
+        /// 部門IDも考慮して、コントロールの制限を取得
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="formName">フォーム名</param>
+        /// <param name="controlName">コントロール名</param>
+        /// <param name="departmentId">部門ID（オプション）</param>
+        /// <returns>コントロールの状態（表示、有効、読み取り専用）</returns>
+        public (bool Visible, bool Enabled, bool ReadOnly) GetControlRestrictionsWithDepartment(
+            string userId, string formName, string controlName, int? departmentId = null)
         {
-            if (_roles.TryGetValue(roleId, out var role))
+            // 基本的な制限を取得（ロールベース）
+            var restrictions = GetControlRestrictions(userId, formName, controlName);
+
+            // 部門IDが指定されていれば、部門ベースの制限も考慮
+            if (departmentId.HasValue)
             {
-                return new HashSet<string>(role.Permissions);
+                var userRole = _permissionManager.GetUserRole(userId);
+                if (userRole == null) return restrictions;
+
+                var controlPermissions = _permissionManager.GetControlPermissions(formName, controlName);
+                if (controlPermissions.Count == 0) return restrictions;
+
+                // 部門ベースの制限を適用
+                var deptPermissions = controlPermissions
+                    .Where(cp => cp.GroupCategory == ControlPermission.GroupCategory_Dept && cp.Id == departmentId.Value)
+                    .ToList();
+
+                foreach (var perm in deptPermissions)
+                {
+                    restrictions.Visible &= perm.ControlVisible;
+                    restrictions.Enabled &= perm.ControlEnabled;
+                    restrictions.ReadOnly |= perm.ControlReadOnly;
+                }
             }
-            return new HashSet<string>();
+
+            return restrictions;
+        }
+
+        /// <summary>
+        /// フォーム内の特定のコントロールを名前で検索して、権限を適用
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="form">対象フォーム</param>
+        /// <param name="controlName">コントロール名</param>
+        /// <param name="departmentId">部門ID（オプション）</param>
+        /// <returns>コントロールが見つかり権限が適用された場合はtrue</returns>
+        public bool ApplyControlPermissionByName(string userId, Form form, string controlName, int? departmentId = null)
+        {
+            var controls = form.Controls.Find(controlName, true);
+            if (controls.Length == 0) return false;
+
+            var restrictions = GetControlRestrictionsWithDepartment(userId, form.Name, controlName, departmentId);
+
+            foreach (var control in controls)
+            {
+                ApplyRestrictionsToControl(control, restrictions);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 指定したフォームの複数のコントロールに権限を適用
+        /// </summary>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="form">対象フォーム</param>
+        /// <param name="controlNames">コントロール名のリスト</param>
+        /// <param name="departmentId">部門ID（オプション）</param>
+        /// <returns>適用したコントロールの数</returns>
+        public int ApplyControlPermissionsToSpecificControls(string userId, Form form, IEnumerable<string> controlNames,
+            int? departmentId = null)
+        {
+            int count = 0;
+            foreach (var controlName in controlNames)
+            {
+                if (ApplyControlPermissionByName(userId, form, controlName, departmentId))
+                {
+                    count++;
+                }
+            }
+            return count;
         }
         #endregion
 
-        #region ユーザーロール
-        public List<UserRole> GetAllUserRoles() => _userRoles.Values.ToList();
+        #region 権限設定のエクスポート・インポート機能
 
-        public void AssignRoleToUser(string userId, string roleId)
+        /// <summary>
+        /// 現在の権限設定を指定されたファイルにエクスポート
+        /// </summary>
+        /// <param name="filePath">エクスポート先のファイルパス</param>
+        public void ExportSettings(string filePath)
         {
-            if (!_userRoles.TryGetValue(userId, out var userRole))
-            {
-                userRole = new UserRole { UserId = userId };
-                _userRoles[userId] = userRole;
-            }
+            string originalPath = PermissionManager.FilePath;
+            PermissionManager.FilePath = filePath;
 
-            if (!userRole.Roles.Contains(roleId))
+            try
             {
-                userRole.Roles.Add(roleId);
+                _permissionManager.Save();
+            }
+            finally
+            {
+                // 元のパスを復元
+                PermissionManager.FilePath = originalPath;
             }
         }
 
-        public void RemoveRoleFromUser(string userId, string roleId)
+        /// <summary>
+        /// 指定されたファイルから権限設定をインポート
+        /// </summary>
+        /// <param name="filePath">インポート元のファイルパス</param>
+        /// <returns>インポートが成功したかどうか</returns>
+        public bool ImportSettings(string filePath)
         {
-            if (_userRoles.TryGetValue(userId, out var userRole))
+            if (!System.IO.File.Exists(filePath))
+                return false;
+
+            string originalPath = PermissionManager.FilePath;
+            PermissionManager.FilePath = filePath;
+
+            try
             {
-                userRole.Roles.Remove(roleId);
+                _permissionManager.Load();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            finally
+            {
+                // 元のパスを復元
+                PermissionManager.FilePath = originalPath;
             }
         }
 
-        public void GrantAdditionalPermissionToUser(string userId, string permissionId)
-        {
-            if (!_userRoles.TryGetValue(userId, out var userRole))
-            {
-                userRole = new UserRole { UserId = userId };
-                _userRoles[userId] = userRole;
-            }
+        #endregion
+    }
 
-            if (!userRole.AdditionalPermissions.Contains(permissionId))
-            {
-                userRole.AdditionalPermissions.Add(permissionId);
-            }
+
+    public class PermissionManager
+    {
+        public static string FilePath = "PermissionSetting.json";
+        private Dictionary<int, Permission> _permissions;
+        private Dictionary<int, Role> _roles;
+        private Dictionary<string, UserRole> _userRoles;
+        private Dictionary<int, DepartmentPermission> _departmentPermissions;
+        private Dictionary<(string, string), List<ControlPermission>> _controlPermissions;
+
+        public PermissionManager()
+        {
+            _permissions = new Dictionary<int, Permission>();
+            _roles = new Dictionary<int, Role>();
+            _userRoles = new Dictionary<string, UserRole>();
+            _departmentPermissions = new Dictionary<int, DepartmentPermission>();
+            _controlPermissions = new Dictionary<(string, string), List<ControlPermission>>();
         }
 
-        public void RevokeAdditionalPermissionFromUser(string userId, string permissionId)
+        #region Permission
+        public Permission AddNewPermission(int id, string name)
         {
-            if (_userRoles.TryGetValue(userId, out var userRole))
+            if (_permissions.ContainsKey(id))
             {
-                userRole.AdditionalPermissions.Remove(permissionId);
+                throw new ArgumentException($"Permission with ID {id} already exists.");
             }
+            var permission = new Permission { Id = id, Name = name };
+            _permissions[id] = permission;
+            return permission;
+        }
+
+        public Permission AddNewPermission(string name)
+        {
+            int newId = _permissions.Count > 0 ? _permissions.Keys.Max() + 1 : 0;
+            return AddNewPermission(newId, name);
+        }
+
+        public bool RemovePermission(int id)
+        {
+            return _permissions.Remove(id);
+        }
+
+        public Permission GetPermission(int id)
+        {
+            return _permissions.TryGetValue(id, out var permission) ? permission : null;
+        }
+
+        public List<Permission> GetAllPermissions()
+        {
+            return _permissions.Values.ToList();
+        }
+        #endregion
+
+        #region Role
+        public Role AddNewRole(int id, string name)
+        {
+            if (_roles.ContainsKey(id))
+            {
+                throw new ArgumentException($"Role with ID {id} already exists.");
+            }
+            var role = new Role { Id = id, Name = name };
+            _roles[id] = role;
+            return role;
+        }
+
+        public Role AddNewRole(string name)
+        {
+            int newId = _roles.Count > 0 ? _roles.Keys.Max() + 1 : 0;
+            return AddNewRole(newId, name);
+        }
+
+        public bool RemoveRole(int id)
+        {
+            return _roles.Remove(id);
+        }
+
+        public Role GetRole(int id)
+        {
+            return _roles.TryGetValue(id, out var role) ? role : null;
+        }
+
+        public List<Role> GetAllRoles()
+        {
+            return _roles.Values.ToList();
+        }
+
+        public bool AddPermissionToRole(int roleId, int permissionId)
+        {
+            if (!_roles.TryGetValue(roleId, out var role))
+                return false;
+
+            if (!_permissions.ContainsKey(permissionId))
+                return false;
+
+            return role.Permissions.Add(permissionId);
+        }
+
+        public bool RemovePermissionFromRole(int roleId, int permissionId)
+        {
+            if (!_roles.TryGetValue(roleId, out var role))
+                return false;
+
+            return role.Permissions.Remove(permissionId);
+        }
+        #endregion
+
+        #region UserRole
+        public UserRole AddUserRole(string userId)
+        {
+            if (_userRoles.ContainsKey(userId))
+            {
+                throw new ArgumentException($"User role with ID {userId} already exists.");
+            }
+            var userRole = new UserRole { UserId = userId };
+            _userRoles[userId] = userRole;
+            return userRole;
+        }
+
+        public bool RemoveUserRole(string userId)
+        {
+            return _userRoles.Remove(userId);
         }
 
         public UserRole GetUserRole(string userId)
@@ -213,498 +551,282 @@ namespace CoreLibWinforms.Core.Permissions
             return _userRoles.TryGetValue(userId, out var userRole) ? userRole : null;
         }
 
-        // 複数のロールをユーザーに一括割り当て
-        public void AssignRolesToUser(string userId, IEnumerable<string> roleIds)
+        public List<UserRole> GetAllUserRoles()
         {
-            if (!_userRoles.TryGetValue(userId, out var userRole))
-            {
-                userRole = new UserRole { UserId = userId };
-                _userRoles[userId] = userRole;
-            }
-
-            foreach (var roleId in roleIds)
-            {
-                userRole.Roles.Add(roleId);
-            }
+            return _userRoles.Values.ToList();
         }
 
-        // 複数の追加権限をユーザーに一括付与
-        public void GrantAdditionalPermissionsToUser(string userId, IEnumerable<string> permissionIds)
+        public bool AddRoleToUser(string userId, int roleId)
         {
-            if (!_userRoles.TryGetValue(userId, out var userRole))
-            {
-                userRole = new UserRole { UserId = userId };
-                _userRoles[userId] = userRole;
-            }
-
-            foreach (var permissionId in permissionIds)
-            {
-                userRole.AdditionalPermissions.Add(permissionId);
-            }
-        }
-
-        // ユーザーに割り当てられたロールの一覧を取得
-        public HashSet<string> GetUserRoles(string userId)
-        {
-            if (_userRoles.TryGetValue(userId, out var userRole))
-            {
-                return new HashSet<string>(userRole.Roles);
-            }
-            return new HashSet<string>();
-        }
-
-        // ユーザーに付与された追加権限の一覧を取得
-        public HashSet<string> GetUserAdditionalPermissions(string userId)
-        {
-            if (_userRoles.TryGetValue(userId, out var userRole))
-            {
-                return new HashSet<string>(userRole.AdditionalPermissions);
-            }
-            return new HashSet<string>();
-        }
-
-        // ユーザーが持つすべての権限（ロール由来と追加権限）を取得
-        public HashSet<string> GetAllUserPermissions(string userId)
-        {
-            var allPermissions = new HashSet<string>();
-
-            if (!_userRoles.TryGetValue(userId, out var userRole))
-                return allPermissions;
-
-            // 追加権限を追加
-            foreach (var permissionId in userRole.AdditionalPermissions)
-            {
-                allPermissions.Add(permissionId);
-
-                // 依存権限も追加
-                if (_permissions.TryGetValue(permissionId, out var permission))
-                {
-                    foreach (var dependsOnId in permission.DependsOn)
-                    {
-                        allPermissions.Add(dependsOnId);
-                    }
-                }
-            }
-
-            // ロール由来の権限を追加
-            foreach (var roleId in userRole.Roles)
-            {
-                if (_roles.TryGetValue(roleId, out var role))
-                {
-                    foreach (var permissionId in role.Permissions)
-                    {
-                        allPermissions.Add(permissionId);
-
-                        // 依存権限も追加
-                        if (_permissions.TryGetValue(permissionId, out var permission))
-                        {
-                            foreach (var dependsOnId in permission.DependsOn)
-                            {
-                                allPermissions.Add(dependsOnId);
-                            }
-                        }
-                    }
-                }
-            }
-
-            return allPermissions;
-        }
-        #endregion
-
-        #region コントロールマッピング
-        public List<ControlPermissionMapping> GetControlMappings(string formName)
-        {
-            if (_controlMappings.TryGetValue(formName, out var mappings))
-            {
-                return mappings;
-            }
-            return new List<ControlPermissionMapping>();
-        }
-
-        public List<string> GetAllFormNames()
-        {
-            return _controlMappings.Keys.ToList();
-        }
-
-        public void AddControlMapping(string formName, string controlName, string permissionId, RestrictType restrictType)
-        {
-            if (!_controlMappings.TryGetValue(formName, out var formMappings))
-            {
-                formMappings = new List<ControlPermissionMapping>();
-                _controlMappings[formName] = formMappings;
-            }
-
-            // 既存のマッピングを確認し、あれば更新
-            var existingMapping = formMappings.FirstOrDefault(m =>
-                m.ControlName == controlName && m.RestrictType == restrictType);
-
-            if (existingMapping != null)
-            {
-                existingMapping.PermissionId = permissionId;
-            }
-            else
-            {
-                // 新しいマッピングを追加（FormNameプロパティも設定）
-                formMappings.Add(new ControlPermissionMapping
-                {
-                    FormName = formName,  // FormNameプロパティを設定
-                    ControlName = controlName,
-                    PermissionId = permissionId,
-                    RestrictType = restrictType
-                });
-            }
-        }
-
-        public void RemoveControlMapping(string formName, string controlName, RestrictType restrictType)
-        {
-            if (_controlMappings.TryGetValue(formName, out var formMappings))
-            {
-                formMappings.RemoveAll(m => m.ControlName == controlName && m.RestrictType == restrictType);
-
-                // マッピングが空になった場合はフォームエントリ自体を削除
-                if (formMappings.Count == 0)
-                {
-                    _controlMappings.Remove(formName);
-                }
-            }
-        }
-
-        public bool IsControlRestricted(string formName, string controlName, RestrictType restrictType, string userId)
-        {
-            // 指定されたフォームのマッピングを取得
-            if (!_controlMappings.TryGetValue(formName, out var formMappings))
-            {
-                return false; // マッピングがなければ制限なし
-            }
-
-            // 指定されたコントロールと制限タイプに一致するマッピングを検索
-            var mapping = formMappings.FirstOrDefault(m =>
-                m.ControlName == controlName && m.RestrictType == restrictType);
-
-            if (mapping == null)
-            {
-                return false; // マッピングがなければ制限なし
-            }
-
-            // ユーザーが必要な権限を持っているか確認
-            // 持っていなければ制限あり（true）、持っていれば制限なし（false）
-            return !HasPermission(userId, mapping.PermissionId);
-        }
-
-        // 特定のフォームのすべてのコントロール制限情報を取得
-        public Dictionary<string, List<ControlPermissionMapping>> GetControlRestrictionsForUser(string formName, string userId)
-        {
-            var result = new Dictionary<string, List<ControlPermissionMapping>>();
-
-            if (!_controlMappings.TryGetValue(formName, out var formMappings))
-            {
-                return result; // マッピングがなければ空のディクショナリを返す
-            }
-
-            // コントロール名でグループ化
-            foreach (var controlGroup in formMappings.GroupBy(m => m.ControlName))
-            {
-                var controlName = controlGroup.Key;
-                var restrictedMappings = new List<ControlPermissionMapping>();
-
-                foreach (var mapping in controlGroup)
-                {
-                    // ユーザーが権限を持っていなければ、制限対象としてリストに追加
-                    if (!HasPermission(userId, mapping.PermissionId))
-                    {
-                        restrictedMappings.Add(mapping);
-                    }
-                }
-
-                if (restrictedMappings.Any())
-                {
-                    result[controlName] = restrictedMappings;
-                }
-            }
-
-            return result;
-        }
-        #endregion
-
-        // ユーザーが特定の権限を持っているか確認するメソッド
-        public bool HasPermission(string userId, string permissionId)
-        {
-            // ユーザーロールが存在しない場合は権限なし
             if (!_userRoles.TryGetValue(userId, out var userRole))
                 return false;
 
-            // 追加権限に直接含まれているか確認
-            if (userRole.AdditionalPermissions.Contains(permissionId))
-                return true;
+            if (!_roles.ContainsKey(roleId))
+                return false;
 
-            // ユーザーのロールに関連付けられた権限を確認
-            foreach (var roleId in userRole.Roles)
-            {
-                if (_roles.TryGetValue(roleId, out var role) && role.Permissions.Contains(permissionId))
-                    return true;
-
-                // 権限の依存関係も確認
-                if (role != null)
-                {
-                    foreach (var permission in role.Permissions)
-                    {
-                        if (permission == permissionId ||
-                            (_permissions.TryGetValue(permission, out var perm) &&
-                             perm.DependsOn.Contains(permissionId)))
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            return false;
+            return userRole.Roles.Add(roleId);
         }
 
-        #region UIコントロール制限の適用
-        /// <summary>
-        /// ユーザーIDに基づいてフォームのUIコントロール状態を変更します
-        /// </summary>
-        /// <param name="form">制限を適用するフォーム</param>
-        /// <param name="userId">ユーザーID</param>
-        public void ApplyUIRestrictions(Form form, string userId)
+        public bool RemoveRoleFromUser(string userId, int roleId)
         {
-            if (form == null)
-                throw new ArgumentNullException(nameof(form));
+            if (!_userRoles.TryGetValue(userId, out var userRole))
+                return false;
 
-            if (string.IsNullOrEmpty(userId))
-                throw new ArgumentException("ユーザーIDが指定されていません", nameof(userId));
-
-            // フォーム名を取得
-            string formName = form.Name;
-
-            // このフォームに対するすべての制限マッピングを取得
-            var restrictions = GetControlRestrictionsForUser(formName, userId);
-
-            // 各コントロールに対して制限を適用
-            foreach (var controlEntry in restrictions)
-            {
-                string controlName = controlEntry.Key;
-                var mappings = controlEntry.Value;
-
-                // コントロール名でコントロールを検索
-                var control = FindControlRecursive(form, controlName);
-                if (control != null)
-                {
-                    // 制限タイプ別に状態を変更
-                    foreach (var mapping in mappings)
-                    {
-                        switch (mapping.RestrictType)
-                        {
-                            case RestrictType.Visibility:
-                                control.Visible = false;
-                                break;
-                            case RestrictType.Enabled:
-                                control.Enabled = false;
-                                break;
-                            case RestrictType.ReadOnly:
-                                SetControlReadOnly(control, true);
-                                break;
-                        }
-                    }
-                }
-            }
+            return userRole.Roles.Remove(roleId);
         }
 
-        /// <summary>
-        /// フォーム内のコントロールを再帰的に検索します
-        /// </summary>
-        private Control FindControlRecursive(Control parent, string controlName)
+        public bool AddAdditionalPermissionToUser(string userId, int permissionId)
         {
-            // 直接の子コントロールを検索
-            Control foundControl = parent.Controls[controlName];
-            if (foundControl != null)
-                return foundControl;
+            if (!_userRoles.TryGetValue(userId, out var userRole))
+                return false;
 
-            // 再帰的に子コントロールを検索
-            foreach (Control control in parent.Controls)
-            {
-                foundControl = FindControlRecursive(control, controlName);
-                if (foundControl != null)
-                    return foundControl;
-            }
+            if (!_permissions.ContainsKey(permissionId))
+                return false;
 
-            return null;
+            return userRole.AdditionalPermissions.Add(permissionId);
         }
 
-        /// <summary>
-        /// コントロールを読み取り専用に設定します
-        /// </summary>
-        private void SetControlReadOnly(Control control, bool readOnly)
+        public bool RemoveAdditionalPermissionFromUser(string userId, int permissionId)
         {
-            // コントロールタイプに応じて適切なプロパティを設定
-            if (control is TextBox textBox)
-            {
-                textBox.ReadOnly = readOnly;
-            }
-            else if (control is ComboBox comboBox)
-            {
-                comboBox.Enabled = !readOnly;
-            }
-            else if (control is DataGridView dataGridView)
-            {
-                dataGridView.ReadOnly = readOnly;
-            }
-            else if (control is CheckBox checkBox ||
-                     control is RadioButton radioButton ||
-                     control is Button button)
-            {
-                control.Enabled = !readOnly;
-            }
-            // 他のコントロールタイプも必要に応じて追加
+            if (!_userRoles.TryGetValue(userId, out var userRole))
+                return false;
+
+            return userRole.AdditionalPermissions.Remove(permissionId);
         }
         #endregion
+
+        #region DepartmentPermission
+        public DepartmentPermission AddNewDepartmentPermission(int id, string name)
+        {
+            if (_departmentPermissions.ContainsKey(id))
+            {
+                throw new ArgumentException($"Department permission with ID {id} already exists.");
+            }
+            var deptPermission = new DepartmentPermission { Id = id, Name = name };
+            _departmentPermissions[id] = deptPermission;
+            return deptPermission;
+        }
+
+        public DepartmentPermission AddNewDepartmentPermission(string name)
+        {
+            int newId = _departmentPermissions.Count > 0 ? _departmentPermissions.Keys.Max() + 1 : 0;
+            return AddNewDepartmentPermission(newId, name);
+        }
+
+        public bool RemoveDepartmentPermission(int id)
+        {
+            return _departmentPermissions.Remove(id);
+        }
+
+        public DepartmentPermission GetDepartmentPermission(int id)
+        {
+            return _departmentPermissions.TryGetValue(id, out var deptPermission) ? deptPermission : null;
+        }
+
+        public List<DepartmentPermission> GetAllDepartmentPermissions()
+        {
+            return _departmentPermissions.Values.ToList();
+        }
+
+        public bool AddPermissionToDepartment(int departmentId, int permissionId)
+        {
+            if (!_departmentPermissions.TryGetValue(departmentId, out var deptPermission))
+                return false;
+
+            if (!_permissions.ContainsKey(permissionId))
+                return false;
+
+            return deptPermission.Permissions.Add(permissionId);
+        }
+
+        public bool RemovePermissionFromDepartment(int departmentId, int permissionId)
+        {
+            if (!_departmentPermissions.TryGetValue(departmentId, out var deptPermission))
+                return false;
+
+            return deptPermission.Permissions.Remove(permissionId);
+        }
+        #endregion
+
+        #region ControlPermission
+        public ControlPermission AddControlPermission(string formName, string controlName, string groupCategory, int id,
+            bool visible = true, bool enabled = true, bool readOnly = false)
+        {
+            var key = (formName, controlName);
+
+            if (!_controlPermissions.ContainsKey(key))
+            {
+                _controlPermissions[key] = new List<ControlPermission>();
+            }
+
+            // Check if a control permission with the same group category and ID already exists
+            var existingPermission = _controlPermissions[key].FirstOrDefault(cp =>
+                cp.GroupCategory == groupCategory && cp.Id == id);
+
+            if (existingPermission != null)
+            {
+                throw new ArgumentException($"Control permission for {formName}.{controlName} with {groupCategory}={id} already exists.");
+            }
+
+            var controlPermission = new ControlPermission
+            {
+                FormName = formName,
+                ControlName = controlName,
+                GroupCategory = groupCategory,
+                Id = id,
+                ControlVisible = visible,
+                ControlEnabled = enabled,
+                ControlReadOnly = readOnly
+            };
+
+            _controlPermissions[key].Add(controlPermission);
+            return controlPermission;
+        }
+
+        public bool RemoveControlPermission(string formName, string controlName, string groupCategory, int id)
+        {
+            var key = (formName, controlName);
+            if (!_controlPermissions.TryGetValue(key, out var permissions))
+                return false;
+
+            var permissionToRemove = permissions.FirstOrDefault(cp =>
+                cp.GroupCategory == groupCategory && cp.Id == id);
+
+            if (permissionToRemove == null)
+                return false;
+
+            var result = permissions.Remove(permissionToRemove);
+
+            // Remove the key if there are no more permissions for this control
+            if (permissions.Count == 0)
+                _controlPermissions.Remove(key);
+
+            return result;
+        }
+
+        public List<ControlPermission> GetControlPermissions(string formName, string controlName)
+        {
+            var key = (formName, controlName);
+            return _controlPermissions.TryGetValue(key, out var permissions)
+                ? permissions
+                : new List<ControlPermission>();
+        }
+
+        public List<ControlPermission> GetAllControlPermissions()
+        {
+            return _controlPermissions.Values.SelectMany(list => list).ToList();
+        }
+
+        public List<ControlPermission> GetControlPermissionsByRole(int roleId)
+        {
+            return GetAllControlPermissions()
+                .Where(cp => cp.GroupCategory == ControlPermission.GroupCategory_Role && cp.Id == roleId)
+                .ToList();
+        }
+
+        public List<ControlPermission> GetControlPermissionsByDepartment(int departmentId)
+        {
+            return GetAllControlPermissions()
+                .Where(cp => cp.GroupCategory == ControlPermission.GroupCategory_Dept && cp.Id == departmentId)
+                .ToList();
+        }
+        #endregion
+
         public void Save()
         {
-            PermissionFileLoader.SavePermissions(_permissionsFilePath, _permissions.Values.ToList());
-            PermissionFileLoader.SaveRoles(_rolesFilePath, _roles.Values.ToList());
-            PermissionFileLoader.SaveUserRoles(_userRolesFilePath, _userRoles.Values.ToList());
-            var allMappings = _controlMappings.Values.SelectMany(list => list).ToList();
-            PermissionFileLoader.SaveControlMappings(_controlMappingsFilePath, allMappings);
+            var data = new
+            {
+                Permissions = _permissions,
+                Roles = _roles,
+                UserRoles = _userRoles,
+                DepartmentPermissions = _departmentPermissions,
+                ControlPermissions = _controlPermissions.Values.SelectMany(list => list).ToList()
+            };
+
+            string jsonString = JsonSerializer.Serialize(data, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            File.WriteAllText(FilePath, jsonString);
         }
 
         public void Load()
         {
-            // 権限をロード
-            var permissions = PermissionFileLoader.LoadPermissions(_permissionsFilePath);
-            _permissions.Clear();
-            foreach (var permission in permissions)
-            {
-                _permissions.TryAdd(permission.Id, permission);
-            }
+            if (!File.Exists(FilePath)) { return; }
 
-            // ロールをロード
-            var roles = PermissionFileLoader.LoadRoles(_rolesFilePath);
-            _roles.Clear();
-            foreach (var role in roles)
-            {
-                _roles.TryAdd(role.Id, role);
-            }
+            string jsonString = File.ReadAllText(FilePath);
+            var data = JsonSerializer.Deserialize<JsonData>(jsonString);
 
-            // ユーザーロールをロード
-            var userRoles = PermissionFileLoader.LoadUserRoles(_userRolesFilePath);
-            _userRoles.Clear();
-            foreach (var userRole in userRoles)
+            if (data != null)
             {
-                _userRoles.TryAdd(userRole.UserId, userRole);
-            }
+                _permissions = data.Permissions;
+                _roles = data.Roles;
+                _userRoles = data.UserRoles;
+                _departmentPermissions = data.DepartmentPermissions;
 
-            // コントロールマッピングをロード
-            var mappings = PermissionFileLoader.LoadControlMappings(_controlMappingsFilePath);
-            _controlMappings.Clear();
-
-            // フォーム名でグループ化してコントロールマッピングを追加
-            foreach (var grouping in mappings.GroupBy(m => m.FormName))
-            {
-                _controlMappings.TryAdd(grouping.Key, grouping.ToList());
+                // 再構築するために一時変数を作成
+                _controlPermissions = new Dictionary<(string, string), List<ControlPermission>>();
+                foreach (var controlPermission in data.ControlPermissions)
+                {
+                    var key = (controlPermission.FormName, controlPermission.ControlName);
+                    if (!_controlPermissions.ContainsKey(key))
+                    {
+                        _controlPermissions[key] = new List<ControlPermission>();
+                    }
+                    _controlPermissions[key].Add(controlPermission);
+                }
             }
         }
 
-    }
-
-    public class PermissionFileLoader
-    {
-        public static List<Permission> LoadPermissions(string filePath)
+        private class JsonData
         {
-            if (!File.Exists(filePath))
-                return new List<Permission>();
-
-            string json = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize<List<Permission>>(json) ?? new List<Permission>();
-        }
-
-        public static List<Role> LoadRoles(string filePath)
-        {
-            if (!File.Exists(filePath))
-                return new List<Role>();
-
-            string json = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize<List<Role>>(json) ?? new List<Role>();
-        }
-
-        public static List<UserRole> LoadUserRoles(string filePath)
-        {
-            if (!File.Exists(filePath))
-                return new List<UserRole>();
-
-            string json = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize<List<UserRole>>(json) ?? new List<UserRole>();
-        }
-
-        public static List<ControlPermissionMapping> LoadControlMappings(string filePath)
-        {
-            if (!File.Exists(filePath))
-                return new List<ControlPermissionMapping>();
-
-            string json = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize<List<ControlPermissionMapping>>(json) ?? new List<ControlPermissionMapping>();
-        }
-
-        public static void SavePermissions(string filePath, List<Permission> permissions)
-        {
-            string json = JsonSerializer.Serialize(permissions, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
-        }
-
-        public static void SaveRoles(string filePath, List<Role> roles)
-        {
-            string json = JsonSerializer.Serialize(roles, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
-        }
-
-        public static void SaveUserRoles(string filePath, List<UserRole> userRoles)
-        {
-            string json = JsonSerializer.Serialize(userRoles, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
-        }
-
-        public static void SaveControlMappings(string filePath, List<ControlPermissionMapping> mappings)
-        {
-            string json = JsonSerializer.Serialize(mappings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
+            public Dictionary<int, Permission> Permissions { get; set; }
+            public Dictionary<int, Role> Roles { get; set; }
+            public Dictionary<string, UserRole> UserRoles { get; set; }
+            public Dictionary<int, DepartmentPermission> DepartmentPermissions { get; set; }
+            public List<ControlPermission> ControlPermissions { get; set; }
         }
     }
 
     public class Permission
     {
-        public string Id { get; set; } = string.Empty;
+        public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public HashSet<string> DependsOn { get; set; } = new HashSet<string>();
     }
 
     public class Role
     {
-        public string Id { get; set; } = string.Empty;
+        public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public HashSet<string> Permissions { get; set; } = new HashSet<string>();
+        public HashSet<int> Permissions { get; set; } = new HashSet<int>();
     }
 
     public class UserRole
     {
-        public string UserId { get; set; } = string.Empty;
-        public HashSet<string> Roles { get; set; } = new HashSet<string>();
-        public HashSet<string> AdditionalPermissions { get; set; } = new HashSet<string>();
+        public string UserId { get; set; }
+        public HashSet<int> Roles { get; set; } = new HashSet<int>();
+        public HashSet<int> AdditionalPermissions { get; set; } = new HashSet<int>();
     }
 
-    // 追加: コントロールと権限のマッピングを定義するクラス
-    public class ControlPermissionMapping
+    public class DepartmentPermission
     {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public HashSet<int> Permissions { get; set; } = new HashSet<int>();
+    }
+
+    public class ControlPermission
+    {
+        public const string GroupCategory_Role = "Role";
+        public const string GroupCategory_Dept = "Dept";
+
         public string FormName { get; set; } = string.Empty;
         public string ControlName { get; set; } = string.Empty;
-        public string PermissionId { get; set; } = string.Empty;
-        public RestrictType RestrictType { get; set; } = RestrictType.Enabled;
+        public string GroupCategory { get; set; } = string.Empty;
+        public int Id { get; set; }
+        public bool ControlVisible { get; set; }
+        public bool ControlEnabled { get; set; }
+        public bool ControlReadOnly { get; set; }
     }
 
-    // 追加: 制限タイプの列挙型
-    public enum RestrictType
-    {
-        Visibility, // 表示/非表示
-        Enabled,    // 有効/無効
-        ReadOnly    // 読み取り専用/編集可能
-    }
 }
