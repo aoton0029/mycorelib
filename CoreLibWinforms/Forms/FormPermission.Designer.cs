@@ -78,10 +78,6 @@ namespace CoreLibWinforms.Forms
             btnAddPermission = new Button();
             lblPermissionName = new Label();
             basicPermissionsTab = new TabPage();
-            gridPermission = new DataGridView();
-            ColumnPermId = new DataGridViewTextBoxColumn();
-            ColumnPermName = new DataGridViewTextBoxColumn();
-            ColumnPermDeleteButton = new DataGridViewButtonColumn();
             tabControl = new TabControl();
             userPermissionsTab = new TabPage();
             splitContainer3 = new SplitContainer();
@@ -133,6 +129,10 @@ namespace CoreLibWinforms.Forms
             ColumnControlDeptReadOnly = new DataGridViewCheckBoxColumn();
             lblTitleSelectedControl = new Label();
             btnCancel = new Button();
+            ColumnPermDeleteButton = new DataGridViewButtonColumn();
+            ColumnPermName = new DataGridViewTextBoxColumn();
+            ColumnPermId = new DataGridViewTextBoxColumn();
+            gridPermission = new DataGridView();
             tabUserPermissions.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)gridUserAdditionalPermissionsAvailable).BeginInit();
             ((System.ComponentModel.ISupportInitialize)gridUserAdditionalPermissionsSelected).BeginInit();
@@ -153,7 +153,6 @@ namespace CoreLibWinforms.Forms
             ((System.ComponentModel.ISupportInitialize)gridRoleAvailable).BeginInit();
             ((System.ComponentModel.ISupportInitialize)gridRoleSelected).BeginInit();
             basicPermissionsTab.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)gridPermission).BeginInit();
             tabControl.SuspendLayout();
             userPermissionsTab.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer3).BeginInit();
@@ -178,6 +177,7 @@ namespace CoreLibWinforms.Forms
             ((System.ComponentModel.ISupportInitialize)gridControlRole).BeginInit();
             tabPageControlDept.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)gridControlDept).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)gridPermission).BeginInit();
             SuspendLayout();
             // 
             // tabUserPermissions
@@ -186,9 +186,9 @@ namespace CoreLibWinforms.Forms
             tabUserPermissions.Controls.Add(btnSelectUserAdditionalPermission);
             tabUserPermissions.Controls.Add(btnDeSelectUserAdditionalPermission);
             tabUserPermissions.Controls.Add(gridUserAdditionalPermissionsSelected);
-            tabUserPermissions.Location = new Point(4, 24);
+            tabUserPermissions.Location = new Point(4, 33);
             tabUserPermissions.Name = "tabUserPermissions";
-            tabUserPermissions.Size = new Size(328, 537);
+            tabUserPermissions.Size = new Size(328, 528);
             tabUserPermissions.TabIndex = 1;
             tabUserPermissions.Text = "追加権限";
             // 
@@ -622,34 +622,6 @@ namespace CoreLibWinforms.Forms
             basicPermissionsTab.Size = new Size(870, 635);
             basicPermissionsTab.TabIndex = 0;
             basicPermissionsTab.Text = "基本権限";
-            // 
-            // gridPermission
-            // 
-            gridPermission.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            gridPermission.Columns.AddRange(new DataGridViewColumn[] { ColumnPermId, ColumnPermName, ColumnPermDeleteButton });
-            gridPermission.Location = new Point(10, 75);
-            gridPermission.Name = "gridPermission";
-            gridPermission.Size = new Size(845, 541);
-            gridPermission.TabIndex = 3;
-            gridPermission.CellContentClick += gridPermission_CellContentClick;
-            // 
-            // ColumnPermId
-            // 
-            ColumnPermId.DataPropertyName = "Id";
-            ColumnPermId.HeaderText = "ID";
-            ColumnPermId.Name = "ColumnPermId";
-            // 
-            // ColumnPermName
-            // 
-            ColumnPermName.DataPropertyName = "Name";
-            ColumnPermName.HeaderText = "Name";
-            ColumnPermName.Name = "ColumnPermName";
-            ColumnPermName.Width = 200;
-            // 
-            // ColumnPermDeleteButton
-            // 
-            ColumnPermDeleteButton.HeaderText = "Delete";
-            ColumnPermDeleteButton.Name = "ColumnPermDeleteButton";
             // 
             // tabControl
             // 
@@ -1101,6 +1073,34 @@ namespace CoreLibWinforms.Forms
             btnCancel.Text = "キャンセル";
             btnCancel.UseVisualStyleBackColor = true;
             // 
+            // ColumnPermDeleteButton
+            // 
+            ColumnPermDeleteButton.HeaderText = "Delete";
+            ColumnPermDeleteButton.Name = "ColumnPermDeleteButton";
+            // 
+            // ColumnPermName
+            // 
+            ColumnPermName.DataPropertyName = "Name";
+            ColumnPermName.HeaderText = "Name";
+            ColumnPermName.Name = "ColumnPermName";
+            ColumnPermName.Width = 200;
+            // 
+            // ColumnPermId
+            // 
+            ColumnPermId.DataPropertyName = "Id";
+            ColumnPermId.HeaderText = "ID";
+            ColumnPermId.Name = "ColumnPermId";
+            // 
+            // gridPermission
+            // 
+            gridPermission.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            gridPermission.Columns.AddRange(new DataGridViewColumn[] { ColumnPermId, ColumnPermName, ColumnPermDeleteButton });
+            gridPermission.Location = new Point(10, 75);
+            gridPermission.Name = "gridPermission";
+            gridPermission.Size = new Size(845, 541);
+            gridPermission.TabIndex = 3;
+            gridPermission.CellContentClick += gridPermission_CellContentClick;
+            // 
             // FormPermission
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -1136,7 +1136,6 @@ namespace CoreLibWinforms.Forms
             ((System.ComponentModel.ISupportInitialize)gridRoleSelected).EndInit();
             basicPermissionsTab.ResumeLayout(false);
             basicPermissionsTab.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)gridPermission).EndInit();
             tabControl.ResumeLayout(false);
             userPermissionsTab.ResumeLayout(false);
             splitContainer3.Panel1.ResumeLayout(false);
@@ -1165,6 +1164,7 @@ namespace CoreLibWinforms.Forms
             ((System.ComponentModel.ISupportInitialize)gridControlRole).EndInit();
             tabPageControlDept.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)gridControlDept).EndInit();
+            ((System.ComponentModel.ISupportInitialize)gridPermission).EndInit();
             ResumeLayout(false);
         }
 
@@ -1241,11 +1241,7 @@ namespace CoreLibWinforms.Forms
         private Button btnSelectUserAdditionalPermission;
         private Button btnDeSelectUserAdditionalPermission;
         private DataGridView gridUserAdditionalPermissionsSelected;
-        private DataGridView gridPermission;
         private DataGridViewTextBoxColumn ColumnPermissionName;
-        private DataGridViewTextBoxColumn ColumnPermId;
-        private DataGridViewTextBoxColumn ColumnPermName;
-        private DataGridViewButtonColumn ColumnPermDeleteButton;
         private DataGridViewTextBoxColumn ColumnUserId;
         private DataGridViewButtonColumn ColumnUserDeleteButton;
         private DataGridViewTextBoxColumn ColumnRoleId;
@@ -1305,5 +1301,9 @@ namespace CoreLibWinforms.Forms
         private TextBox txtControlControlName;
         private Label lblTitleControlControlName;
         private TextBox txtControlFormName;
+        private DataGridView gridPermission;
+        private DataGridViewTextBoxColumn ColumnPermId;
+        private DataGridViewTextBoxColumn ColumnPermName;
+        private DataGridViewButtonColumn ColumnPermDeleteButton;
     }
 }
