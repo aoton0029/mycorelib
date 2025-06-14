@@ -1,3 +1,351 @@
+---
+
+UserControlを使った画面遷移を行う登録フローのクラス構造を設計。画面遷移を管理するNavigationFlowServicve、パンくずリストを管理するBreadCrumb、パンくずリストを表示するBreadCrumbControl、登録フローの遷移条件や遷移先を管理するRegistrationFlowStep、画面ごとのデータのスナップショットを管理するためのISnapshot、SnapshotManagerなどを作る。
+
+WPFで.NET 8を対象とした登録フローのクラス構造を設計したいということですね。UserControlを使った画面遷移システムを作成していきましょう。
+
+まず必要なコンポーネントを検討し、クラス構造を設計していきます。
+
+## 登録フロー全体の設計
+
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Windows.Controls;
+
+namespace RegistrationFlow
+{
+    /// <summary>
+    /// 画面遷移を管理するサービス
+    /// </summary>
+    public class NavigationFlowService
+    {
+        private readonly Dictionary<string, RegistrationFlowStep> _steps = new();
+        private readonly Stack<string> _navigationHistory = new();
+        private readonly SnapshotManager _snapshotManager = new();
+        private readonly ContentControl _container;
+        private readonly BreadCrumb _breadCrumb = new();
+
+        public NavigationFlowService(ContentControl container, BreadCrumbControl breadCrumbControl)
+        {
+            _container = container ?? throw new ArgumentNullException(nameof(container));
+            breadCrumbControl.SetBreadCrumb(_breadCrumb);
+        }
+
+        /// <summary>
+        /// フローステップを登録
+        /// </summary>
+        /// <param name="stepId">ステップID</param>
+        /// <param name="step">登録するステップ</param>
+        public void RegisterStep(string stepId, RegistrationFlowStep step)
+        {
+            _steps[stepId] = step;
+        }
+
+        /// <summary>
+        /// 指定したステップに画面遷移
+        /// </summary>
+        /// <param name="stepId">遷移先ステップID</param>
+        /// <param name="data">遷移時のデータ</param>
+        public void NavigateTo(string stepId, object data = null)
+        {
+            if (!_steps.TryGetValue(stepId, out var step))
+                throw new ArgumentException($"Step {stepId} not found", nameof(stepId));
+
+            // 現在の画面のスナップショットを保存
+            if (_container.Content is UserControl currentControl && currentControl is ISnapshot snapshot)
+            {
+                _snapshotManager.SaveSnapshot(GetCurrentStepId(), snapshot.CreateSnapshot());
+            }
+
+            // 新しい画面を生成して表示
+            var control = step.CreateControl();
+            _container.Content = control;
+            
+            // 履歴を更新
+            _navigationHistory.Push(stepId);
+            
+            // パンくずリストを更新
+            _breadCrumb.UpdatePath(_navigationHistory.ToArray());
+
+            // データがあれば復元
+            if (data != null && control is ISnapshot targetSnapshot)
+            {
+                targetSnapshot.RestoreFromData(data);
+            }
+        }
+
+        /// <summary>
+        /// 前の画面に戻る
+        /// </summary>
+        /// <returns>前の画面に戻れたらtrue</returns>
+        public bool GoBack()
+        {
+            if (_navigationHistory.Count <= 1)
+                return false;
+
+            // 現在の画面を履歴から削除
+            _navigationHistory.Pop();
+            
+            // 前の画面のIDを取得
+            string previousStepId = _navigationHistory.Peek();
+            
+            // スナップショットがあれば取得
+            object snapshot = _snapshotManager.GetSnapshot(previousStepId);
+            
+            // 前の画面に遷移（スナップショットを渡す）
+            NavigateTo(previousStepId, snapshot);
+            
+            return true;
+        }
+
+        /// <summary>
+        /// 現在のステップIDを取得
+        /// </summary>
+        private string GetCurrentStepId()
+        {
+            return _navigationHistory.Count > 0 ? _navigationHistory.Peek() : null;
+        }
+    }
+
+    /// <summary>
+    /// 登録フローのステップを定義
+    /// </summary>
+    public class RegistrationFlowStep
+    {
+        private readonly Func<UserControl> _controlFactory;
+        private readonly List<string> _nextSteps = new();
+
+        public RegistrationFlowStep(Func<UserControl> controlFactory)
+        {
+            _controlFactory = controlFactory ?? throw new ArgumentNullException(nameof(controlFactory));
+        }
+
+        /// <summary>
+        /// このステップから遷移可能な次のステップIDを追加
+        /// </summary>
+        public void AddNextStep(string stepId)
+        {
+            _nextSteps.Add(stepId);
+        }
+
+        /// <summary>
+        /// 指定したステップへ遷移可能か確認
+        /// </summary>
+        public bool CanNavigateTo(string stepId)
+        {
+            return _nextSteps.Contains(stepId);
+        }
+
+        /// <summary>
+        /// このステップに対応するUserControlを生成
+        /// </summary>
+        public UserControl CreateControl()
+        {
+            return _controlFactory();
+        }
+    }
+
+    /// <summary>
+    /// パンくずリスト管理クラス
+    /// </summary>
+    public class BreadCrumb
+    {
+        private readonly Dictionary<string, string> _stepNames = new();
+        
+        public event EventHandler<string[]> PathChanged;
+
+        /// <summary>
+        /// ステップIDと表示名を登録
+        /// </summary>
+        public void RegisterStepName(string stepId, string displayName)
+        {
+            _stepNames[stepId] = displayName;
+        }
+
+        /// <summary>
+        /// パスを更新
+        /// </summary>
+        public void UpdatePath(string[] stepIds)
+        {
+            PathChanged?.Invoke(this, stepIds);
+        }
+
+        /// <summary>
+        /// ステップIDから表示名を取得
+        /// </summary>
+        public string GetDisplayName(string stepId)
+        {
+            return _stepNames.TryGetValue(stepId, out var name) ? name : stepId;
+        }
+    }
+
+    /// <summary>
+    /// パンくずリスト表示コントロール
+    /// </summary>
+    public class BreadCrumbControl : UserControl
+    {
+        private BreadCrumb _breadCrumb;
+
+        public void SetBreadCrumb(BreadCrumb breadCrumb)
+        {
+            if (_breadCrumb != null)
+            {
+                _breadCrumb.PathChanged -= OnPathChanged;
+            }
+
+            _breadCrumb = breadCrumb;
+            _breadCrumb.PathChanged += OnPathChanged;
+        }
+
+        private void OnPathChanged(object sender, string[] stepIds)
+        {
+            // パンくずリストUIを更新する処理
+            // 実際の実装ではStackPanelなどにリンクを追加する
+            UpdateBreadCrumbUI(stepIds);
+        }
+
+        private void UpdateBreadCrumbUI(string[] stepIds)
+        {
+            // UI更新処理の実装
+            // 例: StackPanelをクリアして、各ステップのリンクを追加
+        }
+    }
+
+    /// <summary>
+    /// スナップショットを作成・復元するためのインターフェース
+    /// </summary>
+    public interface ISnapshot
+    {
+        /// <summary>
+        /// 現在の状態のスナップショットを作成
+        /// </summary>
+        object CreateSnapshot();
+
+        /// <summary>
+        /// スナップショットから状態を復元
+        /// </summary>
+        void RestoreFromData(object data);
+    }
+
+    /// <summary>
+    /// スナップショット管理クラス
+    /// </summary>
+    public class SnapshotManager
+    {
+        private readonly Dictionary<string, object> _snapshots = new();
+
+        /// <summary>
+        /// スナップショットを保存
+        /// </summary>
+        public void SaveSnapshot(string stepId, object snapshot)
+        {
+            if (stepId != null)
+            {
+                _snapshots[stepId] = snapshot;
+            }
+        }
+
+        /// <summary>
+        /// スナップショットを取得
+        /// </summary>
+        public object GetSnapshot(string stepId)
+        {
+            return _snapshots.TryGetValue(stepId, out var snapshot) ? snapshot : null;
+        }
+
+        /// <summary>
+        /// スナップショットをクリア
+        /// </summary>
+        public void ClearSnapshot(string stepId)
+        {
+            _snapshots.Remove(stepId);
+        }
+    }
+}
+
+```
+
+## 使用例
+
+
+```csharp
+// 登録フローの使用例
+public class RegistrationFlowDemo
+{
+    private NavigationFlowService _flowService;
+
+    public void InitializeFlow(ContentControl mainContainer, BreadCrumbControl breadCrumbControl)
+    {
+        // フローサービスの初期化
+        _flowService = new NavigationFlowService(mainContainer, breadCrumbControl);
+
+        // ステップの登録
+        _flowService.RegisterStep("step1", new RegistrationFlowStep(() => new Step1Control()));
+        _flowService.RegisterStep("step2", new RegistrationFlowStep(() => new Step2Control()));
+        _flowService.RegisterStep("step3", new RegistrationFlowStep(() => new Step3Control()));
+        
+        // 遷移条件の設定
+        var step1 = _flowService.GetStep("step1");
+        step1.AddNextStep("step2");
+        
+        var step2 = _flowService.GetStep("step2");
+        step2.AddNextStep("step3");
+
+        // パンくずリストの項目名を設定
+        var breadCrumb = _flowService.GetBreadCrumb();
+        breadCrumb.RegisterStepName("step1", "基本情報");
+        breadCrumb.RegisterStepName("step2", "詳細設定");
+        breadCrumb.RegisterStepName("step3", "確認");
+        
+        // 初期画面に遷移
+        _flowService.NavigateTo("step1");
+    }
+}
+
+// ステップのコントロール例
+public class Step1Control : UserControl, ISnapshot
+{
+    public object CreateSnapshot()
+    {
+        // 画面の入力内容をオブジェクトとして保存
+        return new { Name = nameTextBox.Text, Age = ageNumeric.Value };
+    }
+
+    public void RestoreFromData(object data)
+    {
+        // 保存されたデータから画面を復元
+        if (data is dynamic savedData)
+        {
+            nameTextBox.Text = savedData.Name;
+            ageNumeric.Value = savedData.Age;
+        }
+    }
+    
+    private void NextButton_Click(object sender, RoutedEventArgs e)
+    {
+        // 次の画面に遷移（実際の実装ではDIコンテナなどからNavigationFlowServiceを取得）
+        var flowService = GetNavigationFlowService();
+        flowService.NavigateTo("step2");
+    }
+}
+
+```
+
+このクラス構造では以下のポイントを考慮しています：
+
+1. **NavigationFlowService** - 画面遷移とフロー全体を管理
+2. **RegistrationFlowStep** - 各ステップの情報と遷移条件を定義
+3. **BreadCrumb** - パンくずリストのデータを管理
+4. **BreadCrumbControl** - パンくずリストを表示するUI部分
+5. **ISnapshot** - 画面データのスナップショット作成・復元インターフェース
+6. **SnapshotManager** - スナップショットの保存・復元を担当
+
+実際の実装では、DIコンテナの活用やMVVMパターンとの組み合わせなど、プロジェクトの要件に合わせた拡張が必要になるかもしれません。
+
+---
+
 # 権限・役割・部署のサンプルリスト
 
 ## 1. 権限（Permissions）サンプル
