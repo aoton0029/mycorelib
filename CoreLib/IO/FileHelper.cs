@@ -217,4 +217,256 @@ namespace CoreLib.Utilities.IO
             }
         }
     }
+
+    /// <summary>
+    /// フォルダ内のファイルに対して様々な操作を行う静的汎用クラス
+    /// </summary>
+    public static class FileOperations
+    {
+        /// <summary>
+        /// 指定されたフォルダ内のファイルを検索します
+        /// </summary>
+        /// <param name="folderPath">検索対象のフォルダパス</param>
+        /// <param name="searchPattern">検索パターン（例: "*.txt"）</param>
+        /// <param name="searchOption">検索オプション（サブディレクトリを含めるかどうか）</param>
+        /// <returns>ファイルパスのリスト</returns>
+        public static IEnumerable<string> FindFiles(string folderPath, string searchPattern = "*.*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        {
+            if (!Directory.Exists(folderPath))
+                throw new DirectoryNotFoundException($"フォルダが見つかりません: {folderPath}");
+
+            return Directory.GetFiles(folderPath, searchPattern, searchOption);
+        }
+
+        /// <summary>
+        /// 指定されたフォルダ内のファイルを条件に基づいて検索します
+        /// </summary>
+        /// <param name="folderPath">検索対象のフォルダパス</param>
+        /// <param name="predicate">ファイル選択条件</param>
+        /// <param name="searchOption">検索オプション（サブディレクトリを含めるかどうか）</param>
+        /// <returns>条件に一致するファイルパスのリスト</returns>
+        public static IEnumerable<string> FindFiles(string folderPath, Func<FileInfo, bool> predicate, SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        {
+            if (!Directory.Exists(folderPath))
+                throw new DirectoryNotFoundException($"フォルダが見つかりません: {folderPath}");
+
+            return Directory.GetFiles(folderPath, "*.*", searchOption)
+                .Select(path => new FileInfo(path))
+                .Where(predicate)
+                .Select(fi => fi.FullName);
+        }
+
+        /// <summary>
+        /// ファイルの内容をテキストとして読み込みます
+        /// </summary>
+        /// <param name="filePath">ファイルパス</param>
+        /// <param name="encoding">エンコーディング（nullの場合はUTF-8）</param>
+        /// <returns>ファイルの内容</returns>
+        public static string ReadAllText(string filePath, Encoding? encoding = null)
+        {
+            encoding ??= Encoding.UTF8;
+            return File.ReadAllText(filePath, encoding);
+        }
+
+        /// <summary>
+        /// テキストをファイルに書き込みます
+        /// </summary>
+        /// <param name="filePath">ファイルパス</param>
+        /// <param name="content">書き込む内容</param>
+        /// <param name="encoding">エンコーディング（nullの場合はUTF-8）</param>
+        public static void WriteAllText(string filePath, string content, Encoding? encoding = null)
+        {
+            encoding ??= Encoding.UTF8;
+            File.WriteAllText(filePath, content, encoding);
+        }
+
+        /// <summary>
+        /// ファイルを非同期でテキストとして読み込みます
+        /// </summary>
+        /// <param name="filePath">ファイルパス</param>
+        /// <param name="encoding">エンコーディング（nullの場合はUTF-8）</param>
+        /// <returns>ファイルの内容</returns>
+        public static async Task<string> ReadAllTextAsync(string filePath, Encoding? encoding = null)
+        {
+            encoding ??= Encoding.UTF8;
+            return await File.ReadAllTextAsync(filePath, encoding);
+        }
+
+        /// <summary>
+        /// テキストをファイルに非同期で書き込みます
+        /// </summary>
+        /// <param name="filePath">ファイルパス</param>
+        /// <param name="content">書き込む内容</param>
+        /// <param name="encoding">エンコーディング（nullの場合はUTF-8）</param>
+        public static async Task WriteAllTextAsync(string filePath, string content, Encoding? encoding = null)
+        {
+            encoding ??= Encoding.UTF8;
+            await File.WriteAllTextAsync(filePath, content, encoding);
+        }
+
+        /// <summary>
+        /// フォルダ内のファイルに対して指定された処理を実行します
+        /// </summary>
+        /// <typeparam name="T">処理結果の型</typeparam>
+        /// <param name="folderPath">フォルダパス</param>
+        /// <param name="action">各ファイルに対して実行する処理</param>
+        /// <param name="searchPattern">検索パターン</param>
+        /// <param name="searchOption">検索オプション</param>
+        /// <returns>処理結果のリスト</returns>
+        public static IEnumerable<T> ProcessFiles<T>(string folderPath, Func<string, T> action,
+            string searchPattern = "*.*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        {
+            var files = FindFiles(folderPath, searchPattern, searchOption);
+            return files.Select(action);
+        }
+
+        /// <summary>
+        /// フォルダ内のファイルに対して非同期で指定された処理を実行します
+        /// </summary>
+        /// <typeparam name="T">処理結果の型</typeparam>
+        /// <param name="folderPath">フォルダパス</param>
+        /// <param name="action">各ファイルに対して実行する非同期処理</param>
+        /// <param name="searchPattern">検索パターン</param>
+        /// <param name="searchOption">検索オプション</param>
+        /// <returns>処理結果のリスト</returns>
+        public static async Task<IEnumerable<T>> ProcessFilesAsync<T>(string folderPath, Func<string, Task<T>> action,
+            string searchPattern = "*.*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        {
+            var files = FindFiles(folderPath, searchPattern, searchOption);
+            var tasks = files.Select(action);
+            return await Task.WhenAll(tasks);
+        }
+
+        /// <summary>
+        /// ファイルをコピーします（上書き可能）
+        /// </summary>
+        /// <param name="sourcePath">コピー元ファイルパス</param>
+        /// <param name="destinationPath">コピー先ファイルパス</param>
+        /// <param name="overwrite">上書きするかどうか</param>
+        public static void CopyFile(string sourcePath, string destinationPath, bool overwrite = true)
+        {
+            File.Copy(sourcePath, destinationPath, overwrite);
+        }
+
+        /// <summary>
+        /// ファイルを移動します
+        /// </summary>
+        /// <param name="sourcePath">移動元ファイルパス</param>
+        /// <param name="destinationPath">移動先ファイルパス</param>
+        /// <param name="overwrite">上書きするかどうか</param>
+        public static void MoveFile(string sourcePath, string destinationPath, bool overwrite = false)
+        {
+            if (overwrite && File.Exists(destinationPath))
+                File.Delete(destinationPath);
+
+            File.Move(sourcePath, destinationPath);
+        }
+
+        /// <summary>
+        /// ファイルを削除します
+        /// </summary>
+        /// <param name="filePath">削除するファイルパス</param>
+        public static void DeleteFile(string filePath)
+        {
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+
+        /// <summary>
+        /// フォルダ内のファイルを条件に基づいて検索し、一致したファイルの内容を操作します
+        /// </summary>
+        /// <param name="folderPath">検索対象のフォルダパス</param>
+        /// <param name="fileContentPredicate">ファイル内容の条件</param>
+        /// <param name="contentProcessor">ファイル内容を処理する関数</param>
+        /// <param name="encoding">エンコーディング（nullの場合はUTF-8）</param>
+        /// <param name="searchPattern">検索パターン</param>
+        /// <param name="searchOption">検索オプション</param>
+        /// <returns>処理されたファイルのパスリスト</returns>
+        public static IEnumerable<string> FindAndProcessFileContent(
+            string folderPath,
+            Func<string, string, bool> fileContentPredicate,
+            Func<string, string> contentProcessor,
+            Encoding? encoding = null,
+            string searchPattern = "*.*",
+            SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        {
+            if (!Directory.Exists(folderPath))
+                throw new DirectoryNotFoundException($"フォルダが見つかりません: {folderPath}");
+
+            encoding ??= Encoding.UTF8;
+            var processedFiles = new List<string>();
+
+            foreach (var filePath in FindFiles(folderPath, searchPattern, searchOption))
+            {
+                try
+                {
+                    var content = File.ReadAllText(filePath, encoding);
+
+                    // ファイル内容が条件に一致する場合、処理を実行
+                    if (fileContentPredicate(filePath, content))
+                    {
+                        var newContent = contentProcessor(content);
+                        File.WriteAllText(filePath, newContent, encoding);
+                        processedFiles.Add(filePath);
+                    }
+                }
+                catch (Exception)
+                {
+                    // エラーが発生したファイルはスキップ
+                    continue;
+                }
+            }
+
+            return processedFiles;
+        }
+
+        /// <summary>
+        /// フォルダ内のファイルを条件に基づいて検索し、一致したファイルの内容を非同期で操作します
+        /// </summary>
+        /// <param name="folderPath">検索対象のフォルダパス</param>
+        /// <param name="fileContentPredicate">ファイル内容の条件</param>
+        /// <param name="contentProcessor">ファイル内容を処理する関数</param>
+        /// <param name="encoding">エンコーディング（nullの場合はUTF-8）</param>
+        /// <param name="searchPattern">検索パターン</param>
+        /// <param name="searchOption">検索オプション</param>
+        /// <returns>処理されたファイルのパスリスト</returns>
+        public static async Task<IEnumerable<string>> FindAndProcessFileContentAsync(
+            string folderPath,
+            Func<string, string, bool> fileContentPredicate,
+            Func<string, string> contentProcessor,
+            Encoding? encoding = null,
+            string searchPattern = "*.*",
+            SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        {
+            if (!Directory.Exists(folderPath))
+                throw new DirectoryNotFoundException($"フォルダが見つかりません: {folderPath}");
+
+            encoding ??= Encoding.UTF8;
+            var processedFiles = new List<string>();
+            var files = FindFiles(folderPath, searchPattern, searchOption);
+
+            foreach (var filePath in files)
+            {
+                try
+                {
+                    var content = await File.ReadAllTextAsync(filePath, encoding);
+
+                    // ファイル内容が条件に一致する場合、処理を実行
+                    if (fileContentPredicate(filePath, content))
+                    {
+                        var newContent = contentProcessor(content);
+                        await File.WriteAllTextAsync(filePath, newContent, encoding);
+                        processedFiles.Add(filePath);
+                    }
+                }
+                catch (Exception)
+                {
+                    // エラーが発生したファイルはスキップ
+                    continue;
+                }
+            }
+
+            return processedFiles;
+        }
+    }
 }
