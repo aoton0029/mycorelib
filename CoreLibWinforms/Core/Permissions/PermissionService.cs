@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -75,7 +76,12 @@ namespace CoreLibWinforms.Core.Permissions
     // 権限管理システム
     public class PermissionService
     {
-        PermissionManager permissionManager;
+        private PermissionManager permissionManager;
+
+        public PermissionService()
+        {
+            permissionManager = new PermissionManager();
+        }
 
         // 権限チェック - ワイルドカードもサポート
         public bool IsPermitted(string userId, string locationId, string permissionId)
@@ -157,10 +163,15 @@ namespace CoreLibWinforms.Core.Permissions
 
             return false;
         }
+
+        public void Load()
+        {
+            permissionManager.Load();
+        }
     }
     public class PermissionManager 
     {
-        public static string FilePath = "permissions.json"; // 権限設定のJSONファイルパス
+        public static string FilePath = "../設定/permissions.json"; // 権限設定のJSONファイルパス
 
         public List<Permission> AvailablePermissions { get; set; } = new List<Permission>();
         public List<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
@@ -361,6 +372,8 @@ namespace CoreLibWinforms.Core.Permissions
         public void Save(string filePath = null)
         {
             string path = filePath ?? FilePath;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
 
             var permissionsData = new
             {

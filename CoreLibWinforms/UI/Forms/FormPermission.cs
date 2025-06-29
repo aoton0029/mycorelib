@@ -455,18 +455,19 @@ namespace CoreLibWinforms.Forms
             try
             {
                 // 保存ダイアログを表示
-                using (SaveFileDialog dlg = new SaveFileDialog())
-                {
-                    dlg.Filter = "JSONファイル (*.json)|*.json|すべてのファイル (*.*)|*.*";
-                    dlg.DefaultExt = ".json";
-                    dlg.FileName = "permissions.json";
+                //using (SaveFileDialog dlg = new SaveFileDialog())
+                //{
+                //    dlg.Filter = "JSONファイル (*.json)|*.json|すべてのファイル (*.*)|*.*";
+                //    dlg.DefaultExt = ".json";
+                //    dlg.FileName = "permissions.json";
 
-                    if (dlg.ShowDialog() == DialogResult.OK)
-                    {
-                        _permissionManager.Save(dlg.FileName);
-                        MessageBox.Show("権限設定を保存しました。", "保存完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                }
+                //    if (dlg.ShowDialog() == DialogResult.OK)
+                //    {
+                //        _permissionManager.Save(dlg.FileName);
+                //        MessageBox.Show("権限設定を保存しました。", "保存完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //    }
+                //}
+                _permissionManager.Save();
             }
             catch (Exception ex)
             {
@@ -478,19 +479,21 @@ namespace CoreLibWinforms.Forms
         {
             try
             {
-                // 読み込みダイアログを表示
-                using (OpenFileDialog dlg = new OpenFileDialog())
-                {
-                    dlg.Filter = "JSONファイル (*.json)|*.json|すべてのファイル (*.*)|*.*";
-                    dlg.DefaultExt = ".json";
+                //// 読み込みダイアログを表示
+                //using (OpenFileDialog dlg = new OpenFileDialog())
+                //{
+                //    dlg.Filter = "JSONファイル (*.json)|*.json|すべてのファイル (*.*)|*.*";
+                //    dlg.DefaultExt = ".json";
 
-                    if (dlg.ShowDialog() == DialogResult.OK)
-                    {
-                        _permissionManager.Load(dlg.FileName);
-                        RefreshAllViews();
-                        MessageBox.Show("権限設定を読み込みました。", "読み込み完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                }
+                //    if (dlg.ShowDialog() == DialogResult.OK)
+                //    {
+                //        _permissionManager.Load(dlg.FileName);
+                //        RefreshAllViews();
+                //        MessageBox.Show("権限設定を読み込みました。", "読み込み完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //    }
+                //}
+                _permissionManager.Load();
+                RefreshAllViews();
             }
             catch (Exception ex)
             {
