@@ -1,3 +1,79 @@
+VBAでSQL Serverに接続するには、**ADODB**ライブラリを使用する方法が一般的です。  
+以下は基本的な接続例です。
+
+---
+
+### 1. 参照設定
+
+VBAエディタで「ツール」→「参照設定」→「Microsoft ActiveX Data Objects x.x Library」にチェックを入れます。  
+（例：Microsoft ActiveX Data Objects 6.1 Library）
+
+---
+
+### 2. コード例
+
+```vba
+Sub ConnectToSQLServer()
+    Dim conn As Object
+    Dim rs As Object
+    Dim connStr As String
+
+    ' 接続文字列の作成
+    connStr = "Provider=SQLOLEDB;" & _
+              "Data Source=サーバ名;" & _
+              "Initial Catalog=データベース名;" & _
+              "User ID=ユーザー名;" & _
+              "Password=パスワード;"
+
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    On Error GoTo ErrHandler
+
+    conn.Open connStr
+
+    ' SQLを実行
+    rs.Open "SELECT * FROM テーブル名", conn
+
+    ' データの取得例
+    Do Until rs.EOF
+        Debug.Print rs.Fields(0).Value
+        rs.MoveNext
+    Loop
+
+    rs.Close
+    conn.Close
+
+    Set rs = Nothing
+    Set conn = Nothing
+
+    Exit Sub
+
+ErrHandler:
+    MsgBox "接続エラー: " & Err.Description
+End Sub
+```
+
+---
+
+### 3. 注意点・補足
+
+- **サーバ名**や**データベース名**、**ユーザー名**、**パスワード**は実環境に合わせて変更してください。
+- Windows認証を使う場合は、User IDとPasswordを省略し、`Integrated Security=SSPI;`を追加します。
+    ```vba
+    connStr = "Provider=SQLOLEDB;" & _
+              "Data Source=サーバ名;" & _
+              "Initial Catalog=データベース名;" & _
+              "Integrated Security=SSPI;"
+    ```
+- SQL Server Native Client（`Provider=SQLNCLI11` など）を使う場合は、Providerの部分を変更します。
+
+---
+
+ご要望に合わせてサンプルや応用例もご案内できます。  
+必要であれば、接続文字列やSQLの内容を具体的に教えてください。
+
+
 以下に、TextBoxの編集時にPopupBaseFormを使用して履歴選択ができるようなコードの実装例を示します。テキスト入力履歴をドロップダウンのように表示し、過去の入力を選択できる機能を実装します。
 
 ```csharp
