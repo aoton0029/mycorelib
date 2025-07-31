@@ -1,31 +1,154 @@
-リポジトリの構造を確認しました。`mycorelib`は既に権限管理やフォーム機能を含む汎用的なWinFormsライブラリとして開発されていますね。改善要望管理システムの実装例を以下に示します：
+Winformsで改善要望をJSONファイルで管理するためのライブラリを作成します。サーバー上のJSONファイルにアクセスし、複数のPCから同時にアクセスしても整合性を保てるような汎用的な設計にします。
 
-## 🔧 改善要望管理ライブラリ - コード例
+以下のファイル構成でライブラリを作成します：
 
-### 1. 改善要望データモデル
-
-```csharp
+```csharp name=Models/ImprovementRequest.cs
 using System;
-using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.ComponentModel;
 
-namespace CoreLib.ImprovementRequest
+namespace ImprovementRequestManager.Models
 {
     /// <summary>
-    /// 改善要望データモデル
+    /// 改善要望を表すモデルクラス
     /// </summary>
-    public class ImprovementRequest
+    public class ImprovementRequest : INotifyPropertyChanged
     {
-        public int Id { get; set; }
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public Priority Priority { get; set; }
-        public RequestStatus Status { get; set; }
-        public string RequestedBy { get; set; }
-        public DateTime RequestDate { get; set; }
-        public DateTime? CompletedDate { get; set; }
-        public string Category { get; set; }
-        public List<string> Tags { get; set; } = new List<string>();
+        private string _id;
+        private string _title;
+        private string _description;
+        private string _requester;
+        private DateTime _requestDate;
+        private Priority _priority;
+        private Status _status;
+        private string _assignee;
+        private DateTime? _completedDate;
+        private string _category;
+        private string _comments;
+
+        public string Id
+        {
+            get => _id;
+            set
+            {
+                _id = value;
+                OnPropertyChanged(nameof(Id));
+            }
+        }
+
+        public string Title
+        {
+            get => _title;
+            set
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+
+        public string Description
+        {
+            get => _description;
+            set
+            {
+                _description = value;
+                OnPropertyChanged(nameof(Description));
+            }
+        }
+
+        public string Requester
+        {
+            get => _requester;
+            set
+            {
+                _requester = value;
+                OnPropertyChanged(nameof(Requester));
+            }
+        }
+
+        public DateTime RequestDate
+        {
+            get => _requestDate;
+            set
+            {
+                _requestDate = value;
+                OnPropertyChanged(nameof(RequestDate));
+            }
+        }
+
+        public Priority Priority
+        {
+            get => _priority;
+            set
+            {
+                _priority = value;
+                OnPropertyChanged(nameof(Priority));
+            }
+        }
+
+        public Status Status
+        {
+            get => _status;
+            set
+            {
+                _status = value;
+                OnPropertyChanged(nameof(Status));
+            }
+        }
+
+        public string Assignee
+        {
+            get => _assignee;
+            set
+            {
+                _assignee = value;
+                OnPropertyChanged(nameof(Assignee));
+            }
+        }
+
+        public DateTime? CompletedDate
+        {
+            get => _completedDate;
+            set
+            {
+                _completedDate = value;
+                OnPropertyChanged(nameof(CompletedDate));
+            }
+        }
+
+        public string Category
+        {
+            get => _category;
+            set
+            {
+                _category = value;
+                OnPropertyChanged(nameof(Category));
+            }
+        }
+
+        public string Comments
+        {
+            get => _comments;
+            set
+            {
+                _comments = value;
+                OnPropertyChanged(nameof(Comments));
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public ImprovementRequest()
+        {
+            Id = Guid.NewGuid().ToString();
+            RequestDate = DateTime.Now;
+            Status = Status.Open;
+            Priority = Priority.Medium;
+        }
     }
 
     public enum Priority
@@ -36,1069 +159,1413 @@ namespace CoreLib.ImprovementRequest
         Critical = 4
     }
 
-    public enum RequestStatus
+    public enum Status
     {
-        Pending,
+        Open,
         InProgress,
+        UnderReview,
         Completed,
-        Rejected
+        Rejected,
+        OnHold
     }
 }
 ```
 
-### 2. JSONファイル管理サービス（ファイルロック対応）
-
-```csharp
+```csharp name=Services/ImprovementRequestService.cs
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Threading.Tasks;
 using System.Threading;
 using Newtonsoft.Json;
+using ImprovementRequestManager.Models;
 
-namespace CoreLib.ImprovementRequest
+namespace ImprovementRequestManager.Services
 {
     /// <summary>
-    /// 改善要望のJSONファイル管理（排他制御対応）
+    /// 改善要望の管理を行うサービスクラス
+    /// ファイルロックによる排他制御を実装
     /// </summary>
-    public class ImprovementRequestManager
+    public class ImprovementRequestService
     {
         private readonly string _filePath;
-        private readonly string _lockFilePath;
-        private readonly object _lockObject = new object();
-        private static readonly Dictionary<string, Mutex> _fileMutexes = new Dictionary<string, Mutex>();
+        private readonly SemaphoreSlim _semaphore;
+        private readonly int _lockTimeoutMs;
 
-        public ImprovementRequestManager(string filePath = "improvement_requests.json")
+        public ImprovementRequestService(string filePath, int lockTimeoutMs = 30000)
         {
-            _filePath = filePath;
-            _lockFilePath = _filePath + ".lock";
-            
-            // ファイル別のMutexを取得または作成
-            if (!_fileMutexes.ContainsKey(_filePath))
+            _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+            _semaphore = new SemaphoreSlim(1, 1);
+            _lockTimeoutMs = lockTimeoutMs;
+        }
+
+        /// <summary>
+        /// すべての改善要望を取得
+        /// </summary>
+        public async Task<List<ImprovementRequest>> GetAllRequestsAsync()
+        {
+            if (!await _semaphore.WaitAsync(_lockTimeoutMs))
+                throw new TimeoutException("ファイルアクセスがタイムアウトしました。");
+
+            try
             {
-                _fileMutexes[_filePath] = new Mutex(false, $"ImprovementRequest_{Path.GetFileName(_filePath)}");
+                return await ReadFromFileAsync();
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
 
         /// <summary>
-        /// 全ての改善要望を取得
+        /// 新しい改善要望を追加
         /// </summary>
-        public List<ImprovementRequest> GetAll()
+        public async Task<bool> AddRequestAsync(ImprovementRequest request)
         {
-            return ExecuteWithLock(() =>
-            {
-                if (!File.Exists(_filePath))
-                    return new List<ImprovementRequest>();
+            if (request == null) throw new ArgumentNullException(nameof(request));
 
-                var json = File.ReadAllText(_filePath);
-                return JsonConvert.DeserializeObject<List<ImprovementRequest>>(json) ?? new List<ImprovementRequest>();
-            });
-        }
+            if (!await _semaphore.WaitAsync(_lockTimeoutMs))
+                throw new TimeoutException("ファイルアクセスがタイムアウトしました。");
 
-        /// <summary>
-        /// 改善要望を追加
-        /// </summary>
-        public void Add(ImprovementRequest request)
-        {
-            ExecuteWithLock(() =>
+            try
             {
-                var requests = GetAllInternal();
-                request.Id = requests.Any() ? requests.Max(r => r.Id) + 1 : 1;
-                request.RequestDate = DateTime.Now;
+                var requests = await ReadFromFileAsync();
+                
+                // IDが重複していないかチェック
+                if (requests.Exists(r => r.Id == request.Id))
+                {
+                    request.Id = Guid.NewGuid().ToString();
+                }
+
                 requests.Add(request);
-                SaveInternal(requests);
-            });
+                await WriteToFileAsync(requests);
+                return true;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         /// <summary>
         /// 改善要望を更新
         /// </summary>
-        public bool Update(ImprovementRequest request)
+        public async Task<bool> UpdateRequestAsync(ImprovementRequest request)
         {
-            return ExecuteWithLock(() =>
-            {
-                var requests = GetAllInternal();
-                var existingIndex = requests.FindIndex(r => r.Id == request.Id);
-                
-                if (existingIndex == -1)
-                    return false;
+            if (request == null) throw new ArgumentNullException(nameof(request));
 
-                requests[existingIndex] = request;
-                SaveInternal(requests);
+            if (!await _semaphore.WaitAsync(_lockTimeoutMs))
+                throw new TimeoutException("ファイルアクセスがタイムアウトしました。");
+
+            try
+            {
+                var requests = await ReadFromFileAsync();
+                var index = requests.FindIndex(r => r.Id == request.Id);
+                
+                if (index == -1) return false;
+
+                requests[index] = request;
+                await WriteToFileAsync(requests);
                 return true;
-            });
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         /// <summary>
         /// 改善要望を削除
         /// </summary>
-        public bool Delete(int id)
+        public async Task<bool> DeleteRequestAsync(string id)
         {
-            return ExecuteWithLock(() =>
-            {
-                var requests = GetAllInternal();
-                var request = requests.FirstOrDefault(r => r.Id == id);
-                
-                if (request == null)
-                    return false;
+            if (string.IsNullOrEmpty(id)) throw new ArgumentNullException(nameof(id));
 
-                requests.Remove(request);
-                SaveInternal(requests);
-                return true;
-            });
-        }
+            if (!await _semaphore.WaitAsync(_lockTimeoutMs))
+                throw new TimeoutException("ファイルアクセスがタイムアウトしました。");
 
-        /// <summary>
-        /// IDで改善要望を取得
-        /// </summary>
-        public ImprovementRequest GetById(int id)
-        {
-            return ExecuteWithLock(() =>
-            {
-                var requests = GetAllInternal();
-                return requests.FirstOrDefault(r => r.Id == id);
-            });
-        }
-
-        /// <summary>
-        /// 条件で検索
-        /// </summary>
-        public List<ImprovementRequest> Search(string keyword = null, Priority? priority = null, RequestStatus? status = null)
-        {
-            return ExecuteWithLock(() =>
-            {
-                var requests = GetAllInternal();
-                
-                if (!string.IsNullOrEmpty(keyword))
-                {
-                    requests = requests.Where(r => 
-                        r.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                        r.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                }
-
-                if (priority.HasValue)
-                {
-                    requests = requests.Where(r => r.Priority == priority.Value).ToList();
-                }
-
-                if (status.HasValue)
-                {
-                    requests = requests.Where(r => r.Status == status.Value).ToList();
-                }
-
-                return requests;
-            });
-        }
-
-        private T ExecuteWithLock<T>(Func<T> action)
-        {
-            var mutex = _fileMutexes[_filePath];
-            mutex.WaitOne();
-            
             try
             {
-                return action();
+                var requests = await ReadFromFileAsync();
+                var removed = requests.RemoveAll(r => r.Id == id) > 0;
+                
+                if (removed)
+                {
+                    await WriteToFileAsync(requests);
+                }
+                
+                return removed;
             }
             finally
             {
-                mutex.ReleaseMutex();
+                _semaphore.Release();
             }
         }
 
-        private void ExecuteWithLock(Action action)
+        /// <summary>
+        /// IDで改善要望を検索
+        /// </summary>
+        public async Task<ImprovementRequest> GetRequestByIdAsync(string id)
         {
-            ExecuteWithLock(() => { action(); return true; });
+            var requests = await GetAllRequestsAsync();
+            return requests.Find(r => r.Id == id);
         }
 
-        private List<ImprovementRequest> GetAllInternal()
+        /// <summary>
+        /// ファイルからデータを読み込み
+        /// </summary>
+        private async Task<List<ImprovementRequest>> ReadFromFileAsync()
         {
             if (!File.Exists(_filePath))
+            {
                 return new List<ImprovementRequest>();
+            }
 
-            var json = File.ReadAllText(_filePath);
-            return JsonConvert.DeserializeObject<List<ImprovementRequest>>(json) ?? new List<ImprovementRequest>();
+            using (var fileStream = new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var reader = new StreamReader(fileStream))
+            {
+                var json = await reader.ReadToEndAsync();
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    return new List<ImprovementRequest>();
+                }
+
+                try
+                {
+                    return JsonConvert.DeserializeObject<List<ImprovementRequest>>(json) ?? new List<ImprovementRequest>();
+                }
+                catch (JsonException)
+                {
+                    // JSONの形式が不正な場合は空のリストを返す
+                    return new List<ImprovementRequest>();
+                }
+            }
         }
 
-        private void SaveInternal(List<ImprovementRequest> requests)
+        /// <summary>
+        /// ファイルにデータを書き込み
+        /// </summary>
+        private async Task WriteToFileAsync(List<ImprovementRequest> requests)
         {
-            // バックアップ作成
-            if (File.Exists(_filePath))
+            // ディレクトリが存在しない場合は作成
+            var directory = Path.GetDirectoryName(_filePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
-                File.Copy(_filePath, _filePath + ".bak", true);
+                Directory.CreateDirectory(directory);
             }
 
             var json = JsonConvert.SerializeObject(requests, Formatting.Indented);
-            File.WriteAllText(_filePath, json);
+            
+            // 一時ファイルに書き込んでから元のファイルと置き換え（原子性を保証）
+            var tempPath = _filePath + ".tmp";
+            
+            using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(fileStream))
+            {
+                await writer.WriteAsync(json);
+                await writer.FlushAsync();
+            }
+
+            // 元のファイルがあれば削除してから、一時ファイルをリネーム
+            if (File.Exists(_filePath))
+            {
+                File.Delete(_filePath);
+            }
+            File.Move(tempPath, _filePath);
+        }
+
+        public void Dispose()
+        {
+            _semaphore?.Dispose();
         }
     }
 }
 ```
 
-### 3. WinFormsユーザーインターフェース
-
-```csharp
-using System;
-using System.Linq;
-using System.Windows.Forms;
-using CoreLib.ImprovementRequest;
-
-namespace CoreLib.Forms
-{
-    /// <summary>
-    /// 改善要望管理フォーム
-    /// </summary>
-    public partial class FormImprovementRequestManager : Form
-    {
-        private readonly ImprovementRequestManager _manager;
-        private DataGridView dgvRequests;
-        private TextBox txtSearch;
-        private ComboBox cbPriority, cbStatus;
-        private Button btnAdd, btnEdit, btnDelete, btnSearch;
-
-        public FormImprovementRequestManager()
-        {
-            _manager = new ImprovementRequestManager();
-            InitializeComponent();
-            LoadData();
-        }
-
-        private void InitializeComponent()
-        {
-            this.Size = new System.Drawing.Size(1000, 600);
-            this.Text = "改善要望管理システム";
-
-            // 検索パネル
-            var pnlSearch = new Panel { Dock = DockStyle.Top, Height = 60 };
-            
-            txtSearch = new TextBox { Location = new System.Drawing.Point(10, 15), Width = 200 };
-            cbPriority = new ComboBox { Location = new System.Drawing.Point(220, 15), Width = 100 };
-            cbStatus = new ComboBox { Location = new System.Drawing.Point(330, 15), Width = 100 };
-            btnSearch = new Button { Location = new System.Drawing.Point(440, 13), Text = "検索", Width = 60 };
-
-            cbPriority.Items.AddRange(new[] { "全て", "低", "中", "高", "緊急" });
-            cbPriority.SelectedIndex = 0;
-            cbStatus.Items.AddRange(new[] { "全て", "保留中", "進行中", "完了", "却下" });
-            cbStatus.SelectedIndex = 0;
-
-            pnlSearch.Controls.AddRange(new Control[] { txtSearch, cbPriority, cbStatus, btnSearch });
-
-            // ボタンパネル
-            var pnlButtons = new Panel { Dock = DockStyle.Bottom, Height = 50 };
-            
-            btnAdd = new Button { Location = new System.Drawing.Point(10, 10), Text = "新規追加", Width = 80 };
-            btnEdit = new Button { Location = new System.Drawing.Point(100, 10), Text = "編集", Width = 80 };
-            btnDelete = new Button { Location = new System.Drawing.Point(190, 10), Text = "削除", Width = 80 };
-
-            pnlButtons.Controls.AddRange(new Control[] { btnAdd, btnEdit, btnDelete });
-
-            // データグリッド
-            dgvRequests = new DataGridView 
-            { 
-                Dock = DockStyle.Fill,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                ReadOnly = true,
-                AllowUserToAddRows = false
-            };
-
-            // イベント設定
-            btnSearch.Click += BtnSearch_Click;
-            btnAdd.Click += BtnAdd_Click;
-            btnEdit.Click += BtnEdit_Click;
-            btnDelete.Click += BtnDelete_Click;
-            dgvRequests.CellDoubleClick += DgvRequests_CellDoubleClick;
-
-            this.Controls.AddRange(new Control[] { dgvRequests, pnlSearch, pnlButtons });
-        }
-
-        private void LoadData()
-        {
-            var requests = _manager.GetAll();
-            dgvRequests.DataSource = requests.Select(r => new
-            {
-                ID = r.Id,
-                タイトル = r.Title,
-                説明 = r.Description,
-                優先度 = GetPriorityText(r.Priority),
-                ステータス = GetStatusText(r.Status),
-                要求者 = r.RequestedBy,
-                要求日 = r.RequestDate.ToString("yyyy/MM/dd"),
-                カテゴリ = r.Category
-            }).ToList();
-        }
-
-        private void BtnSearch_Click(object sender, EventArgs e)
-        {
-            Priority? priority = cbPriority.SelectedIndex > 0 ? (Priority)(cbPriority.SelectedIndex) : null;
-            RequestStatus? status = cbStatus.SelectedIndex > 0 ? (RequestStatus)(cbStatus.SelectedIndex - 1) : null;
-            
-            var results = _manager.Search(txtSearch.Text, priority, status);
-            dgvRequests.DataSource = results.Select(r => new
-            {
-                ID = r.Id,
-                タイトル = r.Title,
-                説明 = r.Description,
-                優先度 = GetPriorityText(r.Priority),
-                ステータス = GetStatusText(r.Status),
-                要求者 = r.RequestedBy,
-                要求日 = r.RequestDate.ToString("yyyy/MM/dd"),
-                カテゴリ = r.Category
-            }).ToList();
-        }
-
-        private void BtnAdd_Click(object sender, EventArgs e)
-        {
-            using (var form = new FormImprovementRequestEdit())
-            {
-                if (form.ShowDialog() == DialogResult.OK)
-                {
-                    _manager.Add(form.Request);
-                    LoadData();
-                }
-            }
-        }
-
-        private void BtnEdit_Click(object sender, EventArgs e)
-        {
-            if (dgvRequests.SelectedRows.Count == 0) return;
-            
-            var id = (int)dgvRequests.SelectedRows[0].Cells["ID"].Value;
-            var request = _manager.GetById(id);
-            
-            using (var form = new FormImprovementRequestEdit(request))
-            {
-                if (form.ShowDialog() == DialogResult.OK)
-                {
-                    _manager.Update(form.Request);
-                    LoadData();
-                }
-            }
-        }
-
-        private void BtnDelete_Click(object sender, EventArgs e)
-        {
-            if (dgvRequests.SelectedRows.Count == 0) return;
-            
-            var id = (int)dgvRequests.SelectedRows[0].Cells["ID"].Value;
-            
-            if (MessageBox.Show("選択した改善要望を削除しますか？", "確認", 
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-            {
-                _manager.Delete(id);
-                LoadData();
-            }
-        }
-
-        private void DgvRequests_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
-        {
-            BtnEdit_Click(sender, e);
-        }
-
-        private string GetPriorityText(Priority priority)
-        {
-            return priority switch
-            {
-                Priority.Low => "低",
-                Priority.Medium => "中",
-                Priority.High => "高",
-                Priority.Critical => "緊急",
-                _ => "不明"
-            };
-        }
-
-        private string GetStatusText(RequestStatus status)
-        {
-            return status switch
-            {
-                RequestStatus.Pending => "保留中",
-                RequestStatus.InProgress => "進行中",
-                RequestStatus.Completed => "完了",
-                RequestStatus.Rejected => "却下",
-                _ => "不明"
-            };
-        }
-    }
-}
-```
-
-### 4. 使用例
-
-```csharp
-// ライブラリの使用例
-using CoreLib.ImprovementRequest;
-using CoreLib.Forms;
-
-// 改善要望管理システムの起動
-var manager = new ImprovementRequestManager("requests.json");
-
-// 新しい改善要望を追加
-var newRequest = new ImprovementRequest
-{
-    Title = "ログイン画面の改善",
-    Description = "パスワード表示切り替えボタンを追加してほしい",
-    Priority = Priority.Medium,
-    Status = RequestStatus.Pending,
-    RequestedBy = "田中太郎",
-    Category = "UI改善"
-};
-
-manager.Add(newRequest);
-
-// フォームを表示
-var form = new FormImprovementRequestManager();
-Application.Run(form);
-```
-
-## 🔑 主な特徴
-
-- **ファイルロック機能**：複数アプリケーションからの同時アクセスを安全に処理
-- **CRUD操作**：作成・読み込み・更新・削除の完全サポート
-- **検索・フィルタリング**：キーワード、優先度、ステータスでの絞り込み
-- **バックアップ機能**：データ保存時の自動バックアップ
-- **汎用設計**：他のアプリケーションから簡単に組み込み可能
-
-**注意**: 結果は最新の30件のコミットに限定されています。完全な履歴を確認するには、[GitHub上でコミット履歴](https://github.com/aoton0029/mycorelib/commits)をご覧ください。
-
----
-
-Winformsで改善要望をJSONファイルで管理するライブラリを作成いたします。汎用的な設計で、各アプリから簡単に呼び出せるように実装します。
-
-以下のような構成でライブラリを作成します：
-
-## 1. データモデル (ImprovementRequest.cs)
-
-```csharp
-using System;
-using System.ComponentModel;
-
-namespace ImprovementRequestLibrary.Models
-{
-    public class ImprovementRequest : INotifyPropertyChanged
-    {
-        private int _id;
-        private string _title;
-        private string _description;
-        private Priority _priority;
-        private Status _status;
-        private string _category;
-        private string _requester;
-        private DateTime _requestDate;
-        private DateTime? _completedDate;
-        private string _notes;
-
-        public int Id
-        {
-            get => _id;
-            set { _id = value; OnPropertyChanged(nameof(Id)); }
-        }
-
-        public string Title
-        {
-            get => _title;
-            set { _title = value; OnPropertyChanged(nameof(Title)); }
-        }
-
-        public string Description
-        {
-            get => _description;
-            set { _description = value; OnPropertyChanged(nameof(Description)); }
-        }
-
-        public Priority Priority
-        {
-            get => _priority;
-            set { _priority = value; OnPropertyChanged(nameof(Priority)); }
-        }
-
-        public Status Status
-        {
-            get => _status;
-            set { _status = value; OnPropertyChanged(nameof(Status)); }
-        }
-
-        public string Category
-        {
-            get => _category;
-            set { _category = value; OnPropertyChanged(nameof(Category)); }
-        }
-
-        public string Requester
-        {
-            get => _requester;
-            set { _requester = value; OnPropertyChanged(nameof(Requester)); }
-        }
-
-        public DateTime RequestDate
-        {
-            get => _requestDate;
-            set { _requestDate = value; OnPropertyChanged(nameof(RequestDate)); }
-        }
-
-        public DateTime? CompletedDate
-        {
-            get => _completedDate;
-            set { _completedDate = value; OnPropertyChanged(nameof(CompletedDate)); }
-        }
-
-        public string Notes
-        {
-            get => _notes;
-            set { _notes = value; OnPropertyChanged(nameof(Notes)); }
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-
-    public enum Priority
-    {
-        低 = 1,
-        中 = 2,
-        高 = 3,
-        緊急 = 4
-    }
-
-    public enum Status
-    {
-        未対応,
-        対応中,
-        完了,
-        却下,
-        保留
-    }
-}
-```
-
-## 2. JSONデータアクセス層 (JsonDataService.cs)
-
-```csharp
+```csharp name=Forms/ImprovementRequestForm.cs
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
-using ImprovementRequestLibrary.Models;
-
-namespace ImprovementRequestLibrary.Services
-{
-    public class JsonDataService
-    {
-        private readonly string _dataFilePath;
-        private List<ImprovementRequest> _requests;
-
-        public JsonDataService(string dataFilePath = "improvement_requests.json")
-        {
-            _dataFilePath = dataFilePath;
-            _requests = new List<ImprovementRequest>();
-            LoadData();
-        }
-
-        public List<ImprovementRequest> GetAllRequests()
-        {
-            return _requests.ToList();
-        }
-
-        public ImprovementRequest GetRequestById(int id)
-        {
-            return _requests.FirstOrDefault(r => r.Id == id);
-        }
-
-        public void AddRequest(ImprovementRequest request)
-        {
-            request.Id = GetNextId();
-            request.RequestDate = DateTime.Now;
-            _requests.Add(request);
-            SaveData();
-        }
-
-        public void UpdateRequest(ImprovementRequest request)
-        {
-            var existingRequest = _requests.FirstOrDefault(r => r.Id == request.Id);
-            if (existingRequest != null)
-            {
-                var index = _requests.IndexOf(existingRequest);
-                _requests[index] = request;
-                SaveData();
-            }
-        }
-
-        public void DeleteRequest(int id)
-        {
-            var request = _requests.FirstOrDefault(r => r.Id == id);
-            if (request != null)
-            {
-                _requests.Remove(request);
-                SaveData();
-            }
-        }
-
-        public List<ImprovementRequest> SearchRequests(string searchTerm)
-        {
-            if (string.IsNullOrWhiteSpace(searchTerm))
-                return _requests.ToList();
-
-            return _requests.Where(r =>
-                r.Title?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
-                r.Description?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
-                r.Category?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
-                r.Requester?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
-            ).ToList();
-        }
-
-        private void LoadData()
-        {
-            try
-            {
-                if (File.Exists(_dataFilePath))
-                {
-                    var json = File.ReadAllText(_dataFilePath);
-                    _requests = JsonConvert.DeserializeObject<List<ImprovementRequest>>(json) 
-                               ?? new List<ImprovementRequest>();
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"データファイルの読み込みに失敗しました: {ex.Message}");
-            }
-        }
-
-        private void SaveData()
-        {
-            try
-            {
-                var json = JsonConvert.SerializeObject(_requests, Formatting.Indented);
-                File.WriteAllText(_dataFilePath, json);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"データファイルの保存に失敗しました: {ex.Message}");
-            }
-        }
-
-        private int GetNextId()
-        {
-            return _requests.Any() ? _requests.Max(r => r.Id) + 1 : 1;
-        }
-    }
-}
-```
-
-## 3. メインフォーム (ImprovementRequestForm.cs)
-
-```csharp
-using System;
-using System.Drawing;
-using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-using ImprovementRequestLibrary.Models;
-using ImprovementRequestLibrary.Services;
+using ImprovementRequestManager.Models;
+using ImprovementRequestManager.Services;
 
-namespace ImprovementRequestLibrary.Forms
+namespace ImprovementRequestManager.Forms
 {
+    /// <summary>
+    /// 改善要望管理のメインフォーム
+    /// </summary>
     public partial class ImprovementRequestForm : Form
     {
-        private readonly JsonDataService _dataService;
-        private DataGridView _dataGridView;
-        private TextBox _searchTextBox;
-        private ComboBox _statusFilterComboBox;
-        private ComboBox _priorityFilterComboBox;
-        private Button _addButton;
-        private Button _editButton;
-        private Button _deleteButton;
-        private Button _refreshButton;
+        private ImprovementRequestService _service;
+        private List<ImprovementRequest> _requests;
+        private ImprovementRequest _selectedRequest;
 
-        public ImprovementRequestForm(string dataFilePath = null)
+        public ImprovementRequestForm(string jsonFilePath)
         {
-            _dataService = new JsonDataService(dataFilePath ?? "improvement_requests.json");
             InitializeComponent();
-            LoadData();
+            _service = new ImprovementRequestService(jsonFilePath);
+            _requests = new List<ImprovementRequest>();
+            InitializeEvents();
         }
 
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
+            this.dataGridViewRequests = new DataGridView();
+            this.buttonAdd = new Button();
+            this.buttonEdit = new Button();
+            this.buttonDelete = new Button();
+            this.buttonRefresh = new Button();
+            this.groupBoxDetails = new GroupBox();
+            this.textBoxTitle = new TextBox();
+            this.textBoxDescription = new TextBox();
+            this.textBoxRequester = new TextBox();
+            this.comboBoxPriority = new ComboBox();
+            this.comboBoxStatus = new ComboBox();
+            this.textBoxAssignee = new TextBox();
+            this.textBoxCategory = new TextBox();
+            this.textBoxComments = new TextBox();
+            this.dateTimePickerRequest = new DateTimePicker();
+            this.dateTimePickerCompleted = new DateTimePicker();
+            this.checkBoxCompletedDate = new CheckBox();
+            this.labelTitle = new Label();
+            this.labelDescription = new Label();
+            this.labelRequester = new Label();
+            this.labelPriority = new Label();
+            this.labelStatus = new Label();
+            this.labelAssignee = new Label();
+            this.labelCategory = new Label();
+            this.labelComments = new Label();
+            this.labelRequestDate = new Label();
+            this.labelCompletedDate = new Label();
+            this.buttonSave = new Button();
+            this.buttonCancel = new Button();
+            this.statusStrip = new StatusStrip();
+            this.toolStripStatusLabel = new ToolStripStatusLabel();
+
+            this.SuspendLayout();
+
+            // Form
             this.Text = "改善要望管理システム";
-            this.Size = new Size(1000, 600);
+            this.Size = new System.Drawing.Size(1200, 700);
             this.StartPosition = FormStartPosition.CenterScreen;
 
-            // 検索・フィルター部分
-            var searchPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 50,
-                Padding = new Padding(10)
-            };
+            // DataGridView
+            this.dataGridViewRequests.Location = new System.Drawing.Point(12, 12);
+            this.dataGridViewRequests.Size = new System.Drawing.Size(600, 400);
+            this.dataGridViewRequests.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Bottom;
+            this.dataGridViewRequests.AllowUserToAddRows = false;
+            this.dataGridViewRequests.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            this.dataGridViewRequests.MultiSelect = false;
+            this.dataGridViewRequests.ReadOnly = true;
 
-            _searchTextBox = new TextBox
-            {
-                PlaceholderText = "検索...",
-                Location = new Point(10, 15),
-                Width = 200
-            };
-            _searchTextBox.TextChanged += SearchTextBox_TextChanged;
+            // Buttons
+            this.buttonAdd.Location = new System.Drawing.Point(12, 420);
+            this.buttonAdd.Size = new System.Drawing.Size(75, 30);
+            this.buttonAdd.Text = "追加";
+            this.buttonAdd.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
 
-            _statusFilterComboBox = new ComboBox
-            {
-                Location = new Point(220, 15),
-                Width = 120,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            _statusFilterComboBox.Items.Add("全ステータス");
-            _statusFilterComboBox.Items.AddRange(Enum.GetNames(typeof(Status)));
-            _statusFilterComboBox.SelectedIndex = 0;
-            _statusFilterComboBox.SelectedIndexChanged += FilterComboBox_SelectedIndexChanged;
+            this.buttonEdit.Location = new System.Drawing.Point(93, 420);
+            this.buttonEdit.Size = new System.Drawing.Size(75, 30);
+            this.buttonEdit.Text = "編集";
+            this.buttonEdit.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
 
-            _priorityFilterComboBox = new ComboBox
-            {
-                Location = new Point(350, 15),
-                Width = 120,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            _priorityFilterComboBox.Items.Add("全優先度");
-            _priorityFilterComboBox.Items.AddRange(Enum.GetNames(typeof(Priority)));
-            _priorityFilterComboBox.SelectedIndex = 0;
-            _priorityFilterComboBox.SelectedIndexChanged += FilterComboBox_SelectedIndexChanged;
+            this.buttonDelete.Location = new System.Drawing.Point(174, 420);
+            this.buttonDelete.Size = new System.Drawing.Size(75, 30);
+            this.buttonDelete.Text = "削除";
+            this.buttonDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
 
-            _refreshButton = new Button
-            {
-                Text = "更新",
-                Location = new Point(480, 14),
-                Width = 60
-            };
-            _refreshButton.Click += RefreshButton_Click;
+            this.buttonRefresh.Location = new System.Drawing.Point(255, 420);
+            this.buttonRefresh.Size = new System.Drawing.Size(75, 30);
+            this.buttonRefresh.Text = "更新";
+            this.buttonRefresh.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
 
-            searchPanel.Controls.AddRange(new Control[] 
-            { 
-                _searchTextBox, _statusFilterComboBox, _priorityFilterComboBox, _refreshButton 
+            // GroupBox Details
+            this.groupBoxDetails.Location = new System.Drawing.Point(630, 12);
+            this.groupBoxDetails.Size = new System.Drawing.Size(540, 500);
+            this.groupBoxDetails.Text = "詳細情報";
+            this.groupBoxDetails.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
+
+            // Detail Controls
+            int yPos = 25;
+            int spacing = 30;
+
+            this.labelTitle.Location = new System.Drawing.Point(10, yPos);
+            this.labelTitle.Size = new System.Drawing.Size(80, 20);
+            this.labelTitle.Text = "タイトル:";
+
+            this.textBoxTitle.Location = new System.Drawing.Point(100, yPos);
+            this.textBoxTitle.Size = new System.Drawing.Size(420, 20);
+            yPos += spacing;
+
+            this.labelDescription.Location = new System.Drawing.Point(10, yPos);
+            this.labelDescription.Size = new System.Drawing.Size(80, 20);
+            this.labelDescription.Text = "説明:";
+
+            this.textBoxDescription.Location = new System.Drawing.Point(100, yPos);
+            this.textBoxDescription.Size = new System.Drawing.Size(420, 60);
+            this.textBoxDescription.Multiline = true;
+            this.textBoxDescription.ScrollBars = ScrollBars.Vertical;
+            yPos += 70;
+
+            this.labelRequester.Location = new System.Drawing.Point(10, yPos);
+            this.labelRequester.Size = new System.Drawing.Size(80, 20);
+            this.labelRequester.Text = "要求者:";
+
+            this.textBoxRequester.Location = new System.Drawing.Point(100, yPos);
+            this.textBoxRequester.Size = new System.Drawing.Size(200, 20);
+            yPos += spacing;
+
+            this.labelPriority.Location = new System.Drawing.Point(10, yPos);
+            this.labelPriority.Size = new System.Drawing.Size(80, 20);
+            this.labelPriority.Text = "優先度:";
+
+            this.comboBoxPriority.Location = new System.Drawing.Point(100, yPos);
+            this.comboBoxPriority.Size = new System.Drawing.Size(150, 20);
+            this.comboBoxPriority.DropDownStyle = ComboBoxStyle.DropDownList;
+            yPos += spacing;
+
+            this.labelStatus.Location = new System.Drawing.Point(10, yPos);
+            this.labelStatus.Size = new System.Drawing.Size(80, 20);
+            this.labelStatus.Text = "ステータス:";
+
+            this.comboBoxStatus.Location = new System.Drawing.Point(100, yPos);
+            this.comboBoxStatus.Size = new System.Drawing.Size(150, 20);
+            this.comboBoxStatus.DropDownStyle = ComboBoxStyle.DropDownList;
+            yPos += spacing;
+
+            this.labelAssignee.Location = new System.Drawing.Point(10, yPos);
+            this.labelAssignee.Size = new System.Drawing.Size(80, 20);
+            this.labelAssignee.Text = "担当者:";
+
+            this.textBoxAssignee.Location = new System.Drawing.Point(100, yPos);
+            this.textBoxAssignee.Size = new System.Drawing.Size(200, 20);
+            yPos += spacing;
+
+            this.labelCategory.Location = new System.Drawing.Point(10, yPos);
+            this.labelCategory.Size = new System.Drawing.Size(80, 20);
+            this.labelCategory.Text = "カテゴリ:";
+
+            this.textBoxCategory.Location = new System.Drawing.Point(100, yPos);
+            this.textBoxCategory.Size = new System.Drawing.Size(200, 20);
+            yPos += spacing;
+
+            this.labelRequestDate.Location = new System.Drawing.Point(10, yPos);
+            this.labelRequestDate.Size = new System.Drawing.Size(80, 20);
+            this.labelRequestDate.Text = "要求日:";
+
+            this.dateTimePickerRequest.Location = new System.Drawing.Point(100, yPos);
+            this.dateTimePickerRequest.Size = new System.Drawing.Size(200, 20);
+            yPos += spacing;
+
+            this.checkBoxCompletedDate.Location = new System.Drawing.Point(10, yPos);
+            this.checkBoxCompletedDate.Size = new System.Drawing.Size(80, 20);
+            this.checkBoxCompletedDate.Text = "完了日:";
+
+            this.dateTimePickerCompleted.Location = new System.Drawing.Point(100, yPos);
+            this.dateTimePickerCompleted.Size = new System.Drawing.Size(200, 20);
+            this.dateTimePickerCompleted.Enabled = false;
+            yPos += spacing;
+
+            this.labelComments.Location = new System.Drawing.Point(10, yPos);
+            this.labelComments.Size = new System.Drawing.Size(80, 20);
+            this.labelComments.Text = "コメント:";
+
+            this.textBoxComments.Location = new System.Drawing.Point(100, yPos);
+            this.textBoxComments.Size = new System.Drawing.Size(420, 60);
+            this.textBoxComments.Multiline = true;
+            this.textBoxComments.ScrollBars = ScrollBars.Vertical;
+            yPos += 70;
+
+            // Save/Cancel buttons
+            this.buttonSave.Location = new System.Drawing.Point(360, yPos);
+            this.buttonSave.Size = new System.Drawing.Size(75, 30);
+            this.buttonSave.Text = "保存";
+            this.buttonSave.Enabled = false;
+
+            this.buttonCancel.Location = new System.Drawing.Point(445, yPos);
+            this.buttonCancel.Size = new System.Drawing.Size(75, 30);
+            this.buttonCancel.Text = "キャンセル";
+            this.buttonCancel.Enabled = false;
+
+            // StatusStrip
+            this.statusStrip.Items.Add(this.toolStripStatusLabel);
+            this.toolStripStatusLabel.Text = "準備完了";
+
+            // Add controls to GroupBox
+            this.groupBoxDetails.Controls.AddRange(new Control[] {
+                this.labelTitle, this.textBoxTitle,
+                this.labelDescription, this.textBoxDescription,
+                this.labelRequester, this.textBoxRequester,
+                this.labelPriority, this.comboBoxPriority,
+                this.labelStatus, this.comboBoxStatus,
+                this.labelAssignee, this.textBoxAssignee,
+                this.labelCategory, this.textBoxCategory,
+                this.labelRequestDate, this.dateTimePickerRequest,
+                this.checkBoxCompletedDate, this.dateTimePickerCompleted,
+                this.labelComments, this.textBoxComments,
+                this.buttonSave, this.buttonCancel
             });
 
-            // ボタンパネル
-            var buttonPanel = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 50,
-                Padding = new Padding(10)
-            };
+            // Add controls to Form
+            this.Controls.AddRange(new Control[] {
+                this.dataGridViewRequests,
+                this.buttonAdd, this.buttonEdit, this.buttonDelete, this.buttonRefresh,
+                this.groupBoxDetails,
+                this.statusStrip
+            });
 
-            _addButton = new Button
-            {
-                Text = "新規追加",
-                Location = new Point(10, 10),
-                Width = 80
-            };
-            _addButton.Click += AddButton_Click;
-
-            _editButton = new Button
-            {
-                Text = "編集",
-                Location = new Point(100, 10),
-                Width = 80
-            };
-            _editButton.Click += EditButton_Click;
-
-            _deleteButton = new Button
-            {
-                Text = "削除",
-                Location = new Point(190, 10),
-                Width = 80
-            };
-            _deleteButton.Click += DeleteButton_Click;
-
-            buttonPanel.Controls.AddRange(new Control[] { _addButton, _editButton, _deleteButton });
-
-            // データグリッド
-            _dataGridView = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                AutoGenerateColumns = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false
-            };
-
-            SetupDataGridViewColumns();
-            _dataGridView.DoubleClick += DataGridView_DoubleClick;
-
-            this.Controls.AddRange(new Control[] { _dataGridView, buttonPanel, searchPanel });
+            this.ResumeLayout(false);
+            this.PerformLayout();
         }
 
-        private void SetupDataGridViewColumns()
+        private void InitializeEvents()
         {
-            _dataGridView.Columns.Clear();
+            this.Load += ImprovementRequestForm_Load;
+            this.buttonAdd.Click += ButtonAdd_Click;
+            this.buttonEdit.Click += ButtonEdit_Click;
+            this.buttonDelete.Click += ButtonDelete_Click;
+            this.buttonRefresh.Click += ButtonRefresh_Click;
+            this.buttonSave.Click += ButtonSave_Click;
+            this.buttonCancel.Click += ButtonCancel_Click;
+            this.dataGridViewRequests.SelectionChanged += DataGridViewRequests_SelectionChanged;
+            this.checkBoxCompletedDate.CheckedChanged += CheckBoxCompletedDate_CheckedChanged;
 
-            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Id",
-                HeaderText = "ID",
-                DataPropertyName = "Id",
-                Width = 50
-            });
-
-            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Title",
-                HeaderText = "タイトル",
-                DataPropertyName = "Title",
-                Width = 200
-            });
-
-            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Priority",
-                HeaderText = "優先度",
-                DataPropertyName = "Priority",
-                Width = 80
-            });
-
-            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Status",
-                HeaderText = "ステータス",
-                DataPropertyName = "Status",
-                Width = 100
-            });
-
-            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Category",
-                HeaderText = "カテゴリ",
-                DataPropertyName = "Category",
-                Width = 120
-            });
-
-            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Requester",
-                HeaderText = "要望者",
-                DataPropertyName = "Requester",
-                Width = 100
-            });
-
-            _dataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "RequestDate",
-                HeaderText = "要望日",
-                DataPropertyName = "RequestDate",
-                Width = 100,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "yyyy/MM/dd" }
-            });
+            // コントロールの変更を監視
+            this.textBoxTitle.TextChanged += Control_Changed;
+            this.textBoxDescription.TextChanged += Control_Changed;
+            this.textBoxRequester.TextChanged += Control_Changed;
+            this.comboBoxPriority.SelectedIndexChanged += Control_Changed;
+            this.comboBoxStatus.SelectedIndexChanged += Control_Changed;
+            this.textBoxAssignee.TextChanged += Control_Changed;
+            this.textBoxCategory.TextChanged += Control_Changed;
+            this.textBoxComments.TextChanged += Control_Changed;
+            this.dateTimePickerRequest.ValueChanged += Control_Changed;
+            this.dateTimePickerCompleted.ValueChanged += Control_Changed;
         }
 
-        private void LoadData()
+        private async void ImprovementRequestForm_Load(object sender, EventArgs e)
+        {
+            InitializeComboBoxes();
+            await LoadDataAsync();
+            ClearDetailControls();
+        }
+
+        private void InitializeComboBoxes()
+        {
+            // Priority ComboBox
+            this.comboBoxPriority.Items.Clear();
+            foreach (Priority priority in Enum.GetValues(typeof(Priority)))
+            {
+                this.comboBoxPriority.Items.Add(priority);
+            }
+
+            // Status ComboBox
+            this.comboBoxStatus.Items.Clear();
+            foreach (Status status in Enum.GetValues(typeof(Status)))
+            {
+                this.comboBoxStatus.Items.Add(status);
+            }
+        }
+
+        private async Task LoadDataAsync()
         {
             try
             {
-                var requests = _dataService.GetAllRequests();
-                ApplyFilters(requests);
+                this.toolStripStatusLabel.Text = "データを読み込み中...";
+                this.Cursor = Cursors.WaitCursor;
+
+                _requests = await _service.GetAllRequestsAsync();
+                UpdateDataGridView();
+
+                this.toolStripStatusLabel.Text = $"{_requests.Count}件の改善要望を読み込みました";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"データの読み込みに失敗しました: {ex.Message}", "エラー", 
-                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"データの読み込みに失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.toolStripStatusLabel.Text = "データの読み込みに失敗";
+            }
+            finally
+            {
+                this.Cursor = Cursors.Default;
             }
         }
 
-        private void ApplyFilters(System.Collections.Generic.List<ImprovementRequest> requests)
+        private void UpdateDataGridView()
         {
-            var filteredRequests = requests;
-
-            // 検索フィルター
-            if (!string.IsNullOrWhiteSpace(_searchTextBox.Text))
+            this.dataGridViewRequests.DataSource = null;
+            this.dataGridViewRequests.DataSource = _requests.Select(r => new
             {
-                filteredRequests = _dataService.SearchRequests(_searchTextBox.Text);
-            }
+                ID = r.Id,
+                タイトル = r.Title,
+                要求者 = r.Requester,
+                優先度 = r.Priority,
+                ステータス = r.Status,
+                担当者 = r.Assignee,
+                カテゴリ = r.Category,
+                要求日 = r.RequestDate.ToString("yyyy/MM/dd"),
+                完了日 = r.CompletedDate?.ToString("yyyy/MM/dd") ?? ""
+            }).ToList();
 
-            // ステータスフィルター
-            if (_statusFilterComboBox.SelectedIndex > 0)
+            // ID列を非表示にする
+            if (this.dataGridViewRequests.Columns["ID"] != null)
             {
-                var selectedStatus = (Status)Enum.Parse(typeof(Status), _statusFilterComboBox.SelectedItem.ToString());
-                filteredRequests = filteredRequests.Where(r => r.Status == selectedStatus).ToList();
-            }
-
-            // 優先度フィルター
-            if (_priorityFilterComboBox.SelectedIndex > 0)
-            {
-                var selectedPriority = (Priority)Enum.Parse(typeof(Priority), _priorityFilterComboBox.SelectedItem.ToString());
-                filteredRequests = filteredRequests.Where(r => r.Priority == selectedPriority).ToList();
-            }
-
-            _dataGridView.DataSource = filteredRequests.OrderByDescending(r => r.Id).ToList();
-        }
-
-        private void SearchTextBox_TextChanged(object sender, EventArgs e)
-        {
-            LoadData();
-        }
-
-        private void FilterComboBox_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            LoadData();
-        }
-
-        private void RefreshButton_Click(object sender, EventArgs e)
-        {
-            LoadData();
-        }
-
-        private void AddButton_Click(object sender, EventArgs e)
-        {
-            using (var editForm = new ImprovementRequestEditForm())
-            {
-                if (editForm.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        _dataService.AddRequest(editForm.ImprovementRequest);
-                        LoadData();
-                        MessageBox.Show("改善要望を追加しました。", "成功", 
-                                       MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"追加に失敗しました: {ex.Message}", "エラー", 
-                                       MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
+                this.dataGridViewRequests.Columns["ID"].Visible = false;
             }
         }
 
-        private void EditButton_Click(object sender, EventArgs e)
+        private async void ButtonAdd_Click(object sender, EventArgs e)
         {
-            if (_dataGridView.SelectedRows.Count == 0)
-            {
-                MessageBox.Show("編集する項目を選択してください。", "警告", 
-                               MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var selectedRequest = (ImprovementRequest)_dataGridView.SelectedRows[0].DataBoundItem;
-            using (var editForm = new ImprovementRequestEditForm(selectedRequest))
-            {
-                if (editForm.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        _dataService.UpdateRequest(editForm.ImprovementRequest);
-                        LoadData();
-                        MessageBox.Show("改善要望を更新しました。", "成功", 
-                                       MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"更新に失敗しました: {ex.Message}", "エラー", 
-                                       MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-
-        private void DeleteButton_Click(object sender, EventArgs e)
-        {
-            if (_dataGridView.SelectedRows.Count == 0)
-            {
-                MessageBox.Show("削除する項目を選択してください。", "警告", 
-                               MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var selectedRequest = (ImprovementRequest)_dataGridView.SelectedRows[0].DataBoundItem;
-            var result = MessageBox.Show($"「{selectedRequest.Title}」を削除しますか？", "確認", 
-                                        MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-            if (result == DialogResult.Yes)
+            var editForm = new ImprovementRequestEditForm();
+            if (editForm.ShowDialog() == DialogResult.OK)
             {
                 try
                 {
-                    _dataService.DeleteRequest(selectedRequest.Id);
-                    LoadData();
-                    MessageBox.Show("改善要望を削除しました。", "成功", 
-                                   MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    this.toolStripStatusLabel.Text = "新しい改善要望を保存中...";
+                    await _service.AddRequestAsync(editForm.Request);
+                    await LoadDataAsync();
+                    this.toolStripStatusLabel.Text = "新しい改善要望を追加しました";
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"削除に失敗しました: {ex.Message}", "エラー", 
-                                   MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"改善要望の追加に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    this.toolStripStatusLabel.Text = "改善要望の追加に失敗";
                 }
             }
         }
 
-        private void DataGridView_DoubleClick(object sender, EventArgs e)
+        private async void ButtonEdit_Click(object sender, EventArgs e)
         {
-            EditButton_Click(sender, e);
+            if (this.dataGridViewRequests.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("編集する改善要望を選択してください。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var selectedId = this.dataGridViewRequests.SelectedRows[0].Cells["ID"].Value.ToString();
+            var request = _requests.FirstOrDefault(r => r.Id == selectedId);
+            
+            if (request == null) return;
+
+            var editForm = new ImprovementRequestEditForm(request);
+            if (editForm.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    this.toolStripStatusLabel.Text = "改善要望を更新中...";
+                    await _service.UpdateRequestAsync(editForm.Request);
+                    await LoadDataAsync();
+                    this.toolStripStatusLabel.Text = "改善要望を更新しました";
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"改善要望の更新に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    this.toolStripStatusLabel.Text = "改善要望の更新に失敗";
+                }
+            }
         }
+
+        private async void ButtonDelete_Click(object sender, EventArgs e)
+        {
+            if (this.dataGridViewRequests.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("削除する改善要望を選択してください。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show("選択した改善要望を削除しますか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result != DialogResult.Yes) return;
+
+            var selectedId = this.dataGridViewRequests.SelectedRows[0].Cells["ID"].Value.ToString();
+
+            try
+            {
+                this.toolStripStatusLabel.Text = "改善要望を削除中...";
+                await _service.DeleteRequestAsync(selectedId);
+                await LoadDataAsync();
+                ClearDetailControls();
+                this.toolStripStatusLabel.Text = "改善要望を削除しました";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"改善要望の削除に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.toolStripStatusLabel.Text = "改善要望の削除に失敗";
+            }
+        }
+
+        private async void ButtonRefresh_Click(object sender, EventArgs e)
+        {
+            await LoadDataAsync();
+        }
+
+        private void DataGridViewRequests_SelectionChanged(object sender, EventArgs e)
+        {
+            if (this.dataGridViewRequests.SelectedRows.Count > 0)
+            {
+                var selectedId = this.dataGridViewRequests.SelectedRows[0].Cells["ID"].Value.ToString();
+                _selectedRequest = _requests.FirstOrDefault(r => r.Id == selectedId);
+                DisplayRequestDetails(_selectedRequest);
+            }
+            else
+            {
+                ClearDetailControls();
+                _selectedRequest = null;
+            }
+        }
+
+        private void DisplayRequestDetails(ImprovementRequest request)
+        {
+            if (request == null)
+            {
+                ClearDetailControls();
+                return;
+            }
+
+            this.textBoxTitle.Text = request.Title ?? "";
+            this.textBoxDescription.Text = request.Description ?? "";
+            this.textBoxRequester.Text = request.Requester ?? "";
+            this.comboBoxPriority.SelectedItem = request.Priority;
+            this.comboBoxStatus.SelectedItem = request.Status;
+            this.textBoxAssignee.Text = request.Assignee ?? "";
+            this.textBoxCategory.Text = request.Category ?? "";
+            this.textBoxComments.Text = request.Comments ?? "";
+            this.dateTimePickerRequest.Value = request.RequestDate;
+            
+            if (request.CompletedDate.HasValue)
+            {
+                this.checkBoxCompletedDate.Checked = true;
+                this.dateTimePickerCompleted.Value = request.CompletedDate.Value;
+                this.dateTimePickerCompleted.Enabled = true;
+            }
+            else
+            {
+                this.checkBoxCompletedDate.Checked = false;
+                this.dateTimePickerCompleted.Enabled = false;
+            }
+
+            SetControlsReadOnly(true);
+        }
+
+        private void ClearDetailControls()
+        {
+            this.textBoxTitle.Clear();
+            this.textBoxDescription.Clear();
+            this.textBoxRequester.Clear();
+            this.comboBoxPriority.SelectedIndex = -1;
+            this.comboBoxStatus.SelectedIndex = -1;
+            this.textBoxAssignee.Clear();
+            this.textBoxCategory.Clear();
+            this.textBoxComments.Clear();
+            this.dateTimePickerRequest.Value = DateTime.Now;
+            this.checkBoxCompletedDate.Checked = false;
+            this.dateTimePickerCompleted.Enabled = false;
+
+            SetControlsReadOnly(true);
+        }
+
+        private void SetControlsReadOnly(bool readOnly)
+        {
+            this.textBoxTitle.ReadOnly = readOnly;
+            this.textBoxDescription.ReadOnly = readOnly;
+            this.textBoxRequester.ReadOnly = readOnly;
+            this.comboBoxPriority.Enabled = !readOnly;
+            this.comboBoxStatus.Enabled = !readOnly;
+            this.textBoxAssignee.ReadOnly = readOnly;
+            this.textBoxCategory.ReadOnly = readOnly;
+            this.textBoxComments.ReadOnly = readOnly;
+            this.dateTimePickerRequest.Enabled = !readOnly;
+            this.checkBoxCompletedDate.Enabled = !readOnly;
+            this.dateTimePickerCompleted.Enabled = !readOnly && this.checkBoxCompletedDate.Checked;
+
+            this.buttonSave.Enabled = !readOnly;
+            this.buttonCancel.Enabled = !readOnly;
+        }
+
+        private void CheckBoxCompletedDate_CheckedChanged(object sender, EventArgs e)
+        {
+            this.dateTimePickerCompleted.Enabled = this.checkBoxCompletedDate.Checked && !this.textBoxTitle.ReadOnly;
+        }
+
+        private void Control_Changed(object sender, EventArgs e)
+        {
+            // コントロールが変更された時の処理（必要に応じて実装）
+        }
+
+        private async void ButtonSave_Click(object sender, EventArgs e)
+        {
+            if (_selectedRequest == null) return;
+
+            try
+            {
+                // 入力値の検証
+                if (string.IsNullOrWhiteSpace(this.textBoxTitle.Text))
+                {
+                    MessageBox.Show("タイトルは必須です。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // データを更新
+                _selectedRequest.Title = this.textBoxTitle.Text.Trim();
+                _selectedRequest.Description = this.textBoxDescription.Text.Trim();
+                _selectedRequest.Requester = this.textBoxRequester.Text.Trim();
+                _selectedRequest.Priority = (Priority)this.comboBoxPriority.SelectedItem;
+                _selectedRequest.Status = (Status)this.comboBoxStatus.SelectedItem;
+                _selectedRequest.Assignee = this.textBoxAssignee.Text.Trim();
+                _selectedRequest.Category = this.textBoxCategory.Text.Trim();
+                _selectedRequest.Comments = this.textBoxComments.Text.Trim();
+                _selectedRequest.RequestDate = this.dateTimePickerRequest.Value;
+                _selectedRequest.CompletedDate = this.checkBoxCompletedDate.Checked ? this.dateTimePickerCompleted.Value : (DateTime?)null;
+
+                this.toolStripStatusLabel.Text = "改善要望を保存中...";
+                await _service.UpdateRequestAsync(_selectedRequest);
+                await LoadDataAsync();
+                SetControlsReadOnly(true);
+                this.toolStripStatusLabel.Text = "改善要望を保存しました";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"改善要望の保存に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.toolStripStatusLabel.Text = "改善要望の保存に失敗";
+            }
+        }
+
+        private void ButtonCancel_Click(object sender, EventArgs e)
+        {
+            DisplayRequestDetails(_selectedRequest);
+            SetControlsReadOnly(true);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _service?.Dispose();
+                components?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+        private System.ComponentModel.IContainer components = null;
+        private DataGridView dataGridViewRequests;
+        private Button buttonAdd;
+        private Button buttonEdit;
+        private Button buttonDelete;
+        private Button buttonRefresh;
+        private GroupBox groupBoxDetails;
+        private TextBox textBoxTitle;
+        private TextBox textBoxDescription;
+        private TextBox textBoxRequester;
+        private ComboBox comboBoxPriority;
+        private ComboBox comboBoxStatus;
+        private TextBox textBoxAssignee;
+        private TextBox textBoxCategory;
+        private TextBox textBoxComments;
+        private DateTimePicker dateTimePickerRequest;
+        private DateTimePicker dateTimePickerCompleted;
+        private CheckBox checkBoxCompletedDate;
+        private Label labelTitle;
+        private Label labelDescription;
+        private Label labelRequester;
+        private Label labelPriority;
+        private Label labelStatus;
+        private Label labelAssignee;
+        private Label labelCategory;
+        private Label labelComments;
+        private Label labelRequestDate;
+        private Label labelCompletedDate;
+        private Button buttonSave;
+        private Button buttonCancel;
+        private StatusStrip statusStrip;
+        private ToolStripStatusLabel toolStripStatusLabel;
+        #endregion
     }
 }
 ```
 
-## 4. 編集フォーム (ImprovementRequestEditForm.cs)
-
-```csharp
+```csharp name=Forms/ImprovementRequestEditForm.cs
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using ImprovementRequestLibrary.Models;
+using ImprovementRequestManager.Models;
 
-namespace ImprovementRequestLibrary.Forms
+namespace ImprovementRequestManager.Forms
 {
+    /// <summary>
+    /// 改善要望の追加・編集用フォーム
+    /// </summary>
     public partial class ImprovementRequestEditForm : Form
     {
-        private TextBox _titleTextBox;
-        private TextBox _descriptionTextBox;
-        private ComboBox _priorityComboBox;
-        private ComboBox _statusComboBox;
-        private TextBox _categoryTextBox;
-        private TextBox _requesterTextBox;
-        private DateTimePicker _requestDatePicker;
-        private DateTimePicker _completedDatePicker;
-        private CheckBox _completedDateCheckBox;
-        private TextBox _notesTextBox;
-        private Button _okButton;
-        private Button _cancelButton;
+        public ImprovementRequest Request { get; set; }
+        private bool _isEditMode;
 
-        public ImprovementRequest ImprovementRequest { get; private set; }
-
-        public ImprovementRequestEditForm(ImprovementRequest existingRequest = null)
+        public ImprovementRequestEditForm()
         {
             InitializeComponent();
-            
-            if (existingRequest != null)
+            _isEditMode = false;
+            Request = new ImprovementRequest();
+            InitializeForm();
+        }
+
+        public ImprovementRequestEditForm(ImprovementRequest request)
+        {
+            InitializeComponent();
+            _isEditMode = true;
+            Request = new ImprovementRequest
             {
-                ImprovementRequest = existingRequest;
-                LoadRequestData();
-                this.Text = "改善要望編集";
-            }
-            else
-            {
-                ImprovementRequest = new ImprovementRequest
-                {
-                    RequestDate = DateTime.Now,
-                    Status = Status.未対応,
-                    Priority = Priority.中
-                };
-                this.Text = "改善要望新規作成";
-            }
+                Id = request.Id,
+                Title = request.Title,
+                Description = request.Description,
+                Requester = request.Requester,
+                RequestDate = request.RequestDate,
+                Priority = request.Priority,
+                Status = request.Status,
+                Assignee = request.Assignee,
+                CompletedDate = request.CompletedDate,
+                Category = request.Category,
+                Comments = request.Comments
+            };
+            InitializeForm();
         }
 
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
+            this.labelTitle = new Label();
+            this.textBoxTitle = new TextBox();
+            this.labelDescription = new Label();
+            this.textBoxDescription = new TextBox();
+            this.labelRequester = new Label();
+            this.textBoxRequester = new TextBox();
+            this.labelPriority = new Label();
+            this.comboBoxPriority = new ComboBox();
+            this.labelStatus = new Label();
+            this.comboBoxStatus = new ComboBox();
+            this.labelAssignee = new Label();
+            this.textBoxAssignee = new TextBox();
+            this.labelCategory = new Label();
+            this.textBoxCategory = new TextBox();
+            this.labelRequestDate = new Label();
+            this.dateTimePickerRequest = new DateTimePicker();
+            this.checkBoxCompletedDate = new CheckBox();
+            this.dateTimePickerCompleted = new DateTimePicker();
+            this.labelComments = new Label();
+            this.textBoxComments = new TextBox();
+            this.buttonOK = new Button();
+            this.buttonCancel = new Button();
+
+            this.SuspendLayout();
+
+            // Form
+            this.Text = "改善要望の編集";
             this.Size = new Size(500, 600);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
 
-            var panel = new TableLayoutPanel
+            int yPos = 20;
+            int spacing = 35;
+            int labelWidth = 80;
+            int controlWidth = 350;
+
+            // Title
+            this.labelTitle.Location = new Point(20, yPos);
+            this.labelTitle.Size = new Size(labelWidth, 20);
+            this.labelTitle.Text = "タイトル*:";
+
+            this.textBoxTitle.Location = new Point(110, yPos);
+            this.textBoxTitle.Size = new Size(controlWidth, 20);
+            yPos += spacing;
+
+            // Description
+            this.labelDescription.Location = new Point(20, yPos);
+            this.labelDescription.Size = new Size(labelWidth, 20);
+            this.labelDescription.Text = "説明:";
+
+            this.textBoxDescription.Location = new Point(110, yPos);
+            this.textBoxDescription.Size = new Size(controlWidth, 60);
+            this.textBoxDescription.Multiline = true;
+            this.textBoxDescription.ScrollBars = ScrollBars.Vertical;
+            yPos += 70;
+
+            // Requester
+            this.labelRequester.Location = new Point(20, yPos);
+            this.labelRequester.Size = new Size(labelWidth, 20);
+            this.labelRequester.Text = "要求者*:";
+
+            this.textBoxRequester.Location = new Point(110, yPos);
+            this.textBoxRequester.Size = new Size(200, 20);
+            yPos += spacing;
+
+            // Priority
+            this.labelPriority.Location = new Point(20, yPos);
+            this.labelPriority.Size = new Size(labelWidth, 20);
+            this.labelPriority.Text = "優先度:";
+
+            this.comboBoxPriority.Location = new Point(110, yPos);
+            this.comboBoxPriority.Size = new Size(150, 20);
+            this.comboBoxPriority.DropDownStyle = ComboBoxStyle.DropDownList;
+            yPos += spacing;
+
+            // Status
+            this.labelStatus.Location = new Point(20, yPos);
+            this.labelStatus.Size = new Size(labelWidth, 20);
+            this.labelStatus.Text = "ステータス:";
+
+            this.comboBoxStatus.Location = new Point(110, yPos);
+            this.comboBoxStatus.Size = new Size(150, 20);
+            this.comboBoxStatus.DropDownStyle = ComboBoxStyle.DropDownList;
+            yPos += spacing;
+
+            // Assignee
+            this.labelAssignee.Location = new Point(20, yPos);
+            this.labelAssignee.Size = new Size(labelWidth, 20);
+            this.labelAssignee.Text = "担当者:";
+
+            this.textBoxAssignee.Location = new Point(110, yPos);
+            this.textBoxAssignee.Size = new Size(200, 20);
+            yPos += spacing;
+
+            // Category
+            this.labelCategory.Location = new Point(20, yPos);
+            this.labelCategory.Size = new Size(labelWidth, 20);
+            this.labelCategory.Text = "カテゴリ:";
+
+            this.textBoxCategory.Location = new Point(110, yPos);
+            this.textBoxCategory.Size = new Size(200, 20);
+            yPos += spacing;
+
+            // Request Date
+            this.labelRequestDate.Location = new Point(20, yPos);
+            this.labelRequestDate.Size = new Size(labelWidth, 20);
+            this.labelRequestDate.Text = "要求日:";
+
+            this.dateTimePickerRequest.Location = new Point(110, yPos);
+            this.dateTimePickerRequest.Size = new Size(200, 20);
+            yPos += spacing;
+
+            // Completed Date
+            this.checkBoxCompletedDate.Location = new Point(20, yPos);
+            this.checkBoxCompletedDate.Size = new Size(80, 20);
+            this.checkBoxCompletedDate.Text = "完了日:";
+
+            this.dateTimePickerCompleted.Location = new Point(110, yPos);
+            this.dateTimePickerCompleted.Size = new Size(200, 20);
+            this.dateTimePickerCompleted.Enabled = false;
+            yPos += spacing;
+
+            // Comments
+            this.labelComments.Location = new Point(20, yPos);
+            this.labelComments.Size = new Size(labelWidth, 20);
+            this.labelComments.Text = "コメント:";
+
+            this.textBoxComments.Location = new Point(110, yPos);
+            this.textBoxComments.Size = new Size(controlWidth, 60);
+            this.textBoxComments.Multiline = true;
+            this.textBoxComments.ScrollBars = ScrollBars.Vertical;
+            yPos += 70;
+
+            // Buttons
+            this.buttonOK.Location = new Point(300, yPos);
+            this.buttonOK.Size = new Size(75, 30);
+            this.buttonOK.Text = "OK";
+            this.buttonOK.DialogResult = DialogResult.OK;
+
+            this.buttonCancel.Location = new Point(385, yPos);
+            this.buttonCancel.Size = new Size(75, 30);
+            this.buttonCancel.Text = "キャンセル";
+            this.buttonCancel.DialogResult = DialogResult.Cancel;
+
+            // Add controls to form
+            this.Controls.AddRange(new Control[] {
+                this.labelTitle, this.textBoxTitle,
+                this.labelDescription, this.textBoxDescription,
+                this.labelRequester, this.textBoxRequester,
+                this.labelPriority, this.comboBoxPriority,
+                this.labelStatus, this.comboBoxStatus,
+                this.labelAssignee, this.textBoxAssignee,
+                this.labelCategory, this.textBoxCategory,
+                this.labelRequestDate, this.dateTimePickerRequest,
+                this.checkBoxCompletedDate, this.dateTimePickerCompleted,
+                this.labelComments, this.textBoxComments,
+                this.buttonOK, this.buttonCancel
+            });
+
+            this.ResumeLayout(false);
+            this.PerformLayout();
+        }
+
+        private void InitializeForm()
+        {
+            InitializeComboBoxes();
+            InitializeEvents();
+            LoadRequestData();
+            
+            this.Text = _isEditMode ? "改善要望の編集" : "新しい改善要望";
+        }
+
+        private void InitializeComboBoxes()
+        {
+            // Priority ComboBox
+            this.comboBoxPriority.Items.Clear();
+            foreach (Priority priority in Enum.GetValues(typeof(Priority)))
             {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 10,
-                Paddi
+                this.comboBoxPriority.Items.Add(priority);
+            }
+
+            // Status ComboBox
+            this.comboBoxStatus.Items.Clear();
+            foreach (Status status in Enum.GetValues(typeof(Status)))
+            {
+                this.comboBoxStatus.Items.Add(status);
+            }
+        }
+
+        private void InitializeEvents()
+        {
+            this.checkBoxCompletedDate.CheckedChanged += CheckBoxCompletedDate_CheckedChanged;
+            this.buttonOK.Click += ButtonOK_Click;
+        }
+
+        private void LoadRequestData()
+        {
+            if (Request == null) return;
+
+            this.textBoxTitle.Text = Request.Title ?? "";
+            this.textBoxDescription.Text = Request.Description ?? "";
+            this.textBoxRequester.Text = Request.Requester ?? "";
+            this.comboBoxPriority.SelectedItem = Request.Priority;
+            this.comboBoxStatus.SelectedItem = Request.Status;
+            this.textBoxAssignee.Text = Request.Assignee ?? "";
+            this.textBoxCategory.Text = Request.Category ?? "";
+            this.textBoxComments.Text = Request.Comments ?? "";
+            this.dateTimePickerRequest.Value = Request.RequestDate;
+
+            if (Request.CompletedDate.HasValue)
+            {
+                this.checkBoxCompletedDate.Checked = true;
+                this.dateTimePickerCompleted.Value = Request.CompletedDate.Value;
+                this.dateTimePickerCompleted.Enabled = true;
+            }
+            else
+            {
+                this.checkBoxCompletedDate.Checked = false;
+                this.dateTimePickerCompleted.Enabled = false;
+            }
+        }
+
+        private void CheckBoxCompletedDate_CheckedChanged(object sender, EventArgs e)
+        {
+            this.dateTimePickerCompleted.Enabled = this.checkBoxCompletedDate.Checked;
+            if (!this.checkBoxCompletedDate.Checked)
+            {
+                this.dateTimePickerCompleted.Value = DateTime.Now;
+            }
+        }
+
+        private void ButtonOK_Click(object sender, EventArgs e)
+        {
+            if (!ValidateInput()) return;
+
+            SaveRequestData();
+        }
+
+        private bool ValidateInput()
+        {
+            if (string.IsNullOrWhiteSpace(this.textBoxTitle.Text))
+            {
+                MessageBox.Show("タイトルは必須です。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                this.textBoxTitle.Focus();
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(this.textBoxRequester.Text))
+            {
+                MessageBox.Show("要求者は必須です。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                this.textBoxRequester.Focus();
+                return false;
+            }
+
+            if (this.comboBoxPriority.SelectedItem == null)
+            {
+                MessageBox.Show("優先度を選択してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                this.comboBoxPriority.Focus();
+                return false;
+            }
+
+            if (this.comboBoxStatus.SelectedItem == null)
+            {
+                MessageBox.Show("ステータスを選択してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                this.comboBoxStatus.Focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        private void SaveRequestData()
+        {
+            Request.Title = this.textBoxTitle.Text.Trim();
+            Request.Description = this.textBoxDescription.Text.Trim();
+            Request.Requester = this.textBoxRequester.Text.Trim();
+            Request.Priority = (Priority)this.comboBoxPriority.SelectedItem;
+            Request.Status = (Status)this.comboBoxStatus.SelectedItem;
+            Request.Assignee = this.textBoxAssignee.Text.Trim();
+            Request.Category = this.textBoxCategory.Text.Trim();
+            Request.Comments = this.textBoxComments.Text.Trim();
+            Request.RequestDate = this.dateTimePickerRequest.Value;
+            Request.CompletedDate = this.checkBoxCompletedDate.Checked ? this.dateTimePickerCompleted.Value : (DateTime?)null;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+        private System.ComponentModel.IContainer components = null;
+        private Label labelTitle;
+        private TextBox textBoxTitle;
+        private Label labelDescription;
+        private TextBox textBoxDescription;
+        private Label labelRequester;
+        private TextBox textBoxRequester;
+        private Label labelPriority;
+        private ComboBox comboBoxPriority;
+        private Label labelStatus;
+        private ComboBox comboBoxStatus;
+        private Label labelAssignee;
+        private TextBox textBoxAssignee;
+        private Label labelCategory;
+        private TextBox textBoxCategory;
+        private Label labelRequestDate;
+        private DateTimePicker dateTimePickerRequest;
+        private CheckBox checkBoxCompletedDate;
+        private DateTimePicker dateTimePickerCompleted;
+        private Label labelComments;
+        private TextBox textBoxComments;
+        private Button buttonOK;
+        private Button buttonCancel;
+        #endregion
+    }
+}
+```
+
+```csharp name=ImprovementRequestManager.cs
+using System;
+using System.Windows.Forms;
+using ImprovementRequestManager.Forms;
+
+namespace ImprovementRequestManager
+{
+    /// <summary>
+    /// 改善要望管理ライブラリのメインクラス
+    /// 各アプリケーションから呼び出すためのエントリーポイント
+    /// </summary>
+    public static class ImprovementRequestManager
+    {
+        /// <summary>
+        /// 改善要望管理フォームを表示する
+        /// </summary>
+        /// <param name="jsonFilePath">JSONファイルのパス（サーバー上のパスを指定）</param>
+        /// <param name="owner">親ウィンドウ（オプション）</param>
+        /// <returns>フォームの表示結果</returns>
+        public static DialogResult ShowManager(string jsonFilePath, IWin32Window owner = null)
+        {
+            if (string.IsNullOrEmpty(jsonFilePath))
+                throw new ArgumentException("JSONファイルのパスが指定されていません。", nameof(jsonFilePath));
+
+            try
+            {
+                using (var form = new ImprovementRequestForm(jsonFilePath))
+                {
+                    return owner != null ? form.ShowDialog(owner) : form.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"改善要望管理システムを開くことができませんでした。\n\n詳細: {ex.Message}",
+                    "エラー",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return DialogResult.Abort;
+            }
+        }
+
+        /// <summary>
+        /// 改善要望管理フォームをモードレスで表示する
+        /// </summary>
+        /// <param name="jsonFilePath">JSONファイルのパス（サーバー上のパスを指定）</param>
+        /// <returns>作成されたフォームインスタンス</returns>
+        public static Form ShowManagerModeless(string jsonFilePath)
+        {
+            if (string.IsNullOrEmpty(jsonFilePath))
+                throw new ArgumentException("JSONファイルのパスが指定されていません。", nameof(jsonFilePath));
+
+            try
+            {
+                var form = new ImprovementRequestForm(jsonFilePath);
+                form.Show();
+                return form;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"改善要望管理システムを開くことができませんでした。\n\n詳細: {ex.Message}",
+                    "エラー",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return null;
+            }
+        }
+    }
+}
+```
+
+```xml name=ImprovementRequestManager.csproj
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyTitle>ImprovementRequestManager</AssemblyTitle>
+    <AssemblyDescription>改善要望管理ライブラリ</AssemblyDescription>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>
+```
+
+````markdown name=README.md
+# 改善要望管理ライブラリ
+
+## 概要
+このライブラリは、Winformsアプリケーション用の改善要望管理システムです。JSONファイルでデータを管理し、複数のPCから同時にアクセスしても整合性を保つことができる汎用的な設計になっています。
+
+## 特徴
+- **JSONファイルベース**: サーバー上のJSONファイルでデータを管理
+- **排他制御**: ファイルロックによる整合性保証
+- **汎用設計**: 各アプリケーションから簡単に組み込み可能
+- **非同期処理**: UIをブロックしない非同期操作
+- **入力検証**: データの整合性を保つ入力チェック
+
+## 使用方法
+
+### 基本的な使用方法
+```csharp
+// モーダルダイアログとして表示
+string jsonPath = @"\\server\shared\improvement_requests.json";
+var result = ImprovementRequestManager.ShowManager(jsonPath, this);
+
+// モードレスウィンドウとして表示
+var form = ImprovementRequestManager.ShowManagerModeless(jsonPath);
+```
+
+### アプリケーションへの組み込み例
+```csharp
+private void button1_Click(object sender, EventArgs e)
+{
+    try
+    {
+        string serverPath = @"\\fileserver\shared\requests\improvement_requests.json";
+        ImprovementRequestManager.ShowManager(serverPath, this);
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"エラー: {ex.Message}");
+    }
+}
+```
+
+## データモデル
+
+### ImprovementRequest
+改善要望を表すメインのデータモデルです。
+
+- **Id**: 一意識別子（自動生成）
+- **Title**: タイトル（必須）
+- **Description**: 詳細説明
+- **Requester**: 要求者（必須）
+- **RequestDate**: 要求日
+- **Priority**: 優先度（Low, Medium, High, Critical）
+- **Status**: ステータス（Open, InProgress, UnderReview, Completed, Rejected, OnHold）
+- **Assignee**: 担当者
+- **CompletedDate**: 完了日
+- **Category**: カテゴリ
+- **Comments**: コメント
+
+## アーキテクチャ
+
+### ファイル構成
+```
+ImprovementRequestManager/
+├── Models/
+│   └── ImprovementRequest.cs      # データモデル
+├── Services/
+│   └── ImprovementRequestService.cs # データアクセス層
+├── Forms/
+│   ├── ImprovementRequestForm.cs     # メインフォーム
+│   └── ImprovementRequestEditForm.cs # 編集フォーム
+├── ImprovementRequestManager.cs      # エントリーポイント
+└── ImprovementRequestManager.csproj  # プロジェクトファイル
+```
+
+### 排他制御
+- `SemaphoreSlim`を使用したスレッドレベルの排他制御
+- ファイルアクセス時の一時ファイル利用による原子性保証
+- タイムアウト機能により無限待機を防止
+
+### 非同期処理
+すべてのファイルI/O操作は非同期で実行され、UIの応答性を保ちます。
+
+## インストール要件
+- .NET 6.0 Windows Forms
+- Newtonsoft.Json パッケージ
+
+## セットアップ
+
+1. プロジェクトをビルドしてDLLを生成
+2. 参照を追加して使用するアプリケーションに組み込み
+3. サーバー上に共有フォルダを作成してJSONファイルのパスを指定
+
+## 注意事項
+- JSONファイルのパスは書き込み権限のあるネットワークパスを指定してください
+- 大量のデータを扱う場合は、パフォーマンスを考慮してデータベースの使用を検討してください
+- ネットワーク障害に対する適切なエラーハンドリングを実装してください
+
+## ライセンス
+このライブラリは汎用的な設計により、様々なアプリケーションで再利用可能です。
+````
+
+この改善要望管理ライブラリの主な特徴：
+
+1. **排他制御**: SemaphoreSlimとファイルロックで同時アクセス時の整合性を保証
+2. **汎用設計**: 静的メソッドで簡単に各アプリから呼び出し可能
+3. **非同期処理**: UIをブロックしない非同期ファイルI/O
+4. **原子性保証**: 一時ファイルを使った安全な書き込み処理
+5. **入力検証**: データの整合性を保つ検証機能
+6. **エラーハンドリング**: 適切なエラー処理とユーザーへの通知
+
+各アプリケーションからは以下のように簡単に呼び出せます：
+
+```csharp
+// 使用例
+ImprovementRequestManager.ShowManager(@"\\server\shared\requests.json", this);
+```
 
 ---
 
