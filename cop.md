@@ -1,3 +1,467 @@
+リポジトリの構造を確認しました。`mycorelib`は既に権限管理やフォーム機能を含む汎用的なWinFormsライブラリとして開発されていますね。改善要望管理システムの実装例を以下に示します：
+
+## 🔧 改善要望管理ライブラリ - コード例
+
+### 1. 改善要望データモデル
+
+```csharp
+using System;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+
+namespace CoreLib.ImprovementRequest
+{
+    /// <summary>
+    /// 改善要望データモデル
+    /// </summary>
+    public class ImprovementRequest
+    {
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public Priority Priority { get; set; }
+        public RequestStatus Status { get; set; }
+        public string RequestedBy { get; set; }
+        public DateTime RequestDate { get; set; }
+        public DateTime? CompletedDate { get; set; }
+        public string Category { get; set; }
+        public List<string> Tags { get; set; } = new List<string>();
+    }
+
+    public enum Priority
+    {
+        Low = 1,
+        Medium = 2,
+        High = 3,
+        Critical = 4
+    }
+
+    public enum RequestStatus
+    {
+        Pending,
+        InProgress,
+        Completed,
+        Rejected
+    }
+}
+```
+
+### 2. JSONファイル管理サービス（ファイルロック対応）
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using Newtonsoft.Json;
+
+namespace CoreLib.ImprovementRequest
+{
+    /// <summary>
+    /// 改善要望のJSONファイル管理（排他制御対応）
+    /// </summary>
+    public class ImprovementRequestManager
+    {
+        private readonly string _filePath;
+        private readonly string _lockFilePath;
+        private readonly object _lockObject = new object();
+        private static readonly Dictionary<string, Mutex> _fileMutexes = new Dictionary<string, Mutex>();
+
+        public ImprovementRequestManager(string filePath = "improvement_requests.json")
+        {
+            _filePath = filePath;
+            _lockFilePath = _filePath + ".lock";
+            
+            // ファイル別のMutexを取得または作成
+            if (!_fileMutexes.ContainsKey(_filePath))
+            {
+                _fileMutexes[_filePath] = new Mutex(false, $"ImprovementRequest_{Path.GetFileName(_filePath)}");
+            }
+        }
+
+        /// <summary>
+        /// 全ての改善要望を取得
+        /// </summary>
+        public List<ImprovementRequest> GetAll()
+        {
+            return ExecuteWithLock(() =>
+            {
+                if (!File.Exists(_filePath))
+                    return new List<ImprovementRequest>();
+
+                var json = File.ReadAllText(_filePath);
+                return JsonConvert.DeserializeObject<List<ImprovementRequest>>(json) ?? new List<ImprovementRequest>();
+            });
+        }
+
+        /// <summary>
+        /// 改善要望を追加
+        /// </summary>
+        public void Add(ImprovementRequest request)
+        {
+            ExecuteWithLock(() =>
+            {
+                var requests = GetAllInternal();
+                request.Id = requests.Any() ? requests.Max(r => r.Id) + 1 : 1;
+                request.RequestDate = DateTime.Now;
+                requests.Add(request);
+                SaveInternal(requests);
+            });
+        }
+
+        /// <summary>
+        /// 改善要望を更新
+        /// </summary>
+        public bool Update(ImprovementRequest request)
+        {
+            return ExecuteWithLock(() =>
+            {
+                var requests = GetAllInternal();
+                var existingIndex = requests.FindIndex(r => r.Id == request.Id);
+                
+                if (existingIndex == -1)
+                    return false;
+
+                requests[existingIndex] = request;
+                SaveInternal(requests);
+                return true;
+            });
+        }
+
+        /// <summary>
+        /// 改善要望を削除
+        /// </summary>
+        public bool Delete(int id)
+        {
+            return ExecuteWithLock(() =>
+            {
+                var requests = GetAllInternal();
+                var request = requests.FirstOrDefault(r => r.Id == id);
+                
+                if (request == null)
+                    return false;
+
+                requests.Remove(request);
+                SaveInternal(requests);
+                return true;
+            });
+        }
+
+        /// <summary>
+        /// IDで改善要望を取得
+        /// </summary>
+        public ImprovementRequest GetById(int id)
+        {
+            return ExecuteWithLock(() =>
+            {
+                var requests = GetAllInternal();
+                return requests.FirstOrDefault(r => r.Id == id);
+            });
+        }
+
+        /// <summary>
+        /// 条件で検索
+        /// </summary>
+        public List<ImprovementRequest> Search(string keyword = null, Priority? priority = null, RequestStatus? status = null)
+        {
+            return ExecuteWithLock(() =>
+            {
+                var requests = GetAllInternal();
+                
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    requests = requests.Where(r => 
+                        r.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                        r.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+
+                if (priority.HasValue)
+                {
+                    requests = requests.Where(r => r.Priority == priority.Value).ToList();
+                }
+
+                if (status.HasValue)
+                {
+                    requests = requests.Where(r => r.Status == status.Value).ToList();
+                }
+
+                return requests;
+            });
+        }
+
+        private T ExecuteWithLock<T>(Func<T> action)
+        {
+            var mutex = _fileMutexes[_filePath];
+            mutex.WaitOne();
+            
+            try
+            {
+                return action();
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+
+        private void ExecuteWithLock(Action action)
+        {
+            ExecuteWithLock(() => { action(); return true; });
+        }
+
+        private List<ImprovementRequest> GetAllInternal()
+        {
+            if (!File.Exists(_filePath))
+                return new List<ImprovementRequest>();
+
+            var json = File.ReadAllText(_filePath);
+            return JsonConvert.DeserializeObject<List<ImprovementRequest>>(json) ?? new List<ImprovementRequest>();
+        }
+
+        private void SaveInternal(List<ImprovementRequest> requests)
+        {
+            // バックアップ作成
+            if (File.Exists(_filePath))
+            {
+                File.Copy(_filePath, _filePath + ".bak", true);
+            }
+
+            var json = JsonConvert.SerializeObject(requests, Formatting.Indented);
+            File.WriteAllText(_filePath, json);
+        }
+    }
+}
+```
+
+### 3. WinFormsユーザーインターフェース
+
+```csharp
+using System;
+using System.Linq;
+using System.Windows.Forms;
+using CoreLib.ImprovementRequest;
+
+namespace CoreLib.Forms
+{
+    /// <summary>
+    /// 改善要望管理フォーム
+    /// </summary>
+    public partial class FormImprovementRequestManager : Form
+    {
+        private readonly ImprovementRequestManager _manager;
+        private DataGridView dgvRequests;
+        private TextBox txtSearch;
+        private ComboBox cbPriority, cbStatus;
+        private Button btnAdd, btnEdit, btnDelete, btnSearch;
+
+        public FormImprovementRequestManager()
+        {
+            _manager = new ImprovementRequestManager();
+            InitializeComponent();
+            LoadData();
+        }
+
+        private void InitializeComponent()
+        {
+            this.Size = new System.Drawing.Size(1000, 600);
+            this.Text = "改善要望管理システム";
+
+            // 検索パネル
+            var pnlSearch = new Panel { Dock = DockStyle.Top, Height = 60 };
+            
+            txtSearch = new TextBox { Location = new System.Drawing.Point(10, 15), Width = 200 };
+            cbPriority = new ComboBox { Location = new System.Drawing.Point(220, 15), Width = 100 };
+            cbStatus = new ComboBox { Location = new System.Drawing.Point(330, 15), Width = 100 };
+            btnSearch = new Button { Location = new System.Drawing.Point(440, 13), Text = "検索", Width = 60 };
+
+            cbPriority.Items.AddRange(new[] { "全て", "低", "中", "高", "緊急" });
+            cbPriority.SelectedIndex = 0;
+            cbStatus.Items.AddRange(new[] { "全て", "保留中", "進行中", "完了", "却下" });
+            cbStatus.SelectedIndex = 0;
+
+            pnlSearch.Controls.AddRange(new Control[] { txtSearch, cbPriority, cbStatus, btnSearch });
+
+            // ボタンパネル
+            var pnlButtons = new Panel { Dock = DockStyle.Bottom, Height = 50 };
+            
+            btnAdd = new Button { Location = new System.Drawing.Point(10, 10), Text = "新規追加", Width = 80 };
+            btnEdit = new Button { Location = new System.Drawing.Point(100, 10), Text = "編集", Width = 80 };
+            btnDelete = new Button { Location = new System.Drawing.Point(190, 10), Text = "削除", Width = 80 };
+
+            pnlButtons.Controls.AddRange(new Control[] { btnAdd, btnEdit, btnDelete });
+
+            // データグリッド
+            dgvRequests = new DataGridView 
+            { 
+                Dock = DockStyle.Fill,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                ReadOnly = true,
+                AllowUserToAddRows = false
+            };
+
+            // イベント設定
+            btnSearch.Click += BtnSearch_Click;
+            btnAdd.Click += BtnAdd_Click;
+            btnEdit.Click += BtnEdit_Click;
+            btnDelete.Click += BtnDelete_Click;
+            dgvRequests.CellDoubleClick += DgvRequests_CellDoubleClick;
+
+            this.Controls.AddRange(new Control[] { dgvRequests, pnlSearch, pnlButtons });
+        }
+
+        private void LoadData()
+        {
+            var requests = _manager.GetAll();
+            dgvRequests.DataSource = requests.Select(r => new
+            {
+                ID = r.Id,
+                タイトル = r.Title,
+                説明 = r.Description,
+                優先度 = GetPriorityText(r.Priority),
+                ステータス = GetStatusText(r.Status),
+                要求者 = r.RequestedBy,
+                要求日 = r.RequestDate.ToString("yyyy/MM/dd"),
+                カテゴリ = r.Category
+            }).ToList();
+        }
+
+        private void BtnSearch_Click(object sender, EventArgs e)
+        {
+            Priority? priority = cbPriority.SelectedIndex > 0 ? (Priority)(cbPriority.SelectedIndex) : null;
+            RequestStatus? status = cbStatus.SelectedIndex > 0 ? (RequestStatus)(cbStatus.SelectedIndex - 1) : null;
+            
+            var results = _manager.Search(txtSearch.Text, priority, status);
+            dgvRequests.DataSource = results.Select(r => new
+            {
+                ID = r.Id,
+                タイトル = r.Title,
+                説明 = r.Description,
+                優先度 = GetPriorityText(r.Priority),
+                ステータス = GetStatusText(r.Status),
+                要求者 = r.RequestedBy,
+                要求日 = r.RequestDate.ToString("yyyy/MM/dd"),
+                カテゴリ = r.Category
+            }).ToList();
+        }
+
+        private void BtnAdd_Click(object sender, EventArgs e)
+        {
+            using (var form = new FormImprovementRequestEdit())
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    _manager.Add(form.Request);
+                    LoadData();
+                }
+            }
+        }
+
+        private void BtnEdit_Click(object sender, EventArgs e)
+        {
+            if (dgvRequests.SelectedRows.Count == 0) return;
+            
+            var id = (int)dgvRequests.SelectedRows[0].Cells["ID"].Value;
+            var request = _manager.GetById(id);
+            
+            using (var form = new FormImprovementRequestEdit(request))
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    _manager.Update(form.Request);
+                    LoadData();
+                }
+            }
+        }
+
+        private void BtnDelete_Click(object sender, EventArgs e)
+        {
+            if (dgvRequests.SelectedRows.Count == 0) return;
+            
+            var id = (int)dgvRequests.SelectedRows[0].Cells["ID"].Value;
+            
+            if (MessageBox.Show("選択した改善要望を削除しますか？", "確認", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                _manager.Delete(id);
+                LoadData();
+            }
+        }
+
+        private void DgvRequests_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            BtnEdit_Click(sender, e);
+        }
+
+        private string GetPriorityText(Priority priority)
+        {
+            return priority switch
+            {
+                Priority.Low => "低",
+                Priority.Medium => "中",
+                Priority.High => "高",
+                Priority.Critical => "緊急",
+                _ => "不明"
+            };
+        }
+
+        private string GetStatusText(RequestStatus status)
+        {
+            return status switch
+            {
+                RequestStatus.Pending => "保留中",
+                RequestStatus.InProgress => "進行中",
+                RequestStatus.Completed => "完了",
+                RequestStatus.Rejected => "却下",
+                _ => "不明"
+            };
+        }
+    }
+}
+```
+
+### 4. 使用例
+
+```csharp
+// ライブラリの使用例
+using CoreLib.ImprovementRequest;
+using CoreLib.Forms;
+
+// 改善要望管理システムの起動
+var manager = new ImprovementRequestManager("requests.json");
+
+// 新しい改善要望を追加
+var newRequest = new ImprovementRequest
+{
+    Title = "ログイン画面の改善",
+    Description = "パスワード表示切り替えボタンを追加してほしい",
+    Priority = Priority.Medium,
+    Status = RequestStatus.Pending,
+    RequestedBy = "田中太郎",
+    Category = "UI改善"
+};
+
+manager.Add(newRequest);
+
+// フォームを表示
+var form = new FormImprovementRequestManager();
+Application.Run(form);
+```
+
+## 🔑 主な特徴
+
+- **ファイルロック機能**：複数アプリケーションからの同時アクセスを安全に処理
+- **CRUD操作**：作成・読み込み・更新・削除の完全サポート
+- **検索・フィルタリング**：キーワード、優先度、ステータスでの絞り込み
+- **バックアップ機能**：データ保存時の自動バックアップ
+- **汎用設計**：他のアプリケーションから簡単に組み込み可能
+
+**注意**: 結果は最新の30件のコミットに限定されています。完全な履歴を確認するには、[GitHub上でコミット履歴](https://github.com/aoton0029/mycorelib/commits)をご覧ください。
+
+---
+
 Winformsで改善要望をJSONファイルで管理するライブラリを作成いたします。汎用的な設計で、各アプリから簡単に呼び出せるように実装します。
 
 以下のような構成でライブラリを作成します：
