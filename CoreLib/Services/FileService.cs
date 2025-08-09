@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -24,11 +25,11 @@ namespace CoreLib.Services
         /// <summary>
         /// 自動マージを試行
         /// </summary>
-        AutoMerge,
+        //AutoMerge,
         /// <summary>
         /// 手動マージのため競合ファイルを作成
         /// </summary>
-        CreateConflictFile
+        //CreateConflictFile
     }
 
     /// <summary>
@@ -120,7 +121,7 @@ namespace CoreLib.Services
                 ExpectedVersion = Version,
                 BaseVersion = Version,
                 UserId = UserId,
-                ConflictStrategy = strategy ?? ConflictResolutionStrategy.AutoMerge
+                ConflictStrategy = strategy ?? ConflictResolutionStrategy.Abort
             };
 
             return await _fileService.SaveFileWithMergeAsync(FilePath, content, BaseContent, options);
@@ -142,21 +143,16 @@ namespace CoreLib.Services
     /// </summary>
     public class FileService
     {
-        private readonly string _baseDirectory;
-        private readonly string _metadataDirectory;
-        private readonly string _versionsDirectory;
+        private const string METADATA = "meta";
+        private const string VERSION = "version";
+
+        private string _baseDirectory = "設定";
         private readonly SemaphoreSlim _globalLock = new SemaphoreSlim(1, 1);
         private readonly Dictionary<string, SemaphoreSlim> _fileLocks = new Dictionary<string, SemaphoreSlim>();
 
-        public FileService(string baseDirectory)
+        public FileService()
         {
-            _baseDirectory = baseDirectory ?? throw new ArgumentNullException(nameof(baseDirectory));
-            _metadataDirectory = Path.Combine(_baseDirectory, ".metadata");
-            _versionsDirectory = Path.Combine(_baseDirectory, ".versions");
-
             Directory.CreateDirectory(_baseDirectory);
-            Directory.CreateDirectory(_metadataDirectory);
-            Directory.CreateDirectory(_versionsDirectory);
         }
 
         /// <summary>
@@ -171,10 +167,12 @@ namespace CoreLib.Services
 
             try
             {
+                Debug.Print("StartEditSessionAsync");
                 // ファイルを読み込み
                 var (readResult, content) = await ReadFileAsync(filePath, options);
                 if (!readResult.Success)
                 {
+                    Debug.Print("StartEditSessionAsync readResult not success");
                     return (readResult, null);
                 }
 
@@ -224,6 +222,8 @@ namespace CoreLib.Services
                 await semaphore.WaitAsync();
                 try
                 {
+                    Debug.Print("SaveFileWithMergeAsync");
+
                     if (!File.Exists(fullPath))
                     {
                         // 新規ファイルの場合
@@ -262,24 +262,24 @@ namespace CoreLib.Services
                                 // そのまま上書き保存
                                 break;
 
-                            case ConflictResolutionStrategy.AutoMerge:
-                                var mergeResult = await PerformAutoMergeAsync(baseContent, currentContent, content);
-                                if (mergeResult.HasConflicts)
-                                {
-                                    result.Success = false;
-                                    result.ErrorMessage = "自動マージに失敗しました";
-                                    result.ConflictMarkers = mergeResult.ConflictMarkers;
-                                    return result;
-                                }
-                                content = mergeResult.MergedContent;
-                                result.MergedContent = content;
-                                break;
+                            //case ConflictResolutionStrategy.AutoMerge:
+                            //    var mergeResult = await PerformAutoMergeAsync(baseContent, currentContent, content);
+                            //    if (mergeResult.HasConflicts)
+                            //    {
+                            //        result.Success = false;
+                            //        result.ErrorMessage = "自動マージに失敗しました";
+                            //        result.ConflictMarkers = mergeResult.ConflictMarkers;
+                            //        return result;
+                            //    }
+                            //    content = mergeResult.MergedContent;
+                            //    result.MergedContent = content;
+                            //    break;
 
-                            case ConflictResolutionStrategy.CreateConflictFile:
-                                await CreateConflictFileAsync(filePath, baseContent, currentContent, content, options);
-                                result.Success = false;
-                                result.ErrorMessage = "競合ファイルを作成しました。手動でマージしてください";
-                                return result;
+                            //case ConflictResolutionStrategy.CreateConflictFile:
+                            //    await CreateConflictFileAsync(filePath, baseContent, currentContent, content, options);
+                            //    result.Success = false;
+                            //    result.ErrorMessage = "競合ファイルを作成しました。手動でマージしてください";
+                            //    return result;
                         }
                     }
 

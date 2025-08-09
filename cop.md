@@ -1,4 +1,50 @@
+```csharp
+public class ThreeWayMerger<T> where T : class, new()
+{
+    public T Merge(T baseModel, T localModel, T remoteModel, out List<string> conflicts)
+    {
+        conflicts = new List<string>();
+        var result = new T();
+        var props = typeof(T).GetProperties();
+
+        foreach (var prop in props)
+        {
+            var baseValue = prop.GetValue(baseModel);
+            var localValue = prop.GetValue(localModel);
+            var remoteValue = prop.GetValue(remoteModel);
+
+            if (Equals(localValue, remoteValue))
+            {
+                // 両方同じならその値を採用
+                prop.SetValue(result, localValue);
+            }
+            else if (Equals(baseValue, localValue))
+            {
+                // ローカル変更なし、リモートの値を採用
+                prop.SetValue(result, remoteValue);
+            }
+            else if (Equals(baseValue, remoteValue))
+            {
+                // リモート変更なし、ローカルの値を採用
+                prop.SetValue(result, localValue);
+            }
+            else
+            {
+                // 両方変更あり、コンフリクト
+                conflicts.Add(prop.Name);
+                // ここではベース値を採用（必要に応じて変更）
+                prop.SetValue(result, baseValue);
+            }
+        }
+        return result;
+    }
+}
+```
+
+---
+
 `ISerializer`インターフェースを使った具体的なユースケースを、`FileService`と連携した実用的な例で紹介します：
+
 
 ## 1. 設定ファイル管理システム
 
