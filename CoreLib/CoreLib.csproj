@@ -10,6 +10,7 @@
     <PackageReference Include="CommunityToolkit.Common" Version="8.4.0" />
     <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.4.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Docker.DotNet" Version="3.125.15" />
     <PackageReference Include="MediatR" Version="12.5.0" />
     <PackageReference Include="MediatR.Contracts" Version="2.0.1" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.4" />
@@ -23,6 +24,10 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Docker\" />
   </ItemGroup>
 
 </Project>

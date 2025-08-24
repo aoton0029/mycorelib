@@ -104,6 +104,7 @@ namespace CoreLib.Cmds
             catch (Exception ex) when (!(ex is OperationCanceledException))
             {
                 stopwatch.Stop();
+                Debug.Print($"Failed to execute command: {command}");
                 throw new InvalidOperationException($"Failed to execute command: {command}", ex);
             }
         }

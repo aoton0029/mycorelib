@@ -2,11 +2,34 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static CoreLib.Cmds.CommandExecutor;
 
 namespace CoreLib.Cmds
 {
+    public static class DockerContainerExtensions
+    {
+        /// <summary>
+        /// Ports文字列からブラウザで開けるローカルアドレス一覧を取得
+        /// </summary>
+        public static IEnumerable<string> GetBrowsableAddresses(this DockerWslExecutor.DockerContainer container)
+        {
+            if (string.IsNullOrWhiteSpace(container.Ports))
+                yield break;
+
+            // 例: "0.0.0.0:8080->80/tcp, :::8080->80/tcp"
+            var portPattern = new Regex(@"(?:0\.0\.0\.0|::):(\d+)->\d+/(tcp|udp)", RegexOptions.Compiled);
+
+            foreach (Match match in portPattern.Matches(container.Ports))
+            {
+                var port = match.Groups[1].Value;
+                // TCPのみを対象にする場合
+                if (match.Groups[2].Value == "tcp")
+                    yield return $"http://localhost:{port}";
+            }
+        }
+    }
     public class DockerWslExecutor
     {
         private readonly WslCommandExecutor _wslExecutor;
@@ -114,15 +137,16 @@ namespace CoreLib.Cmds
         #endregion
 
         #region コンテナ操作
+        char _splitter = '\a';
 
         /// <summary>
         /// コンテナ一覧を取得
         /// </summary>
         public async Task<DockerContainer[]> GetContainersAsync(bool includeAll = false)
         {
-            var command = includeAll ? "docker ps -a --format table" : "docker ps --format table";
+            var command = includeAll ? "docker ps -a" : "docker ps";
             var result = await _wslExecutor.ExecuteWslCommandAsync(
-                $"{command} \"{{{{.ID}}}}\\t{{{{.Image}}}}\\t{{{{.Command}}}}\\t{{{{.CreatedAt}}}}\\t{{{{.Status}}}}\\t{{{{.Ports}}}}\\t{{{{.Names}}}}\"",
+                $"{command} --format 'table {{{{.ID}}}}{_splitter}{{{{.Image}}}}{_splitter}{{{{.Command}}}}{_splitter}{{{{.CreatedAt}}}}{_splitter}{{{{.Status}}}}{_splitter}{{{{.Ports}}}}{_splitter}{{{{.Names}}}}'",
                 _defaultOptions);
 
             if (!result.IsSuccess)
@@ -217,7 +241,7 @@ namespace CoreLib.Cmds
         public async Task<DockerImage[]> GetImagesAsync()
         {
             var result = await _wslExecutor.ExecuteWslCommandAsync(
-                "docker images --format \"{{.Repository}}\\t{{.Tag}}\\t{{.ID}}\\t{{.CreatedAt}}\\t{{.Size}}\"",
+                "docker images --format 'table {{.Repository}}\\t{{.Tag}}\\t{{.ID}}\\t{{.CreatedAt}}\\t{{.Size}}'",
                 _defaultOptions);
 
             if (!result.IsSuccess)
@@ -429,7 +453,7 @@ namespace CoreLib.Cmds
 
             foreach (var line in lines)
             {
-                var parts = line.Split('\t');
+                var parts = line.Split(_splitter);
                 if (parts.Length >= 7)
                 {
                     containers.Add(new DockerContainer

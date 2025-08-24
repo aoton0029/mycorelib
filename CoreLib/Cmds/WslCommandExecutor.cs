@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -70,7 +71,7 @@ namespace CoreLib.Cmds
 
             // WSLコマンドの構築
             var wslCommand = BuildWslCommand(command, options);
-
+            Debug.Print(wslCommand);
             return await ExecuteWithRealtimeOutputAsync(wslCommand, options, cancellationToken);
         }
 
